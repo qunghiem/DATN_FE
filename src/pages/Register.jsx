@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone, Loader2 } from 'lucide-react';
 import { register, clearMessages } from '../features/auth/authSlice';
 import logo from '../assets/logo.png';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 const Register = () => {
   const dispatch = useDispatch();
@@ -245,7 +246,14 @@ const Register = () => {
                 </a>
               </label>
             </div>
-
+<div className="mt-4 flex justify-center">
+                    <ReCAPTCHA
+                      sitekey="6Lc1lwAsAAAAAKLMPjj46NxekGoIwzEvePUjVKRO" // 👈 thay bằng site key thật của bạn
+                      onChange={(value) =>
+                        setFormData({ ...formData, captcha_response: value })
+                      }
+                    />
+                  </div>
             {/* Submit Button */}
             <button
               type="submit"

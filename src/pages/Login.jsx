@@ -1,37 +1,39 @@
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2 } from 'lucide-react';
-import { 
-  login, 
-  loginWithGoogle, 
-  forgotPassword, 
-  verifyOTP, 
-  resetPassword, 
-  clearMessages 
-} from '../features/auth/authSlice';
-import logo from '../assets/logo.png';
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, Link } from "react-router-dom";
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
+import {
+  login,
+  loginWithGoogle,
+  forgotPassword,
+  verifyOTP,
+  resetPassword,
+  clearMessages,
+} from "../features/auth/authSlice";
+import logo from "../assets/logo.png";
+import ReCAPTCHA from "react-google-recaptcha";
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isLoading, error, success, isAuthenticated, resetToken } = useSelector((state) => state.auth);
+  const { isLoading, error, success, isAuthenticated, resetToken } =
+    useSelector((state) => state.auth);
 
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [view, setView] = useState('login'); // 'login', 'forgot', 'otp', 'reset'
+  const [view, setView] = useState("login"); // 'login', 'forgot', 'otp', 'reset'
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    otp: '',
-    newPassword: '',
-    confirmPassword: ''
+    email: "",
+    password: "",
+    otp: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && view === 'login') {
-      navigate('/');
+    if (isAuthenticated && view === "login") {
+      navigate("/");
     }
   }, [isAuthenticated, navigate, view]);
 
@@ -43,28 +45,30 @@ const Login = () => {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const result = await dispatch(login({
-      email: formData.email,
-      password: formData.password,
-      remember_me: rememberMe,
-      captcha_response: ''
-    }));
+    const result = await dispatch(
+      login({
+        email: formData.email,
+        password: formData.password,
+        remember_me: rememberMe,
+        captcha_response: formData.captcha_response,
+      })
+    );
 
     if (login.fulfilled.match(result)) {
-      navigate('/');
+      navigate("/");
     }
   };
 
   const handleGoogleLogin = async () => {
     // Implement Google OAuth flow here
     // You'll need to get the idToken from Google Sign-In
-    console.log('Google login clicked');
+    console.log("Google login clicked");
     // Example:
     // const idToken = await getGoogleIdToken();
     // dispatch(loginWithGoogle({ idToken }));
@@ -73,48 +77,52 @@ const Login = () => {
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     const result = await dispatch(forgotPassword({ email: formData.email }));
-    
+
     if (forgotPassword.fulfilled.match(result)) {
-      setView('otp');
+      setView("otp");
     }
   };
 
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
-    const result = await dispatch(verifyOTP({
-      email: formData.email,
-      otp: formData.otp
-    }));
-    
+    const result = await dispatch(
+      verifyOTP({
+        email: formData.email,
+        otp: formData.otp,
+      })
+    );
+
     if (verifyOTP.fulfilled.match(result)) {
-      setView('reset');
+      setView("reset");
     }
   };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    
+
     if (formData.newPassword !== formData.confirmPassword) {
-      alert('Mật khẩu xác nhận không khớp');
+      alert("Mật khẩu xác nhận không khớp");
       return;
     }
 
-    const result = await dispatch(resetPassword({
-      email: formData.email,
-      resetToken: resetToken,
-      newPassword: formData.newPassword,
-      confirmPassword: formData.confirmPassword
-    }));
-    
+    const result = await dispatch(
+      resetPassword({
+        email: formData.email,
+        resetToken: resetToken,
+        newPassword: formData.newPassword,
+        confirmPassword: formData.confirmPassword,
+      })
+    );
+
     if (resetPassword.fulfilled.match(result)) {
       setTimeout(() => {
-        setView('login');
+        setView("login");
         setFormData({
-          email: '',
-          password: '',
-          otp: '',
-          newPassword: '',
-          confirmPassword: ''
+          email: "",
+          password: "",
+          otp: "",
+          newPassword: "",
+          confirmPassword: "",
         });
       }, 2000);
     }
@@ -128,15 +136,19 @@ const Login = () => {
           <Link to="/" className="inline-block mb-4">
             <img src={logo} alt="EGA Sportswear" className="h-12 mx-auto" />
           </Link>
-          <p className="text-gray-600 text-sm">Chất lượng tạo nên sự chuyên nghiệp</p>
+          <p className="text-gray-600 text-sm">
+            Chất lượng tạo nên sự chuyên nghiệp
+          </p>
         </div>
 
         {/* Main Card */}
         <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
           {/* Login View */}
-          {view === 'login' && (
+          {view === "login" && (
             <>
-              <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Đăng nhập</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+                Đăng nhập
+              </h2>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -170,7 +182,7 @@ const Login = () => {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
-                      type={showPassword ? 'text' : 'password'}
+                      type={showPassword ? "text" : "password"}
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
@@ -183,7 +195,11 @@ const Login = () => {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -196,17 +212,27 @@ const Login = () => {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="w-4 h-4 text-sky-600 border-gray-300 rounded focus:ring-sky-500"
                     />
-                    <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
+                    <span className="text-sm text-gray-600">
+                      Ghi nhớ đăng nhập
+                    </span>
                   </label>
                   <button
                     type="button"
-                    onClick={() => setView('forgot')}
+                    onClick={() => setView("forgot")}
                     className="text-sm text-sky-600 hover:text-sky-700 font-medium"
                   >
                     Quên mật khẩu?
                   </button>
+                  
                 </div>
-
+<div className="mt-4 flex justify-center">
+                    <ReCAPTCHA
+                      sitekey="6Lc1lwAsAAAAAKLMPjj46NxekGoIwzEvePUjVKRO" // 👈 thay bằng site key thật của bạn
+                      onChange={(value) =>
+                        setFormData({ ...formData, captcha_response: value })
+                      }
+                    />
+                  </div>
                 <button
                   type="submit"
                   disabled={isLoading}
@@ -218,7 +244,7 @@ const Login = () => {
                       Đang xử lý...
                     </>
                   ) : (
-                    'Đăng nhập'
+                    "Đăng nhập"
                   )}
                 </button>
               </form>
@@ -228,7 +254,9 @@ const Login = () => {
                   <div className="w-full border-t border-gray-300"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">Hoặc đăng nhập với</span>
+                  <span className="px-4 bg-white text-gray-500">
+                    Hoặc đăng nhập với
+                  </span>
                 </div>
               </div>
 
@@ -258,8 +286,11 @@ const Login = () => {
               </button>
 
               <p className="text-center text-sm text-gray-600 mt-6">
-                Chưa có tài khoản?{' '}
-                <Link to="/register" className="text-sky-600 hover:text-sky-700 font-medium">
+                Chưa có tài khoản?{" "}
+                <Link
+                  to="/register"
+                  className="text-sky-600 hover:text-sky-700 font-medium"
+                >
                   Đăng ký ngay
                 </Link>
               </p>
@@ -267,18 +298,22 @@ const Login = () => {
           )}
 
           {/* Forgot Password View */}
-          {view === 'forgot' && (
+          {view === "forgot" && (
             <>
               <button
-                onClick={() => setView('login')}
+                onClick={() => setView("login")}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 mb-6 transition"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span>Quay lại</span>
               </button>
 
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Quên mật khẩu</h2>
-              <p className="text-gray-600 mb-6 text-sm">Nhập email để nhận mã OTP xác thực</p>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                Quên mật khẩu
+              </h2>
+              <p className="text-gray-600 mb-6 text-sm">
+                Nhập email để nhận mã OTP xác thực
+              </p>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -322,7 +357,7 @@ const Login = () => {
                       Đang gửi...
                     </>
                   ) : (
-                    'Gửi mã OTP'
+                    "Gửi mã OTP"
                   )}
                 </button>
               </form>
@@ -330,19 +365,22 @@ const Login = () => {
           )}
 
           {/* OTP Verification View */}
-          {view === 'otp' && (
+          {view === "otp" && (
             <>
               <button
-                onClick={() => setView('forgot')}
+                onClick={() => setView("forgot")}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 mb-6 transition"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span>Quay lại</span>
               </button>
 
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Xác thực OTP</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                Xác thực OTP
+              </h2>
               <p className="text-gray-600 mb-6 text-sm">
-                Mã OTP đã được gửi đến <span className="font-medium">{formData.email}</span>
+                Mã OTP đã được gửi đến{" "}
+                <span className="font-medium">{formData.email}</span>
               </p>
 
               {error && (
@@ -372,7 +410,9 @@ const Login = () => {
                     maxLength="6"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-2 text-center">Mã OTP có hiệu lực trong 5 phút</p>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Mã OTP có hiệu lực trong 5 phút
+                  </p>
                 </div>
 
                 <button
@@ -386,7 +426,7 @@ const Login = () => {
                       Đang xác thực...
                     </>
                   ) : (
-                    'Xác thực'
+                    "Xác thực"
                   )}
                 </button>
 
@@ -403,10 +443,14 @@ const Login = () => {
           )}
 
           {/* Reset Password View */}
-          {view === 'reset' && (
+          {view === "reset" && (
             <>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Đặt lại mật khẩu</h2>
-              <p className="text-gray-600 mb-6 text-sm">Nhập mật khẩu mới của bạn</p>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                Đặt lại mật khẩu
+              </h2>
+              <p className="text-gray-600 mb-6 text-sm">
+                Nhập mật khẩu mới của bạn
+              </p>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -428,7 +472,7 @@ const Login = () => {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
-                      type={showPassword ? 'text' : 'password'}
+                      type={showPassword ? "text" : "password"}
                       name="newPassword"
                       value={formData.newPassword}
                       onChange={handleChange}
@@ -442,10 +486,16 @@ const Login = () => {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Mật khẩu phải có ít nhất 8 ký tự</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Mật khẩu phải có ít nhất 8 ký tự
+                  </p>
                 </div>
 
                 <div>
@@ -455,7 +505,7 @@ const Login = () => {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
-                      type={showPassword ? 'text' : 'password'}
+                      type={showPassword ? "text" : "password"}
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleChange}
@@ -477,7 +527,7 @@ const Login = () => {
                       Đang xử lý...
                     </>
                   ) : (
-                    'Đặt lại mật khẩu'
+                    "Đặt lại mật khẩu"
                   )}
                 </button>
               </form>
