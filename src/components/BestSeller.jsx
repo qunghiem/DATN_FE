@@ -221,14 +221,14 @@ const BestSeller = () => {
       </div>
 
       {/* View All Button (Mobile & Tablet) */}
-      <div className="mt-6 text-center lg:hidden">
+      {/* <div className="mt-6 text-center lg:hidden">
         <Link
           to="/collection"
           className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-[#3A6FB5] text-white rounded-full hover:bg-[#2E5C99] transition shadow-sm"
         >
           Xem tất cả <ChevronRight className="w-4 h-4" />
         </Link>
-      </div>
+      </div> */}
     </div>
   );
 };

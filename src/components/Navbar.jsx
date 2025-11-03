@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { FaHeart, FaBars, FaTimes } from "react-icons/fa";
+import { FaHeart, FaBars, FaTimes, FaRegHeart  } from "react-icons/fa";
 import { logout } from "../features/auth/authSlice";
 import logo from "../assets/logo.png";
 import cart from "../assets/cart.png";
@@ -11,10 +11,16 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { items } = useSelector((state) => state.cart || { items: [] });
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [savedCount, setSavedCount] = useState(0); // số lượt Saved
+
   const avatarRef = useRef();
+  const savedRef = useRef(); // ref cho icon Heart
+
+  const cartCount = items ? items.reduce((total, item) => total + item.quantity, 0) : 0;
 
   const handleLogout = () => {
     dispatch(logout());
@@ -22,25 +28,10 @@ const Navbar = () => {
     navigate("/");
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (avatarRef.current && !avatarRef.current.contains(event.target)) {
-        setAvatarMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Lấy chữ cái viết tắt từ tên
   const getInitials = (fullName) => {
     if (!fullName) return "";
     const parts = fullName.trim().split(" ");
-    const initials = parts
-      .map((p) => p.charAt(0).toUpperCase())
-      .slice(0, 2)
-      .join("");
-    return initials;
+    return parts.map((p) => p.charAt(0).toUpperCase()).slice(0, 2).join("");
   };
 
   const initials = getInitials(user?.fullName);
@@ -114,6 +105,7 @@ const Navbar = () => {
 
           {/* Icons */}
           <div className="flex items-center space-x-4 h-10 relative">
+            {/* Search */}
             <img
               src={search}
               className="w-5 h-5 cursor-pointer hover:opacity-70 transition"
@@ -129,7 +121,6 @@ const Navbar = () => {
                 {initials || "?"}
               </div>
 
-              {/* Menu con */}
               {avatarMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
                   {!isAuthenticated ? (
@@ -185,7 +176,16 @@ const Navbar = () => {
               )}
             </div>
 
-            <FaHeart className="text-gray-700 hover:text-sky-600 cursor-pointer transition" />
+            {/* Saved / Heart */}
+            <div className="relative">
+              <FaRegHeart 
+                ref={savedRef}
+                className="text-gray-700 hover:text-sky-600 cursor-pointer transition w-5 h-5"
+              />
+              <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] bg-black text-white rounded-full flex items-center justify-center">
+                {savedCount}
+              </span>
+            </div>
 
             {/* Cart icon */}
             <NavLink to="/cart" className="relative">
@@ -194,8 +194,8 @@ const Navbar = () => {
                 alt="Cart"
                 className="w-5 h-5 cursor-pointer hover:opacity-70 transition"
               />
-              <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] bg-sky-500 text-white rounded-full flex items-center justify-center">
-                0
+              <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] bg-black text-white rounded-full flex items-center justify-center">
+                {cartCount}
               </span>
             </NavLink>
 

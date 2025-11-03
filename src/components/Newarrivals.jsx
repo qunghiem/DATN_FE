@@ -2,14 +2,48 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, ChevronRight } from "lucide-react";
 
-const NewArrivals = () => {
+const NewArrivals = ({ savedRef, setSavedCount }) => {
   const [favorites, setFavorites] = useState([]);
   const [selectedColors, setSelectedColors] = useState({});
 
-  const toggleFavorite = (id) =>
+  const toggleFavorite = (id, e) => {
+    e.preventDefault();
+
+    // Toggle favorites
     setFavorites((prev) =>
       prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
     );
+
+    // Fly +1 animation
+    if (savedRef?.current) {
+      const tymRect = e.target.getBoundingClientRect();
+      const savedRect = savedRef.current.getBoundingClientRect();
+
+      const flyEl = document.createElement("div");
+      flyEl.innerText = "+1";
+      flyEl.style.position = "fixed";
+      flyEl.style.left = `${tymRect.left + tymRect.width / 2}px`;
+      flyEl.style.top = `${tymRect.top}px`;
+      flyEl.style.fontWeight = "bold";
+      flyEl.style.color = "red";
+      flyEl.style.transition = "all 0.7s ease-in-out";
+      flyEl.style.zIndex = 1000;
+
+      document.body.appendChild(flyEl);
+
+      requestAnimationFrame(() => {
+        flyEl.style.left = `${savedRect.left + savedRect.width / 2}px`;
+        flyEl.style.top = `${savedRect.top}px`;
+        flyEl.style.transform = "scale(0.5)";
+        flyEl.style.opacity = 0;
+      });
+
+      flyEl.addEventListener("transitionend", () => {
+        document.body.removeChild(flyEl);
+        setSavedCount((prev) => prev + 1);
+      });
+    }
+  };
 
   const handleColorChange = (id, img) =>
     setSelectedColors((prev) => ({ ...prev, [id]: img }));
@@ -135,7 +169,6 @@ const NewArrivals = () => {
 
       {/* Product List */}
       <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 hide-scrollbar">
-        {/* Mobile: 1.5 products | Tablet (768-1200): 3.5 products | Desktop (>1200): Grid 4 columns */}
         <div className="flex gap-3 md:gap-4 lg:grid lg:grid-cols-4 lg:gap-4">
           {products.map((p) => (
             <div
@@ -148,12 +181,9 @@ const NewArrivals = () => {
                   alt={p.name}
                   className="w-full h-full object-cover rounded-t-xl"
                 />
-                {/* Favorite */}
+                {/* Favorite button */}
                 <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    toggleFavorite(p.id);
-                  }}
+                  onClick={(e) => toggleFavorite(p.id, e)}
                   className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition ${
                     favorites.includes(p.id)
                       ? "text-red-500"
@@ -199,17 +229,16 @@ const NewArrivals = () => {
                     <button
                       key={i}
                       onClick={() => handleColorChange(p.id, c.image)}
-                      className={`w-5 h-5 rounded-full border-2 transition ${
-                        (selectedColors[p.id] || p.image) === c.image
-                          ? "border-[#3A6FB5] scale-110"
-                          : "border-gray-300 hover:border-[#3A6FB5]"
+                      className={`w-5 h-5 rounded-full border ${
+                        selectedColors[p.id] === c.image
+                          ? "border-gray-800"
+                          : "border-gray-300"
                       }`}
                       style={{ backgroundColor: c.code }}
-                      title={c.name}
                     ></button>
                   ))}
                   {p.moreColors > 0 && (
-                    <span className="text-gray-500 text-xs">
+                    <span className="text-gray-400 text-xs">
                       +{p.moreColors}
                     </span>
                   )}
@@ -218,16 +247,6 @@ const NewArrivals = () => {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* View All Button (Mobile & Tablet) */}
-      <div className="mt-6 text-center lg:hidden">
-        <Link
-          to="/collection"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-[#3A6FB5] text-white rounded-full hover:bg-[#2E5C99] transition shadow-sm"
-        >
-          Xem tất cả <ChevronRight className="w-4 h-4" />
-        </Link>
       </div>
     </div>
   );

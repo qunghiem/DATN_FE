@@ -8,15 +8,15 @@ const Features = () => {
       description: "Nhận hàng trong vòng 3 ngày",
       icon: (
         <svg
-          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
+          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-[#335E99]"
           viewBox="0 0 64 64"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <circle cx="32" cy="32" r="30" stroke="#6B7280" strokeWidth="2" />
+          <circle cx="32" cy="32" r="30" stroke="currentColor" strokeWidth="2" />
           <path
             d="M20 28h16v8H20v-8z M36 28h8l4 4v4h-12v-8z M24 40a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M44 40a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
-            stroke="#6B7280"
+            stroke="currentColor"
             strokeWidth="1.5"
             fill="none"
             strokeLinecap="round"
@@ -31,15 +31,15 @@ const Features = () => {
       description: "Nhiều ưu đãi khuyến mãi hot",
       icon: (
         <svg
-          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
+          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-[#335E99]"
           viewBox="0 0 64 64"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <circle cx="32" cy="32" r="30" stroke="#6B7280" strokeWidth="2" />
+          <circle cx="32" cy="32" r="30" stroke="currentColor" strokeWidth="2" />
           <path
             d="M18 26h28v4H18v-4z M20 30v14h24V30 M32 26v18 M28 22a4 4 0 0 1 4 4 M36 22a4 4 0 0 0-4 4"
-            stroke="#6B7280"
+            stroke="currentColor"
             strokeWidth="1.5"
             fill="none"
             strokeLinecap="round"
@@ -54,15 +54,15 @@ const Features = () => {
       description: "Sản phẩm đã được kiểm định",
       icon: (
         <svg
-          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
+          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-[#335E99]"
           viewBox="0 0 64 64"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <circle cx="32" cy="32" r="30" stroke="#6B7280" strokeWidth="2" />
+          <circle cx="32" cy="32" r="30" stroke="currentColor" strokeWidth="2" />
           <path
             d="M32 18s-10 4-10 10v10c0 8 10 12 10 12s10-4 10-12V28c0-6-10-10-10-10z M26 32l4 4 8-8"
-            stroke="#6B7280"
+            stroke="currentColor"
             strokeWidth="1.5"
             fill="none"
             strokeLinecap="round"
@@ -77,15 +77,15 @@ const Features = () => {
       description: "Dịch vụ hỗ trợ bạn 24/7",
       icon: (
         <svg
-          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
+          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-[#335E99]"
           viewBox="0 0 64 64"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <circle cx="32" cy="32" r="30" stroke="#6B7280" strokeWidth="2" />
+          <circle cx="32" cy="32" r="30" stroke="currentColor" strokeWidth="2" />
           <path
             d="M24 22h4l2 6-2 2a16 16 0 0 0 8 8l2-2 6 2v4a2 2 0 0 1-2 2c-10 0-18-8-18-18a2 2 0 0 1 2-2z"
-            stroke="#6B7280"
+            stroke="currentColor"
             strokeWidth="1.5"
             fill="none"
             strokeLinecap="round"
@@ -104,8 +104,8 @@ const Features = () => {
             key={feature.id}
             className="flex flex-col items-center justify-center text-center
                        p-3 sm:p-4 md:p-5
-                       border border-gray-200 rounded-lg
-                       hover:border-gray-300 hover:shadow-md
+                       border border-[#335E99] rounded-lg
+                       hover:border-[#335E99] hover:shadow-md
                        transition-all duration-300
                        bg-white group"
           >
