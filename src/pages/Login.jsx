@@ -1,213 +1,142 @@
-import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, Loader2 } from 'lucide-react';
+import { 
+  login, 
+  loginWithGoogle, 
+  forgotPassword, 
+  verifyOTP, 
+  resetPassword, 
+  clearMessages 
+} from '../features/auth/authSlice';
+import logo from '../assets/logo.png';
 
 const Login = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { isLoading, error, success, isAuthenticated, resetToken } = useSelector((state) => state.auth);
+
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState('login'); // 'login', 'forgot', 'otp', 'reset'
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     otp: '',
-    resetToken: '',
     newPassword: '',
     confirmPassword: ''
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && view === 'login') {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate, view]);
+
+  // Clear messages when view changes
+  useEffect(() => {
+    dispatch(clearMessages());
+  }, [view, dispatch]);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
-    setError('');
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
+    const result = await dispatch(login({
+      email: formData.email,
+      password: formData.password,
+      remember_me: rememberMe,
+      captcha_response: ''
+    }));
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          remember_me: rememberMe,
-          captcha_response: ''
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.code === 1000) {
-        // Store tokens
-        localStorage.setItem('access_token', data.result.tokens.access_token);
-        localStorage.setItem('refresh_token', data.result.tokens.refresh_token);
-        localStorage.setItem('user', JSON.stringify(data.result.user));
-        
-        // Redirect to dashboard or home
-        window.location.href = '/';
-      } else {
-        setError(data.message);
-      }
-    } catch (err) {
-      setError('Có lỗi xảy ra. Vui lòng thử lại sau.');
-    } finally {
-      setIsLoading(false);
+    if (login.fulfilled.match(result)) {
+      navigate('/');
     }
   };
 
   const handleGoogleLogin = async () => {
-    // Implement Google OAuth flow
-    // You'll need to integrate with Google Identity Services
+    // Implement Google OAuth flow here
+    // You'll need to get the idToken from Google Sign-In
     console.log('Google login clicked');
+    // Example:
+    // const idToken = await getGoogleIdToken();
+    // dispatch(loginWithGoogle({ idToken }));
   };
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.code === 1000) {
-        setSuccess(data.result.message);
-        setView('otp');
-      } else {
-        setError(data.message);
-      }
-    } catch (err) {
-      setError('Có lỗi xảy ra. Vui lòng thử lại sau.');
-    } finally {
-      setIsLoading(false);
+    const result = await dispatch(forgotPassword({ email: formData.email }));
+    
+    if (forgotPassword.fulfilled.match(result)) {
+      setView('otp');
     }
   };
 
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          otp: formData.otp
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.code === 1000) {
-        setSuccess(data.result.message);
-        setFormData({
-          ...formData,
-          resetToken: data.result.resetToken
-        });
-        setView('reset');
-      } else {
-        setError(data.message);
-      }
-    } catch (err) {
-      setError('Có lỗi xảy ra. Vui lòng thử lại sau.');
-    } finally {
-      setIsLoading(false);
+    const result = await dispatch(verifyOTP({
+      email: formData.email,
+      otp: formData.otp
+    }));
+    
+    if (verifyOTP.fulfilled.match(result)) {
+      setView('reset');
     }
   };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
+    
     if (formData.newPassword !== formData.confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
-      setIsLoading(false);
+      alert('Mật khẩu xác nhận không khớp');
       return;
     }
 
-    try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          resetToken: formData.resetToken,
-          newPassword: formData.newPassword,
-          confirmPassword: formData.confirmPassword
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.code === 1000) {
-        setSuccess(data.result.message);
-        setTimeout(() => {
-          setView('login');
-          setFormData({
-            email: '',
-            password: '',
-            otp: '',
-            resetToken: '',
-            newPassword: '',
-            confirmPassword: ''
-          });
-          setSuccess('');
-        }, 2000);
-      } else {
-        setError(data.message);
-      }
-    } catch (err) {
-      setError('Có lỗi xảy ra. Vui lòng thử lại sau.');
-    } finally {
-      setIsLoading(false);
+    const result = await dispatch(resetPassword({
+      email: formData.email,
+      resetToken: resetToken,
+      newPassword: formData.newPassword,
+      confirmPassword: formData.confirmPassword
+    }));
+    
+    if (resetPassword.fulfilled.match(result)) {
+      setTimeout(() => {
+        setView('login');
+        setFormData({
+          email: '',
+          password: '',
+          otp: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      }, 2000);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 flex items-center justify-center p-4 pt-20">
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">E</span>
-            </div>
-            <span className="text-2xl font-bold text-gray-800">EGA SPORTSWEAR</span>
-          </div>
-          <p className="text-gray-600">Chất lượng tạo nên sự chuyên nghiệp</p>
+          <Link to="/" className="inline-block mb-4">
+            <img src={logo} alt="EGA Sportswear" className="h-12 mx-auto" />
+          </Link>
+          <p className="text-gray-600 text-sm">Chất lượng tạo nên sự chuyên nghiệp</p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
           {/* Login View */}
           {view === 'login' && (
             <>
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Đăng nhập</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Đăng nhập</h2>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -227,7 +156,7 @@ const Login = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition outline-none"
                       placeholder="example@email.com"
                       required
                     />
@@ -245,7 +174,7 @@ const Login = () => {
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition outline-none"
                       placeholder="••••••••"
                       required
                     />
@@ -265,14 +194,14 @@ const Login = () => {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-sky-600 border-gray-300 rounded focus:ring-sky-500"
                     />
                     <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => setView('forgot')}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    className="text-sm text-sky-600 hover:text-sky-700 font-medium"
                   >
                     Quên mật khẩu?
                   </button>
@@ -281,9 +210,16 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-sky-500 hover:bg-sky-600 text-white py-3 rounded-lg font-medium transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  {isLoading ? 'Đang xử lý...' : 'Đăng nhập'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Đăng nhập'
+                  )}
                 </button>
               </form>
 
@@ -323,9 +259,9 @@ const Login = () => {
 
               <p className="text-center text-sm text-gray-600 mt-6">
                 Chưa có tài khoản?{' '}
-                <a href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
+                <Link to="/register" className="text-sky-600 hover:text-sky-700 font-medium">
                   Đăng ký ngay
-                </a>
+                </Link>
               </p>
             </>
           )}
@@ -335,14 +271,14 @@ const Login = () => {
             <>
               <button
                 onClick={() => setView('login')}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 mb-6"
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 mb-6 transition"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span>Quay lại</span>
               </button>
 
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Quên mật khẩu</h2>
-              <p className="text-gray-600 mb-6">Nhập email để nhận mã OTP xác thực</p>
+              <p className="text-gray-600 mb-6 text-sm">Nhập email để nhận mã OTP xác thực</p>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -368,7 +304,7 @@ const Login = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition outline-none"
                       placeholder="example@email.com"
                       required
                     />
@@ -378,9 +314,16 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-sky-500 hover:bg-sky-600 text-white py-3 rounded-lg font-medium transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  {isLoading ? 'Đang gửi...' : 'Gửi mã OTP'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Đang gửi...
+                    </>
+                  ) : (
+                    'Gửi mã OTP'
+                  )}
                 </button>
               </form>
             </>
@@ -391,14 +334,16 @@ const Login = () => {
             <>
               <button
                 onClick={() => setView('forgot')}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 mb-6"
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 mb-6 transition"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span>Quay lại</span>
               </button>
 
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Xác thực OTP</h2>
-              <p className="text-gray-600 mb-6">Mã OTP đã được gửi đến {formData.email}</p>
+              <p className="text-gray-600 mb-6 text-sm">
+                Mã OTP đã được gửi đến <span className="font-medium">{formData.email}</span>
+              </p>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -422,26 +367,34 @@ const Login = () => {
                     name="otp"
                     value={formData.otp}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-center text-2xl tracking-widest"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition text-center text-2xl tracking-widest outline-none"
                     placeholder="000000"
                     maxLength="6"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-2">Mã OTP có hiệu lực trong 5 phút</p>
+                  <p className="text-xs text-gray-500 mt-2 text-center">Mã OTP có hiệu lực trong 5 phút</p>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-sky-500 hover:bg-sky-600 text-white py-3 rounded-lg font-medium transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  {isLoading ? 'Đang xác thực...' : 'Xác thực'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Đang xác thực...
+                    </>
+                  ) : (
+                    'Xác thực'
+                  )}
                 </button>
 
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="w-full text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  disabled={isLoading}
+                  className="w-full text-sky-600 hover:text-sky-700 text-sm font-medium"
                 >
                   Gửi lại mã OTP
                 </button>
@@ -453,7 +406,7 @@ const Login = () => {
           {view === 'reset' && (
             <>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Đặt lại mật khẩu</h2>
-              <p className="text-gray-600 mb-6">Nhập mật khẩu mới của bạn</p>
+              <p className="text-gray-600 mb-6 text-sm">Nhập mật khẩu mới của bạn</p>
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -479,9 +432,10 @@ const Login = () => {
                       name="newPassword"
                       value={formData.newPassword}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition outline-none"
                       placeholder="••••••••"
                       required
+                      minLength="8"
                     />
                     <button
                       type="button"
@@ -491,6 +445,7 @@ const Login = () => {
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">Mật khẩu phải có ít nhất 8 ký tự</p>
                 </div>
 
                 <div>
@@ -504,7 +459,7 @@ const Login = () => {
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleChange}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent transition outline-none"
                       placeholder="••••••••"
                       required
                     />
@@ -514,9 +469,16 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-sky-500 hover:bg-sky-600 text-white py-3 rounded-lg font-medium transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  {isLoading ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Đặt lại mật khẩu'
+                  )}
                 </button>
               </form>
             </>
