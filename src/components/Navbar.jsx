@@ -122,18 +122,12 @@ const Navbar = () => {
 
             {/* Avatar */}
             <div className="relative" ref={avatarRef}>
-              <img
-  src={user?.avatar || "/src/assets/avt.png"}
-  alt="Avatar"
-  onClick={() => setAvatarMenuOpen(!avatarMenuOpen)}
-  className="w-8 h-8 cursor-pointer rounded-full object-cover transition hover:opacity-80"
-  style={{
-    border: "none",
-    outline: "none",
-    boxShadow: "none",
-  }}
-/>
-
+              <div
+                onClick={() => setAvatarMenuOpen(!avatarMenuOpen)}
+                className="w-8 h-8 cursor-pointer rounded-full bg-black text-white flex items-center justify-center font-semibold text-sm transition hover:opacity-80"
+              >
+                {initials || "?"}
+              </div>
 
               {/* Menu con */}
               {avatarMenuOpen && (

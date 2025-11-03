@@ -41,18 +41,18 @@ const Banner = () => {
   return (
     <div className="relative w-full overflow-hidden cursor-pointer">
       {/* Slides */}
-      <div className="relative w-full h-[250px] sm:h-[350px] md:h-[450px] lg:h-[500px] xl:h-[550px] 2xl:h-[600px] max-h-[600px]">
+      <div className="relative w-full flex justify-center">
         {slides.map((slide, index) => (
           <div
             key={slide.id}
-            className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-              index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0"
+            className={`transition-opacity duration-700 ease-in-out w-full ${
+              index === currentSlide ? "opacity-100" : "opacity-0 absolute inset-0"
             }`}
           >
             <img
               src={slide.image}
               alt={slide.alt}
-              className="w-full h-full object-cover object-center"
+              className="w-full h-auto mx-auto"
             />
           </div>
         ))}
@@ -93,8 +93,8 @@ const Banner = () => {
             onClick={() => goToSlide(index)}
             className={`transition-all duration-300 ${
               index === currentSlide
-                ? "w-8 md:w-10 h-2 bg-black rounded-full"
-                : "w-2 h-2 bg-black bg-opacity-40 hover:bg-opacity-60 rounded-full"
+                ? "w-8 md:w-10 h-2 bg-white rounded-full"
+                : "w-2 h-2 bg-white bg-opacity-40 hover:bg-opacity-60 rounded-full"
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />
