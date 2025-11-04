@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Heart, ChevronRight } from "lucide-react";
 import axios from "axios";
 
 const NewArrivals = ({ savedRef, setSavedCount }) => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [selectedColors, setSelectedColors] = useState({});
@@ -15,8 +16,6 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
         const data = Array.isArray(res.data?.data) ? res.data.data : [];
 
         const mappedProducts = data.map((p) => {
-          const thumbnail =
-            Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : null;
           const variants = Array.isArray(p.variants) ? p.variants : [];
 
           const colors = variants.map((v) => ({
@@ -26,16 +25,17 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
           }));
 
           return {
-            id: p.id || Math.random().toString(36).substr(2, 9),
+            id: p.id,
             name: p.name || "No name",
             brand: p.brand || "Unknown",
             price: p.price?.current || 0,
             originalPrice: p.price?.original || 0,
             discount: p.price?.discount_percent || 0,
-            image: thumbnail,
+            image: p.images?.[0] || "",
             colors,
             moreColors: colors.length > 1 ? colors.length - 1 : 0,
-            link: p.url || `/product/${p.slug || ""}`,
+            // Use product ID for navigation
+            link: `/product/${p.id}`,
             labels: Array.isArray(p.labels) ? p.labels : [],
           };
         });
@@ -52,6 +52,8 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
 
   const toggleFavorite = (id, e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     setFavorites((prev) =>
       prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
     );
@@ -81,13 +83,20 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
 
       flyEl.addEventListener("transitionend", () => {
         document.body.removeChild(flyEl);
-        setSavedCount((prev) => prev + 1);
+        if (setSavedCount) {
+          setSavedCount((prev) => prev + 1);
+        }
       });
     }
   };
 
-  const handleColorChange = (id, img) =>
+  const handleColorChange = (id, img) => {
     setSelectedColors((prev) => ({ ...prev, [id]: img }));
+  };
+
+  const handleProductClick = (productId) => {
+    navigate(`/product/${productId}`);
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 bg-white">
@@ -113,9 +122,10 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
           {products.map((p) => (
             <div
               key={p.id}
-              className="flex-none w-[65%] md:w-[27.5%] lg:flex-auto lg:w-auto bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1 relative overflow-hidden"
+              onClick={() => handleProductClick(p.id)}
+              className="flex-none w-[65%] md:w-[27.5%] lg:flex-auto lg:w-auto bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1 relative overflow-hidden cursor-pointer"
             >
-              <Link to={p.link} className="block relative aspect-[3/4]">
+              <div className="block relative aspect-[3/4]">
                 {/* Ảnh sản phẩm */}
                 {p.image ? (
                   <img
@@ -129,7 +139,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                   </div>
                 )}
 
-                {/* Nhãn “Bán chạy” */}
+                {/* Nhãn "Bán chạy" */}
                 {p.labels.includes("Bán chạy") && (
                   <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
                     Bán chạy
@@ -139,7 +149,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                 {/* Nút yêu thích */}
                 <button
                   onClick={(e) => toggleFavorite(p.id, e)}
-                  className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition ${
+                  className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition z-10 ${
                     favorites.includes(p.id)
                       ? "text-red-500"
                       : "text-gray-400 hover:text-[#3A6FB5]"
@@ -163,7 +173,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                     </span>
                   </div>
                 </div>
-              </Link>
+              </div>
 
               {/* Thông tin sản phẩm */}
               <div className="p-3">
@@ -171,12 +181,9 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                   {p.brand || "YINLI"}
                 </p>
 
-                <Link
-                  to={p.link}
-                  className="block font-medium text-gray-800 text-[15px] leading-snug hover:text-[#3A6FB5] transition line-clamp-2"
-                >
+                <div className="block font-medium text-gray-800 text-[15px] leading-snug hover:text-[#3A6FB5] transition line-clamp-2">
                   {p.name || "Áo croptop tập gym yoga"}
-                </Link>
+                </div>
 
                 {/* Giá và giảm giá */}
                 <div className="flex items-center gap-1 mt-1">
@@ -200,7 +207,11 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                   {p.colors.map((c, i) => (
                     <button
                       key={i}
-                      onMouseEnter={() => handleColorChange(p.id, c.image)}
+                      onMouseEnter={(e) => {
+                        e.stopPropagation();
+                        handleColorChange(p.id, c.image);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
                       className={`w-5 h-5 rounded-full border ${
                         selectedColors[p.id] === c.image
                           ? "border-gray-800"

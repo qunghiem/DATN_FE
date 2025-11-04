@@ -27,6 +27,7 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/place-order" element={<PlaceOrder />} />
+        {/* Product detail route - support both formats */}
         <Route path="/product/:productId" element={<Product />} />
       </Routes>
       <Footer />
