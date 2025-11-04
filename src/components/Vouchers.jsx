@@ -7,10 +7,10 @@ export default function Vouchers() {
   const [saved, setSaved] = useState([]);
 
   const vouchers = [
-    { id: 1, icon: <FaTruck />, title: "MIỄN PHÍ VẬN CHUYỂN", desc: "Freeship cho đơn từ 500k", code: "EGA-FREESHIP", expiry: "30/12/2025" },
-    { id: 2, icon: <FaTicketAlt />, title: "GIẢM 50K", desc: "Áp dụng đơn từ 600k", code: "GIAM50K", expiry: "06/07/2025" },
-    { id: 3, icon: <FaPercent />, title: "GIẢM 30%", desc: "Cho sản phẩm trong Set đồ tập", code: "GIAM30", expiry: "09/06/2025" },
-    { id: 4, icon: <FaPercent />, title: "GIẢM 40%", desc: "Cho sản phẩm thứ 4 trong đơn", code: "GIAM40", expiry: "20/05/2025" },
+    { id: 1, icon: <FaTruck />, title: "MIỄN PHÍ VẬN CHUYỂN", desc: "Freeship cho đơn từ 500k", code: "FREESHIP", expiry: "30/12/2025" },
+    { id: 2, icon: <FaTicketAlt />, title: "GIẢM 50K", desc: "Áp dụng đơn từ 600k", code: "GIAM50K", expiry: "06/12/2025" },
+    { id: 3, icon: <FaPercent />, title: "GIẢM 10%", desc: "Áp dụng đơn từ 1000k", code: "GIAM10", expiry: "09/12/2025" },
+    { id: 4, icon: <FaPercent />, title: "GIẢM 15%", desc: "Áp dụng đơn từ 2000k", code: "GIAM15", expiry: "20/12/2025" },
   ];
 
   const handleCopy = (code) => {

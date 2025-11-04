@@ -11,16 +11,22 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const { items } = useSelector((state) => state.cart || { items: [] });
+  
+  // Fix: Safely get cart items with fallback
+  const cartState = useSelector((state) => state.cart);
+  const items = cartState?.items || [];
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
-  const [savedCount, setSavedCount] = useState(0); // số lượt Saved
+  const [savedCount, setSavedCount] = useState(0);
 
   const avatarRef = useRef();
-  const savedRef = useRef(); // ref cho icon Heart
+  const savedRef = useRef();
 
-  const cartCount = items ? items.reduce((total, item) => total + item.quantity, 0) : 0;
+  // Fix: Safely calculate cart count
+  const cartCount = Array.isArray(items) 
+    ? items.reduce((total, item) => total + (item.quantity || 0), 0)
+    : 0;
 
   const handleLogout = () => {
     dispatch(logout());
@@ -182,9 +188,11 @@ const Navbar = () => {
                 ref={savedRef}
                 className="text-gray-700 hover:text-sky-600 cursor-pointer transition w-5 h-5"
               />
-              <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] bg-black text-white rounded-full flex items-center justify-center">
-                {savedCount}
-              </span>
+              {savedCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] bg-black text-white rounded-full flex items-center justify-center">
+                  {savedCount}
+                </span>
+              )}
             </div>
 
             {/* Cart icon */}
@@ -194,9 +202,11 @@ const Navbar = () => {
                 alt="Cart"
                 className="w-5 h-5 cursor-pointer hover:opacity-70 transition"
               />
-              <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] bg-black text-white rounded-full flex items-center justify-center">
-                {cartCount}
-              </span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] bg-black text-white rounded-full flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
             </NavLink>
 
             {/* Mobile Menu Button */}

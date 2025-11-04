@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { Heart, Minus, Plus, ShoppingCart, Truck, CreditCard, RotateCcw, Loader2 } from "lucide-react";
 import axios from "axios";
+import { addToCart } from "../features/cart/cartSlice";
+import { toast } from "react-toastify";
 
 const Product = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   // State
   const [product, setProduct] = useState(null);
@@ -29,7 +33,6 @@ const Product = () => {
 
         console.log("Fetching product ID:", productId);
         
-        // Fetch product details
         const response = await axios.get(
           `http://localhost:8080/api/products/${productId}`
         );
@@ -42,7 +45,6 @@ const Product = () => {
           throw new Error("Product not found");
         }
 
-        // Transform product data
         const transformedProduct = {
           id: productData.id,
           name: productData.name,
@@ -70,12 +72,10 @@ const Product = () => {
         setProduct(transformedProduct);
         setIsFavorite(transformedProduct.is_wishlisted);
         
-        // Set initial image
         if (transformedProduct.images.length > 0) {
           setSelectedImage(transformedProduct.images[0]);
         }
 
-        // Set initial variant and size
         if (transformedProduct.variants.length > 0) {
           const firstVariant = transformedProduct.variants[0];
           setSelectedVariant(firstVariant);
@@ -87,7 +87,6 @@ const Product = () => {
           });
         }
 
-        // Fetch related products
         try {
           const relatedResponse = await axios.get(
             `http://localhost:8080/api/products`
@@ -97,22 +96,18 @@ const Product = () => {
           const relatedArray = Array.isArray(relatedData) ? relatedData : [];
           
           const filtered = relatedArray
-  .filter(
-    p => p.id !== productData.id && p.brand === productData.brand
-  )
-  .slice(0, 5)
-  .map(p => ({
-    id: p.id,
-    name: p.name,
-    price: p.price,
-    brand: p.brand,
-    image: p.images?.[0],
-    url: p.url
-  }));
-
+            .filter(p => p.id !== productData.id && p.brand === productData.brand)
+            .slice(0, 5)
+            .map(p => ({
+              id: p.id,
+              name: p.name,
+              price: p.price,
+              brand: p.brand,
+              image: p.images?.[0],
+              url: p.url
+            }));
           
           setRelatedProducts(filtered);
-          console.log("Related products:", filtered);
         } catch (err) {
           console.log("Error fetching related products:", err);
           setRelatedProducts([]);
@@ -129,10 +124,9 @@ const Product = () => {
     };
 
     if (productId) {
-  window.scrollTo(0, 0);
-  fetchProduct();
-}
-
+      window.scrollTo(0, 0);
+      fetchProduct();
+    }
   }, [productId]);
 
   // Handlers
@@ -160,7 +154,7 @@ const Product = () => {
   const handleQuantityChange = (type) => {
     if (type === "increase") {
       if (selectedVariant?.stock && quantity >= selectedVariant.stock) {
-        alert(`Chỉ còn ${selectedVariant.stock} sản phẩm trong kho!`);
+        toast.error(`Chỉ còn ${selectedVariant.stock} sản phẩm trong kho!`);
         return;
       }
       setQuantity(quantity + 1);
@@ -170,26 +164,73 @@ const Product = () => {
   };
 
   const handleAddToCart = () => {
-    if (!selectedSize) {
-      alert("Vui lòng chọn kích thước!");
-      return;
-    }
-    console.log("Add to cart:", {
-      product,
-      variant: selectedVariant,
-      quantity,
-    });
-    alert("Đã thêm vào giỏ hàng!");
+  if (!selectedVariant || !selectedSize) {
+    toast.warning("Vui lòng chọn kích thước!");
+    return;
+  }
+
+  if (selectedVariant.stock === 0) {
+    toast.error("Sản phẩm đã hết hàng!");
+    return;
+  }
+
+  // Tạo variantId từ color và size nếu variant không có id
+  const variantId = selectedVariant.id || `${product.id}-${selectedColor.name}-${selectedSize}`;
+
+  const cartItem = {
+    productId: product.id,
+    variantId: variantId,  // ← Sử dụng variantId đã tạo
+    name: product.name,
+    price: product.price.current,
+    image: selectedImage || product.images[0],
+    color: selectedColor.name,
+    size: selectedSize,
+    quantity: quantity,
+    stock: selectedVariant.stock,
   };
 
+  console.log('🛒 Adding to cart:', cartItem);
+
+  dispatch(addToCart(cartItem));
+
+  // Log sau khi dispatch
+  setTimeout(() => {
+    const currentCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    console.log('✅ Cart after adding:', currentCart);
+    console.log('📊 Total items in cart:', currentCart.length);
+  }, 100);
+
+  toast.success("Đã thêm vào giỏ hàng!");
+};
+
   const handleBuyNow = () => {
-    if (!selectedSize) {
-      alert("Vui lòng chọn kích thước!");
-      return;
-    }
-    handleAddToCart();
-    navigate("/place-order");
-  };
+  if (!selectedVariant || !selectedSize) {
+    toast.warning("Vui lòng chọn kích thước!");
+    return;
+  }
+
+  if (selectedVariant.stock === 0) {
+    toast.error("Sản phẩm đã hết hàng!");
+    return;
+  }
+
+  // Tạo variantId từ color và size nếu variant không có id
+  const variantId = selectedVariant.id || `${product.id}-${selectedColor.name}-${selectedSize}`;
+
+  dispatch(addToCart({
+    productId: product.id,
+    variantId: variantId,  // ← Sử dụng variantId đã tạo
+    name: product.name,
+    price: product.price.current,
+    image: selectedImage || product.images[0],
+    color: selectedColor.name,
+    size: selectedSize,
+    quantity: quantity,
+    stock: selectedVariant.stock,
+  }));
+
+  navigate("/place-order");
+};
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
@@ -221,7 +262,6 @@ const Product = () => {
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-[#3A6FB5] mx-auto mb-4 animate-spin" />
           <p className="text-gray-600">Đang tải sản phẩm...</p>
-          <p className="text-xs text-gray-400 mt-2">ID: {productId}</p>
         </div>
       </div>
     );
@@ -509,8 +549,9 @@ const Product = () => {
               <button
                 onClick={handleAddToCart}
                 disabled={!selectedVariant || selectedVariant.stock === 0}
-                className="flex-1 px-6 py-4 bg-white border-2 border-[#3A6FB5] text-[#3A6FB5] rounded-lg font-medium hover:bg-[#3A6FB5] hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-[#3A6FB5] text-[#3A6FB5] rounded-lg font-medium hover:bg-[#3A6FB5] hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
+                <ShoppingCart className="w-5 h-5" />
                 THÊM VÀO GIỎ
               </button>
               <button
@@ -578,10 +619,9 @@ const Product = () => {
                 <div
                   key={item.id}
                   onClick={() => {
-  navigate(`/product/${item.id}`);
-  window.scrollTo(0, 0);
-}}
-
+                    navigate(`/product/${item.id}`);
+                    window.scrollTo(0, 0);
+                  }}
                   className="bg-white border border-gray-200 rounded-lg hover:shadow-md transition cursor-pointer"
                 >
                   <div className="relative aspect-square bg-gray-100 rounded-t-lg overflow-hidden">
