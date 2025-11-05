@@ -13,6 +13,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
     const fetchProducts = async () => {
       try {
         const res = await axios.get("http://localhost:8080/api/products");
+        // const res = await axios.get("https://fnzv9bcp-8080.asse.devtunnels.ms/api/products");
         const data = Array.isArray(res.data?.data) ? res.data.data : [];
 
         const mappedProducts = data.map((p) => {
@@ -130,6 +131,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                 {p.image ? (
                   <img
                     src={selectedColors[p.id] || p.image}
+                    // src={selectedColors[p.id] || `https://fnzv9bcp-8080.asse.devtunnels.ms/${p.image}`}
                     alt={p.name}
                     className="w-full h-full object-cover"
                   />

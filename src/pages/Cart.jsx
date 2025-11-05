@@ -1,15 +1,15 @@
-import { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Trash2, 
-  Plus, 
-  Minus, 
-  ShoppingBag, 
+import { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import {
+  Trash2,
+  Plus,
+  Minus,
+  ShoppingBag,
   ArrowLeft,
   Tag,
-  X 
-} from 'lucide-react';
+  X,
+} from "lucide-react";
 import {
   removeFromCart,
   updateQuantity,
@@ -20,23 +20,26 @@ import {
   applyDiscount,
   removeDiscount,
   clearError,
-} from '../features/cart/cartSlice';
+} from "../features/cart/cartSlice";
+import { toast } from "react-toastify";
 
 const Cart = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
+
   const cartItems = useSelector(selectCartItems);
   const subtotal = useSelector(selectCartSubtotal);
   const total = useSelector(selectCartTotal);
-  const { error, discountCode, discountAmount } = useSelector(state => state.cart);
-  
-  const [voucherCode, setVoucherCode] = useState('');
+  const { error, discountCode, discountAmount } = useSelector(
+    (state) => state.cart
+  );
+
+  const [voucherCode, setVoucherCode] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Format price
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + '₫';
+    return new Intl.NumberFormat("vi-VN").format(price) + "₫";
   };
 
   // Handle quantity change
@@ -45,18 +48,18 @@ const Cart = () => {
       handleRemoveItem(productId, variantId);
       return;
     }
-    
+
     if (newQuantity > stock) {
-      alert(`Chỉ còn ${stock} sản phẩm trong kho!`);
+      toast.warning(`Chỉ còn ${stock} sản phẩm trong kho!`);
       return;
     }
-    
+
     dispatch(updateQuantity({ productId, variantId, quantity: newQuantity }));
   };
 
   // Handle remove item
   const handleRemoveItem = (productId, variantId) => {
-    if (window.confirm('Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?')) {
+    if (window.confirm("Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?")) {
       dispatch(removeFromCart({ productId, variantId }));
     }
   };
@@ -70,32 +73,43 @@ const Cart = () => {
   // Handle apply voucher
   const handleApplyVoucher = () => {
     if (!voucherCode.trim()) {
-      alert('Vui lòng nhập mã giảm giá!');
+      toast.info("Vui lòng nhập mã giảm giá!");
       return;
     }
 
-    // Simulate voucher validation (replace with actual API call)
     const vouchers = {
-      'GIAM50K': { amount: 50000, minOrder: 600000 },
-      'GIAM30': { percent: 30, minOrder: 500000 },
-      'FREESHIP': { amount: 30000, minOrder: 500000 },
+      GIAM50K: { amount: 50000, minOrder: 600000 },
+      GIAM10: { percent: 10, minOrder: 1000000 },
+      GIAM15: { percent: 15, minOrder: 1500000 },
+      FREESHIP: { freeship: true, minOrder: 300000 }, // FREESHIP chỉ miễn ship
     };
 
-    const voucher = vouchers[voucherCode.toUpperCase()];
-    
+    const code = voucherCode.toUpperCase();
+    const voucher = vouchers[code];
+
     if (!voucher) {
-      alert('Mã giảm giá không hợp lệ!');
+      toast.error("Mã giảm giá không hợp lệ!");
       return;
     }
 
     if (subtotal < voucher.minOrder) {
-      alert(`Đơn hàng tối thiểu ${formatPrice(voucher.minOrder)} để áp dụng mã này!`);
+      toast.warning(
+        `Đơn hàng tối thiểu ${formatPrice(voucher.minOrder)} để áp dụng mã này!`
+      );
       return;
     }
 
-    const discount = voucher.amount || Math.floor(subtotal * voucher.percent / 100);
-    dispatch(applyDiscount({ code: voucherCode.toUpperCase(), amount: discount }));
-    setVoucherCode('');
+    // Nếu là mã freeship, không giảm tiền hàng, chỉ miễn phí vận chuyển
+    let discount = 0;
+    if (voucher.freeship) {
+      discount = 0; // <-- sửa ở đây: không đặt 30000 nữa
+    } else {
+      discount =
+        voucher.amount || Math.floor((subtotal * voucher.percent) / 100);
+    }
+
+    dispatch(applyDiscount({ code, amount: discount }));
+    setVoucherCode("");
   };
 
   // Handle remove voucher
@@ -106,37 +120,44 @@ const Cart = () => {
   // Handle checkout
   const handleCheckout = () => {
     if (cartItems.length === 0) {
-      alert('Giỏ hàng của bạn đang trống!');
+      toast.info("Giỏ hàng của bạn đang trống!");
       return;
     }
-    navigate('/place-order');
+
+    navigate("/place-order");
   };
 
   // Empty cart view
   if (cartItems.length === 0) {
     return (
       <div className="pt-16 min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="text-center">
-            <ShoppingBag className="w-24 h-24 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Giỏ hàng trống
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Bạn chưa thêm sản phẩm nào vào giỏ hàng
-            </p>
-            <button
-              onClick={() => navigate('/collection')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#3A6FB5] text-white rounded-lg hover:bg-[#2E5C99] transition"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Tiếp tục mua sắm
-            </button>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 py-12 text-center">
+          <ShoppingBag className="w-24 h-24 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Giỏ hàng trống
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Bạn chưa thêm sản phẩm nào vào giỏ hàng
+          </p>
+          <button
+            onClick={() => navigate("/collection")}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#3A6FB5] text-white rounded-lg hover:bg-[#2E5C99] transition"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Tiếp tục mua sắm
+          </button>
         </div>
       </div>
     );
   }
+
+  // 🚚 Ship cost mặc định 30.000đ
+  const shippingFee = 30000;
+  const hasFreeShip = discountCode === "FREESHIP";
+  const finalShipping = hasFreeShip ? 0 : shippingFee;
+
+  // Tổng tiền cuối cùng (subtotal - discount + ship)
+  const finalTotal = subtotal - discountAmount + finalShipping;
 
   return (
     <div className="pt-16 min-h-screen bg-gray-50">
@@ -147,7 +168,7 @@ const Cart = () => {
             Giỏ hàng của bạn ({cartItems.length} sản phẩm)
           </h1>
           <button
-            onClick={() => navigate('/collection')}
+            onClick={() => navigate("/collection")}
             className="flex items-center gap-2 text-[#3A6FB5] hover:text-[#2E5C99] transition"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -189,7 +210,7 @@ const Cart = () => {
               >
                 <div className="flex gap-4">
                   {/* Image */}
-                  <div 
+                  <div
                     className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
                     onClick={() => navigate(`/product/${item.productId}`)}
                   >
@@ -202,13 +223,13 @@ const Cart = () => {
 
                   {/* Info */}
                   <div className="flex-1">
-                    <h3 
+                    <h3
                       className="font-medium text-gray-900 mb-1 hover:text-[#3A6FB5] cursor-pointer line-clamp-2"
                       onClick={() => navigate(`/product/${item.productId}`)}
                     >
                       {item.name}
                     </h3>
-                    
+
                     <div className="text-sm text-gray-600 mb-2">
                       <span>Màu: {item.color}</span>
                       <span className="mx-2">|</span>
@@ -219,10 +240,10 @@ const Cart = () => {
                       {/* Quantity controls */}
                       <div className="flex items-center border border-gray-300 rounded-lg">
                         <button
-                          onClick={() => 
+                          onClick={() =>
                             handleQuantityChange(
-                              item.productId, 
-                              item.variantId, 
+                              item.productId,
+                              item.variantId,
                               item.quantity - 1,
                               item.stock
                             )
@@ -235,10 +256,10 @@ const Cart = () => {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => 
+                          onClick={() =>
                             handleQuantityChange(
-                              item.productId, 
-                              item.variantId, 
+                              item.productId,
+                              item.variantId,
                               item.quantity + 1,
                               item.stock
                             )
@@ -263,7 +284,9 @@ const Cart = () => {
 
                   {/* Remove button */}
                   <button
-                    onClick={() => handleRemoveItem(item.productId, item.variantId)}
+                    onClick={() =>
+                      handleRemoveItem(item.productId, item.variantId)
+                    }
                     className="text-gray-400 hover:text-red-600 transition"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -310,7 +333,7 @@ const Cart = () => {
                     </button>
                   )}
                 </div>
-                
+
                 {discountCode && (
                   <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
                     <Tag className="w-4 h-4" />
@@ -330,7 +353,9 @@ const Cart = () => {
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Giảm giá:</span>
-                    <span className="font-medium">-{formatPrice(discountAmount)}</span>
+                    <span className="font-medium">
+                      -{formatPrice(discountAmount)}
+                    </span>
                   </div>
                 )}
 
@@ -338,15 +363,17 @@ const Cart = () => {
                 <div className="flex justify-between text-gray-600">
                   <span>Phí vận chuyển:</span>
                   <span className="font-medium">
-                    {subtotal >= 500000 ? 'Miễn phí' : formatPrice(30000)}
+                    {hasFreeShip ? "Miễn phí" : formatPrice(shippingFee)}
                   </span>
                 </div>
 
                 {/* Total */}
                 <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
-                  <span className="text-lg font-bold text-gray-900">Tổng cộng:</span>
+                  <span className="text-lg font-bold text-gray-900">
+                    Tổng cộng:
+                  </span>
                   <span className="text-2xl font-bold text-red-600">
-                    {formatPrice(total + (subtotal >= 500000 ? 0 : 30000))}
+                    {formatPrice(finalTotal)}
                   </span>
                 </div>
               </div>
@@ -360,9 +387,9 @@ const Cart = () => {
               </button>
 
               {/* Free shipping notice */}
-              {subtotal < 500000 && (
+              {!hasFreeShip && subtotal < 300000 && (
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-                  Mua thêm {formatPrice(500000 - subtotal)} để được miễn phí vận chuyển!
+                  Mua thêm {formatPrice(300000 - subtotal)} để dùng mã FREESHIP!
                 </div>
               )}
             </div>

@@ -35,6 +35,7 @@ const Product = () => {
         
         const response = await axios.get(
           `http://localhost:8080/api/products/${productId}`
+          // `https://fnzv9bcp-8080.asse.devtunnels.ms/api/products/${productId}`
         );
 
         console.log("API Response:", response.data);
