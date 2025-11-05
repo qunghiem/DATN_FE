@@ -171,8 +171,12 @@ const PlaceOrder = () => {
         items: cartItems.map((item) => ({
           productId: item.productId,
           variantId: item.variantId,
+          name: item.name,
+          color: item.color,
+          size: item.size,
           quantity: item.quantity,
           price: item.price,
+          image: item.image,
         })),
         payment: {
           method: formData.paymentMethod,
@@ -187,20 +191,68 @@ const PlaceOrder = () => {
 
       console.log('Order Data:', orderData);
 
-      // Call API to create order
-      // const response = await axios.post('http://localhost:8080/api/orders', orderData);
+      // Try to call API first
+      let orderSaved = false;
+      try {
+        const response = await axios.post('http://localhost:8080/api/orders', orderData, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          }
+        });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+        console.log('Order created via API:', response.data);
+        orderSaved = true;
 
-      // Clear only selected items from cart
-      dispatch(clearSelectedItems());
+      } catch (apiError) {
+        console.log('API not available, saving to localStorage:', apiError.message);
+        
+        // Fallback: Save to localStorage
+        const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+        const newOrder = {
+          id: `ORD-${Date.now()}`,
+          orderDate: new Date().toISOString(),
+          status: 'PENDING',
+          items: orderData.items,
+          shipping: {
+            fullName: orderData.customer.fullName,
+            phone: orderData.customer.phone,
+            email: orderData.customer.email,
+            address: orderData.shippingAddress.address,
+            ward: orderData.shippingAddress.ward,
+            district: orderData.shippingAddress.district,
+            city: orderData.shippingAddress.city,
+          },
+          payment: orderData.payment,
+          tracking: [
+            {
+              status: 'PENDING',
+              time: new Date().toISOString(),
+              description: 'Đơn hàng đã được đặt'
+            }
+          ],
+          estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          note: orderData.note || '',
+        };
 
-      // Show success message
-      toast.success('Đặt hàng thành công!');
+        existingOrders.unshift(newOrder);
+        localStorage.setItem('orders', JSON.stringify(existingOrders));
+        orderSaved = true;
+      }
 
-      // Redirect to order confirmation page
-      navigate('/orders');
+      if (orderSaved) {
+        // Clear only selected items from cart
+        dispatch(clearSelectedItems());
+
+        // Show success message
+        toast.success('Đặt hàng thành công!');
+
+        // Redirect to orders page
+        setTimeout(() => {
+          navigate('/orders');
+        }, 1000);
+      }
+
     } catch (error) {
       console.error('Error placing order:', error);
       toast.error(
