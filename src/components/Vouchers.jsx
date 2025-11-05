@@ -31,57 +31,113 @@ export default function Vouchers() {
         🎟️ Danh sách mã giảm giá
       </h1>
 
-      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
+      {/* Desktop: Grid bình thường (>= 992px) */}
+      <div className="hidden lg:grid grid-cols-4 gap-4">
         {vouchers.map((v) => (
-          <div
+          <VoucherCard
             key={v.id}
-            className="rounded-xl shadow-sm hover:shadow-md transition transform hover:-translate-y-1 bg-white"
-          >
-            {/* Icon */}
-            <div className="bg-[#EAF1FB] p-4 flex justify-center items-center rounded-t-xl text-[#3A6FB5] text-2xl">
-              {v.icon}
-            </div>
-
-            {/* Nội dung */}
-            <div className="p-3 flex flex-col text-sm">
-              <div className="flex justify-between items-start mb-1">
-                <div>
-                  <h2 className="font-semibold text-gray-800 text-xs sm:text-sm uppercase">
-                    {v.title}
-                  </h2>
-                  <p className="text-gray-600 text-xs mt-0.5">{v.desc}</p>
-                </div>
-                <FiInfo className="text-gray-400 text-sm" />
-              </div>
-
-              <p className="text-xs text-gray-500 mt-1">
-                Mã: <span className="font-semibold text-[#3A6FB5]">{v.code}</span>
-              </p>
-              <p className="text-xs text-gray-400">HSD: {v.expiry}</p>
-
-              {/* Nút */}
-              <div className="mt-2 flex gap-1.5">
-                <button
-                  onClick={() => handleCopy(v.code)}
-                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs bg-[#3A6FB5] text-white rounded-md hover:bg-[#2E5C99] transition"
-                >
-                  {copied === v.code ? <><FiCheck /> Đã sao chép</> : <><FiCopy /> Sao chép</>}
-                </button>
-
-                <button
-                  onClick={() => handleSave(v.id)}
-                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md border transition ${
-                    saved.includes(v.id)
-                      ? "bg-green-100 border-green-400 text-green-600"
-                      : "border-gray-300 hover:border-[#3A6FB5] text-gray-600"
-                  }`}
-                >
-                  {saved.includes(v.id) ? "Đã lưu" : "Lưu"}
-                </button>
-              </div>
-            </div>
-          </div>
+            voucher={v}
+            copied={copied}
+            saved={saved}
+            onCopy={handleCopy}
+            onSave={handleSave}
+          />
         ))}
+      </div>
+
+      {/* Tablet: Hiển thị 2.5 voucher (768px - 991px) */}
+      <div className="hidden md:block lg:hidden overflow-x-auto scrollbar-hide">
+        <div className="flex gap-4" style={{ width: 'fit-content' }}>
+          {vouchers.map((v) => (
+            <div key={v.id} style={{ minWidth: 'calc(40% - 12px)' }}>
+              <VoucherCard
+                voucher={v}
+                copied={copied}
+                saved={saved}
+                onCopy={handleCopy}
+                onSave={handleSave}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile: Hiển thị 1.5 voucher (< 768px) */}
+      <div className="block md:hidden overflow-x-auto scrollbar-hide">
+        <div className="flex gap-3" style={{ width: 'fit-content' }}>
+          {vouchers.map((v) => (
+            <div key={v.id} style={{ minWidth: 'calc(66.666% - 8px)' }}>
+              <VoucherCard
+                voucher={v}
+                copied={copied}
+                saved={saved}
+                onCopy={handleCopy}
+                onSave={handleSave}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// Component Voucher Card tách riêng để tái sử dụng
+function VoucherCard({ voucher: v, copied, saved, onCopy, onSave }) {
+  return (
+    <div className="rounded-xl shadow-sm hover:shadow-md transition transform hover:-translate-y-1 bg-white">
+      {/* Icon */}
+      <div className="bg-[#EAF1FB] p-4 flex justify-center items-center rounded-t-xl text-[#3A6FB5] text-2xl">
+        {v.icon}
+      </div>
+
+      {/* Nội dung */}
+      <div className="p-3 flex flex-col text-sm">
+        <div className="flex justify-between items-start mb-1">
+          <div>
+            <h2 className="font-semibold text-gray-800 text-xs sm:text-sm uppercase">
+              {v.title}
+            </h2>
+            <p className="text-gray-600 text-xs mt-0.5">{v.desc}</p>
+          </div>
+          <FiInfo className="text-gray-400 text-sm" />
+        </div>
+
+        <p className="text-xs text-gray-500 mt-1">
+          Mã: <span className="font-semibold text-[#3A6FB5]">{v.code}</span>
+        </p>
+        <p className="text-xs text-gray-400">HSD: {v.expiry}</p>
+
+        {/* Nút */}
+        <div className="mt-2 flex gap-1.5">
+          <button
+            onClick={() => onCopy(v.code)}
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs bg-[#3A6FB5] text-white rounded-md hover:bg-[#2E5C99] transition"
+          >
+            {copied === v.code ? <><FiCheck /> Đã sao chép</> : <><FiCopy /> Sao chép</>}
+          </button>
+
+          <button
+            onClick={() => onSave(v.id)}
+            className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md border transition ${
+              saved.includes(v.id)
+                ? "bg-green-100 border-green-400 text-green-600"
+                : "border-gray-300 hover:border-[#3A6FB5] text-gray-600"
+            }`}
+          >
+            {saved.includes(v.id) ? "Đã lưu" : "Lưu"}
+          </button>
+        </div>
       </div>
     </div>
   );

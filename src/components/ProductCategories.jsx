@@ -59,43 +59,81 @@ const ProductCategories = () => {
         </p>
       </div>
 
-      {/* Categories Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-5">
+      {/* Desktop: Grid 6 cột bình thường (>= 992px) */}
+      <div className="hidden lg:grid grid-cols-6 gap-5">
         {categories.map((category) => (
-          <Link
-            key={category.id}
-            to={category.link}
-            className="group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
-          >
-            {/* Image */}
-            <div className="relative aspect-square overflow-hidden bg-gray-100">
-              <img
-                src={category.image}
-                alt={category.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            </div>
-
-            {/* Info */}
-            <div className="p-2 md:p-3 text-center">
-              <h3 className="font-medium text-gray-900 text-sm md:text-base mb-0.5 group-hover:text-[#3A6FB5] transition-colors line-clamp-2">
-                {category.name}
-              </h3>
-              <p className="text-xs md:text-sm text-gray-500">
-                {category.productCount} sản phẩm
-              </p>
-            </div>
-
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-              <button className="bg-white text-[#3A6FB5] px-4 py-1.5 rounded-full font-medium text-sm shadow-sm hover:shadow-md transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
-                Xem ngay
-              </button>
-            </div>
-          </Link>
+          <CategoryCard key={category.id} category={category} />
         ))}
       </div>
+
+      {/* Tablet: Hiển thị 3.5 item (768px - 991px) */}
+      <div className="hidden md:block lg:hidden overflow-x-auto scrollbar-hide">
+        <div className="flex gap-4" style={{ width: 'fit-content' }}>
+          {categories.map((category) => (
+            <div key={category.id} style={{ minWidth: 'calc(28.57% - 11.43px)' }}>
+              <CategoryCard category={category} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile: Hiển thị 2.5 item (< 768px) */}
+      <div className="block md:hidden overflow-x-auto scrollbar-hide">
+        <div className="flex gap-3" style={{ width: 'fit-content' }}>
+          {categories.map((category) => (
+            <div key={category.id} style={{ minWidth: 'calc(40% - 9.6px)' }}>
+              <CategoryCard category={category} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
+  );
+};
+
+// Component Category Card tách riêng
+const CategoryCard = ({ category }) => {
+  return (
+    <Link
+      to={category.link}
+      className="group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 block"
+    >
+      {/* Image */}
+      <div className="relative aspect-square overflow-hidden bg-gray-100">
+        <img
+          src={category.image}
+          alt={category.name}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
+
+      {/* Info */}
+      <div className="p-2 md:p-3 text-center">
+        <h3 className="font-medium text-gray-900 text-sm md:text-base mb-0.5 group-hover:text-[#3A6FB5] transition-colors line-clamp-2">
+          {category.name}
+        </h3>
+        <p className="text-xs md:text-sm text-gray-500">
+          {category.productCount} sản phẩm
+        </p>
+      </div>
+
+      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+        <button className="bg-white text-[#3A6FB5] px-4 py-1.5 rounded-full font-medium text-sm shadow-sm hover:shadow-md transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
+          Xem ngay
+        </button>
+      </div>
+    </Link>
   );
 };
 

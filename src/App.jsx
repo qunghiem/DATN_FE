@@ -14,11 +14,14 @@ import Product from "./pages/Product";
 import Navbar from "./components/Navbar";
 import Collection from "./pages/Collection";
 import Footer from "./components/Footer";
+import ScrollToTop from "./components/ScrollToTop";
 
 const App = () => {
   return (
     <div className="">
       <Navbar />
+        <ScrollToTop />
+
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/collection" element={<Collection />} />
