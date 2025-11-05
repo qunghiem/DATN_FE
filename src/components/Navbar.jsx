@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { FaHeart, FaBars, FaTimes, FaRegHeart  } from "react-icons/fa";
+import { FaRegHeart, FaBars, FaTimes } from "react-icons/fa";
 import { logout } from "../features/auth/authSlice";
 import logo from "../assets/logo.png";
 import cart from "../assets/cart.png";
@@ -11,20 +11,19 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
-  
-  // Fix: Safely get cart items with fallback
   const cartState = useSelector((state) => state.cart);
   const items = cartState?.items || [];
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
   const avatarRef = useRef();
   const savedRef = useRef();
 
-  // Fix: Safely calculate cart count
-  const cartCount = Array.isArray(items) 
+  const cartCount = Array.isArray(items)
     ? items.reduce((total, item) => total + (item.quantity || 0), 0)
     : 0;
 
@@ -42,10 +41,33 @@ const Navbar = () => {
 
   const initials = getInitials(user?.fullName);
 
+  const handleSearchToggle = () => {
+    setSearchOpen((s) => !s);
+    setSearchValue("");
+    setAvatarMenuOpen(false);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const q = searchValue.trim();
+    if (q) {
+      navigate(`/collection?search=${encodeURIComponent(q)}`);
+      setSearchOpen(false);
+      setSearchValue("");
+    } else {
+      setSearchOpen(false);
+    }
+  };
+
   return (
-    <nav className="bg-white shadow-md fixed w-full z-50">
+    <nav
+      className={`bg-white shadow-md fixed w-full z-50 transition-all duration-300 ${
+        searchOpen ? "pb-4" : ""
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        {/* TOP ROW: luôn có height cố định để giữ căn giữa dọc */}
+        <div className="flex items-center h-16 justify-between">
           {/* Logo */}
           <div className="flex-shrink-0">
             <NavLink to="/">
@@ -53,7 +75,7 @@ const Navbar = () => {
             </NavLink>
           </div>
 
-          {/* Desktop Menu */}
+          {/* Center menu (giữ căn giữa dọc nhờ items-center ở parent) */}
           <div className="hidden md:flex flex-1 justify-center space-x-8">
             <NavLink
               to="/"
@@ -109,13 +131,14 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Icons */}
+          {/* RIGHT ICONS (khi searchOpen vẫn giữ ở hàng trên) */}
           <div className="flex items-center space-x-4 h-10 relative">
-            {/* Search */}
+            {/* Search icon toggles the extra search bar below */}
             <img
               src={search}
               className="w-5 h-5 cursor-pointer hover:opacity-70 transition"
               alt="Search"
+              onClick={handleSearchToggle}
             />
 
             {/* Avatar */}
@@ -184,7 +207,7 @@ const Navbar = () => {
 
             {/* Saved / Heart */}
             <div className="relative">
-              <FaRegHeart 
+              <FaRegHeart
                 ref={savedRef}
                 className="text-gray-700 hover:text-sky-600 cursor-pointer transition w-5 h-5"
               />
@@ -220,6 +243,23 @@ const Navbar = () => {
             </div>
           </div>
         </div>
+
+        {/* SEARCH BAR: xuất hiện dưới top row, không làm thay đổi căn giữa của top row */}
+        {searchOpen && (
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex justify-center mt-3 transition-all duration-200"
+          >
+            <input
+              type="text"
+              placeholder="Tìm kiếm sản phẩm..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="w-full max-w-lg border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+              autoFocus
+            />
+          </form>
+        )}
       </div>
 
       {/* Mobile Menu */}
