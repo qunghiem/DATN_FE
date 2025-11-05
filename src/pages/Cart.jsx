@@ -15,11 +15,16 @@ import {
   updateQuantity,
   clearCart,
   selectCartItems,
+  selectSelectedItems,
   selectCartSubtotal,
   selectCartTotal,
   applyDiscount,
   removeDiscount,
   clearError,
+  toggleSelectItem,
+  selectAllItems,
+  deselectAllItems,
+  removeSelectedItems,
 } from "../features/cart/cartSlice";
 import { toast } from "react-toastify";
 
@@ -28,6 +33,7 @@ const Cart = () => {
   const navigate = useNavigate();
 
   const cartItems = useSelector(selectCartItems);
+  const selectedItems = useSelector(selectSelectedItems);
   const subtotal = useSelector(selectCartSubtotal);
   const total = useSelector(selectCartTotal);
   const { error, discountCode, discountAmount } = useSelector(
@@ -36,10 +42,35 @@ const Cart = () => {
 
   const [voucherCode, setVoucherCode] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showRemoveSelectedConfirm, setShowRemoveSelectedConfirm] = useState(false);
 
   // Format price
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN").format(price) + "₫";
+  };
+
+  // Check if item is selected
+  const isItemSelected = (productId, variantId) => {
+    return selectedItems.includes(`${productId}-${variantId}`);
+  };
+
+  // Check if all items are selected
+  const isAllSelected = () => {
+    return cartItems.length > 0 && selectedItems.length === cartItems.length;
+  };
+
+  // Handle toggle select item
+  const handleToggleSelect = (productId, variantId) => {
+    dispatch(toggleSelectItem({ productId, variantId }));
+  };
+
+  // Handle select all
+  const handleSelectAll = () => {
+    if (isAllSelected()) {
+      dispatch(deselectAllItems());
+    } else {
+      dispatch(selectAllItems());
+    }
   };
 
   // Handle quantity change
@@ -64,6 +95,21 @@ const Cart = () => {
     }
   };
 
+  // Handle remove selected items
+  const handleRemoveSelected = () => {
+    if (selectedItems.length === 0) {
+      toast.info("Vui lòng chọn sản phẩm cần xóa!");
+      return;
+    }
+    setShowRemoveSelectedConfirm(true);
+  };
+
+  const confirmRemoveSelected = () => {
+    dispatch(removeSelectedItems());
+    setShowRemoveSelectedConfirm(false);
+    toast.success("Đã xóa sản phẩm đã chọn!");
+  };
+
   // Handle clear cart
   const handleClearCart = () => {
     dispatch(clearCart());
@@ -81,7 +127,7 @@ const Cart = () => {
       GIAM50K: { amount: 50000, minOrder: 600000 },
       GIAM10: { percent: 10, minOrder: 1000000 },
       GIAM15: { percent: 15, minOrder: 1500000 },
-      FREESHIP: { freeship: true, minOrder: 300000 }, // FREESHIP chỉ miễn ship
+      FREESHIP: { freeship: true, minOrder: 300000 },
     };
 
     const code = voucherCode.toUpperCase();
@@ -99,10 +145,9 @@ const Cart = () => {
       return;
     }
 
-    // Nếu là mã freeship, không giảm tiền hàng, chỉ miễn phí vận chuyển
     let discount = 0;
     if (voucher.freeship) {
-      discount = 0; // <-- sửa ở đây: không đặt 30000 nữa
+      discount = 0;
     } else {
       discount =
         voucher.amount || Math.floor((subtotal * voucher.percent) / 100);
@@ -121,6 +166,11 @@ const Cart = () => {
   const handleCheckout = () => {
     if (cartItems.length === 0) {
       toast.info("Giỏ hàng của bạn đang trống!");
+      return;
+    }
+
+    if (selectedItems.length === 0) {
+      toast.warning("Vui lòng chọn sản phẩm cần thanh toán!");
       return;
     }
 
@@ -151,12 +201,9 @@ const Cart = () => {
     );
   }
 
-  // 🚚 Ship cost mặc định 30.000đ
   const shippingFee = 30000;
   const hasFreeShip = discountCode === "FREESHIP";
   const finalShipping = hasFreeShip ? 0 : shippingFee;
-
-  // Tổng tiền cuối cùng (subtotal - discount + ship)
   const finalTotal = subtotal - discountAmount + finalShipping;
 
   return (
@@ -192,23 +239,63 @@ const Cart = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Clear cart button */}
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowClearConfirm(true)}
-                className="text-sm text-red-600 hover:text-red-700 font-medium"
-              >
-                Xóa tất cả
-              </button>
+            {/* Select all and bulk actions */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected()}
+                    onChange={handleSelectAll}
+                    className="w-5 h-5 text-[#3A6FB5] border-gray-300 rounded focus:ring-[#3A6FB5]"
+                  />
+                  <span className="font-medium text-gray-700">
+                    Chọn tất cả ({cartItems.length})
+                  </span>
+                </label>
+
+                <div className="flex gap-3">
+                  {selectedItems.length > 0 && (
+                    <button
+                      onClick={handleRemoveSelected}
+                      className="text-sm text-red-600 hover:text-red-700 font-medium"
+                    >
+                      Xóa đã chọn ({selectedItems.length})
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowClearConfirm(true)}
+                    className="text-sm text-red-600 hover:text-red-700 font-medium"
+                  >
+                    Xóa tất cả
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Items list */}
             {cartItems.map((item) => (
               <div
                 key={`${item.productId}-${item.variantId}`}
-                className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition"
+                className={`bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition ${
+                  isItemSelected(item.productId, item.variantId)
+                    ? "ring-2 ring-[#3A6FB5]"
+                    : ""
+                }`}
               >
                 <div className="flex gap-4">
+                  {/* Checkbox */}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={isItemSelected(item.productId, item.variantId)}
+                      onChange={() =>
+                        handleToggleSelect(item.productId, item.variantId)
+                      }
+                      className="w-5 h-5 text-[#3A6FB5] border-gray-300 rounded focus:ring-[#3A6FB5]"
+                    />
+                  </div>
+
                   {/* Image */}
                   <div
                     className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
@@ -303,6 +390,12 @@ const Cart = () => {
                 Thông tin đơn hàng
               </h2>
 
+              {selectedItems.length === 0 && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm">
+                  Vui lòng chọn sản phẩm cần thanh toán
+                </div>
+              )}
+
               {/* Voucher */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -345,7 +438,7 @@ const Cart = () => {
               <div className="border-t border-gray-200 pt-4 space-y-3">
                 {/* Subtotal */}
                 <div className="flex justify-between text-gray-600">
-                  <span>Tạm tính:</span>
+                  <span>Tạm tính ({selectedItems.length} sản phẩm):</span>
                   <span className="font-medium">{formatPrice(subtotal)}</span>
                 </div>
 
@@ -381,13 +474,14 @@ const Cart = () => {
               {/* Checkout button */}
               <button
                 onClick={handleCheckout}
-                className="w-full mt-6 px-6 py-4 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition"
+                disabled={selectedItems.length === 0}
+                className="w-full mt-6 px-6 py-4 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Tiến hành thanh toán
+                Tiến hành thanh toán ({selectedItems.length})
               </button>
 
               {/* Free shipping notice */}
-              {!hasFreeShip && subtotal < 300000 && (
+              {!hasFreeShip && subtotal < 300000 && selectedItems.length > 0 && (
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
                   Mua thêm {formatPrice(300000 - subtotal)} để dùng mã FREESHIP!
                 </div>
@@ -419,6 +513,34 @@ const Cart = () => {
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
               >
                 Xóa tất cả
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove selected confirmation modal */}
+      {showRemoveSelectedConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Xóa sản phẩm đã chọn?
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Bạn có chắc muốn xóa {selectedItems.length} sản phẩm đã chọn không?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowRemoveSelectedConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmRemoveSelected}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                Xóa
               </button>
             </div>
           </div>

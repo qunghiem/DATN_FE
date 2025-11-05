@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 import {
   selectCartItems,
+  selectSelectedItems,
   selectCartSubtotal,
   selectCartTotal,
-  clearCart,
+  clearSelectedItems,
 } from '../features/cart/cartSlice';
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -29,11 +30,17 @@ const PlaceOrder = () => {
   const navigate = useNavigate();
 
   // Redux state
-  const cartItems = useSelector(selectCartItems);
+  const allCartItems = useSelector(selectCartItems);
+  const selectedItemKeys = useSelector(selectSelectedItems);
   const subtotal = useSelector(selectCartSubtotal);
   const total = useSelector(selectCartTotal);
   const { discountCode, discountAmount } = useSelector((state) => state.cart);
   const { user, isAuthenticated } = useSelector((state) => state.auth);
+
+  // Filter only selected items
+  const cartItems = allCartItems.filter(item => 
+    selectedItemKeys.includes(`${item.productId}-${item.variantId}`)
+  );
 
   // Form state
   const [formData, setFormData] = useState({
@@ -63,13 +70,13 @@ const PlaceOrder = () => {
     }
   }, [isAuthenticated, user]);
 
-  // Redirect if cart is empty
+  // Redirect if no items selected
   useEffect(() => {
-    if (cartItems.length === 0) {
-      toast.info('Giỏ hàng của bạn đang trống!');
+    if (cartItems.length === 0 || selectedItemKeys.length === 0) {
+      toast.info('Vui lòng chọn sản phẩm cần thanh toán!');
       navigate('/cart');
     }
-  }, [cartItems, navigate]);
+  }, [cartItems, selectedItemKeys, navigate]);
 
   // Format price
   const formatPrice = (price) => {
@@ -148,7 +155,7 @@ const PlaceOrder = () => {
     setIsSubmitting(true);
 
     try {
-      // Prepare order data
+      // Prepare order data with only selected items
       const orderData = {
         customer: {
           fullName: formData.fullName,
@@ -186,8 +193,8 @@ const PlaceOrder = () => {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Clear cart
-      dispatch(clearCart());
+      // Clear only selected items from cart
+      dispatch(clearSelectedItems());
 
       // Show success message
       toast.success('Đặt hàng thành công!');
@@ -505,9 +512,9 @@ const PlaceOrder = () => {
 
                 <div className="space-y-3">
                   {/* COD */}
-                  <label className="flex items-start space-x-3 cursor-pointer p-4 border-2 rounded-lg transition hover:border-[#3A6FB5] ${
+                  <label className={`flex items-start space-x-3 cursor-pointer p-4 border-2 rounded-lg transition hover:border-[#3A6FB5] ${
                     formData.paymentMethod === 'COD' ? 'border-[#3A6FB5] bg-blue-50' : 'border-gray-200'
-                  }">
+                  }`}>
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -560,7 +567,7 @@ const PlaceOrder = () => {
       Quét mã QR để thanh toán
     </h3>
     <img
-      src={qrCode} // hoặc link VietQR thật
+      src={qrCode}
       alt="QR chuyển khoản"
       className="w-56 h-56 mx-auto mb-3 rounded-lg border"
     />
@@ -577,15 +584,13 @@ const PlaceOrder = () => {
 )}
               </div>
             </div>
-                {/* Hiển thị mã QR khi chọn chuyển khoản */}
-
   
             {/* Right: Order Summary */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-sm p-6 sticky top-20">
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
                   <Package className="w-5 h-5 mr-2 text-[#3A6FB5]" />
-                  Thông tin đơn hàng
+                  Thông tin đơn hàng ({cartItems.length} sản phẩm đã chọn)
                 </h2>
 
                 {/* Order Items */}

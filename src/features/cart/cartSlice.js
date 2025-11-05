@@ -38,6 +38,20 @@ const loadCartFromStorage = () => {
   }
 };
 
+// Load selected items from localStorage
+const loadSelectedItemsFromStorage = () => {
+  try {
+    const savedSelected = localStorage.getItem('selectedItems');
+    if (!savedSelected) return [];
+    
+    const parsed = JSON.parse(savedSelected);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('Error loading selected items:', error);
+    return [];
+  }
+};
+
 // Save cart to localStorage
 const saveCartToStorage = (items) => {
   try {
@@ -51,9 +65,23 @@ const saveCartToStorage = (items) => {
   }
 };
 
+// Save selected items to localStorage
+const saveSelectedItemsToStorage = (selectedItems) => {
+  try {
+    if (!Array.isArray(selectedItems)) {
+      console.error('Cannot save selected items: not an array');
+      return;
+    }
+    localStorage.setItem('selectedItems', JSON.stringify(selectedItems));
+  } catch (error) {
+    console.error('Error saving selected items to localStorage:', error);
+  }
+};
+
 // Initial state
 const initialState = {
   items: loadCartFromStorage(),
+  selectedItems: loadSelectedItemsFromStorage(), // Danh sách productId-variantId được chọn
   isLoading: false,
   error: null,
   discountCode: null,
@@ -123,7 +151,7 @@ const cartSlice = createSlice({
       } else {
         console.log('➕ Adding new item to cart');
         // Add new item
-        state.items.push({
+        const newItem = {
           productId,
           variantId,
           name,
@@ -134,13 +162,21 @@ const cartSlice = createSlice({
           quantity,
           stock,
           addedAt: new Date().toISOString(),
-        });
+        };
+        state.items.push(newItem);
+        
+        // Tự động chọn item mới thêm vào
+        const itemKey = `${productId}-${variantId}`;
+        if (!state.selectedItems.includes(itemKey)) {
+          state.selectedItems.push(itemKey);
+        }
       }
 
       console.log('✅ Cart after update:', state.items);
       console.log('📊 Total items:', state.items.length);
       
       saveCartToStorage(state.items);
+      saveSelectedItemsToStorage(state.selectedItems);
       state.error = null;
       
       console.log('💾 Saved to localStorage');
@@ -159,7 +195,13 @@ const cartSlice = createSlice({
       state.items = state.items.filter(
         item => !(item.productId === productId && item.variantId === variantId)
       );
+      
+      // Xóa khỏi danh sách đã chọn
+      const itemKey = `${productId}-${variantId}`;
+      state.selectedItems = state.selectedItems.filter(key => key !== itemKey);
+      
       saveCartToStorage(state.items);
+      saveSelectedItemsToStorage(state.selectedItems);
     },
 
     // Update item quantity
@@ -182,6 +224,9 @@ const cartSlice = createSlice({
           state.items = state.items.filter(
             item => !(item.productId === productId && item.variantId === variantId)
           );
+          // Xóa khỏi danh sách đã chọn
+          const itemKey = `${productId}-${variantId}`;
+          state.selectedItems = state.selectedItems.filter(key => key !== itemKey);
         } else if (quantity <= item.stock) {
           item.quantity = quantity;
         } else {
@@ -191,15 +236,68 @@ const cartSlice = createSlice({
       }
 
       saveCartToStorage(state.items);
+      saveSelectedItemsToStorage(state.selectedItems);
       state.error = null;
+    },
+
+    // Toggle select item
+    toggleSelectItem: (state, action) => {
+      const { productId, variantId } = action.payload;
+      const itemKey = `${productId}-${variantId}`;
+      
+      if (state.selectedItems.includes(itemKey)) {
+        state.selectedItems = state.selectedItems.filter(key => key !== itemKey);
+      } else {
+        state.selectedItems.push(itemKey);
+      }
+      
+      saveSelectedItemsToStorage(state.selectedItems);
+    },
+
+    // Select all items
+    selectAllItems: (state) => {
+      state.selectedItems = state.items.map(
+        item => `${item.productId}-${item.variantId}`
+      );
+      saveSelectedItemsToStorage(state.selectedItems);
+    },
+
+    // Deselect all items
+    deselectAllItems: (state) => {
+      state.selectedItems = [];
+      saveSelectedItemsToStorage(state.selectedItems);
+    },
+
+    // Remove selected items
+    removeSelectedItems: (state) => {
+      state.items = state.items.filter(
+        item => !state.selectedItems.includes(`${item.productId}-${item.variantId}`)
+      );
+      state.selectedItems = [];
+      saveCartToStorage(state.items);
+      saveSelectedItemsToStorage(state.selectedItems);
+    },
+
+    // Clear only selected items after checkout
+    clearSelectedItems: (state) => {
+      state.items = state.items.filter(
+        item => !state.selectedItems.includes(`${item.productId}-${item.variantId}`)
+      );
+      state.selectedItems = [];
+      state.discountCode = null;
+      state.discountAmount = 0;
+      saveCartToStorage(state.items);
+      saveSelectedItemsToStorage(state.selectedItems);
     },
 
     // Clear all items from cart
     clearCart: (state) => {
       state.items = [];
+      state.selectedItems = [];
       state.discountCode = null;
       state.discountAmount = 0;
       saveCartToStorage([]);
+      saveSelectedItemsToStorage([]);
     },
 
     // Clear error
@@ -222,11 +320,13 @@ const cartSlice = createSlice({
     // Reset cart to safe state (for debugging)
     resetCart: (state) => {
       state.items = [];
+      state.selectedItems = [];
       state.isLoading = false;
       state.error = null;
       state.discountCode = null;
       state.discountAmount = 0;
       localStorage.removeItem('cart');
+      localStorage.removeItem('selectedItems');
     },
   },
 });
@@ -237,6 +337,10 @@ export const selectCartItems = (state) => {
   return Array.isArray(items) ? items : [];
 };
 
+export const selectSelectedItems = (state) => {
+  return state.cart?.selectedItems || [];
+};
+
 export const selectCartItemsCount = (state) => {
   const items = selectCartItems(state);
   return items.reduce((total, item) => {
@@ -245,12 +349,32 @@ export const selectCartItemsCount = (state) => {
   }, 0);
 };
 
+export const selectSelectedItemsCount = (state) => {
+  const items = selectCartItems(state);
+  const selectedItems = selectSelectedItems(state);
+  
+  return items.reduce((total, item) => {
+    const itemKey = `${item.productId}-${item.variantId}`;
+    if (selectedItems.includes(itemKey)) {
+      const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+      return total + quantity;
+    }
+    return total;
+  }, 0);
+};
+
 export const selectCartSubtotal = (state) => {
   const items = selectCartItems(state);
+  const selectedItems = selectSelectedItems(state);
+  
   return items.reduce((total, item) => {
-    const price = typeof item.price === 'number' ? item.price : 0;
-    const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-    return total + (price * quantity);
+    const itemKey = `${item.productId}-${item.variantId}`;
+    if (selectedItems.includes(itemKey)) {
+      const price = typeof item.price === 'number' ? item.price : 0;
+      const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+      return total + (price * quantity);
+    }
+    return total;
   }, 0);
 };
 
@@ -265,6 +389,11 @@ export const {
   addToCart, 
   removeFromCart, 
   updateQuantity, 
+  toggleSelectItem,
+  selectAllItems,
+  deselectAllItems,
+  removeSelectedItems,
+  clearSelectedItems,
   clearCart, 
   clearError,
   applyDiscount,
