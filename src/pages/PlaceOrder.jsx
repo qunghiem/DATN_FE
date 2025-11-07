@@ -49,14 +49,113 @@ const PlaceOrder = () => {
     phone: '',
     address: '',
     ward: '',
+    wardCode: '',
     district: '',
+    districtCode: '',
     city: '',
+    cityCode: '',
     note: '',
     paymentMethod: 'COD',
   });
 
+  // Address data state
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
+
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getUserId = () => {
+    if (user?.id) return user.id;
+    if (user?.email) return user.email;
+    return 'guest';
+  };
+
+  // Load provinces on component mount
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const response = await axios.get('https://provinces.open-api.vn/api/p/');
+        setProvinces(response.data);
+      } catch (error) {
+        console.error('Error fetching provinces:', error);
+        toast.error('Không thể tải danh sách tỉnh/thành phố');
+      }
+    };
+
+    fetchProvinces();
+  }, []);
+
+  // Load districts when province changes
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      if (!formData.cityCode) {
+        setDistricts([]);
+        setWards([]);
+        return;
+      }
+
+      setLoadingDistricts(true);
+      try {
+        const response = await axios.get(
+          `https://provinces.open-api.vn/api/p/${formData.cityCode}?depth=2`
+        );
+        setDistricts(response.data.districts || []);
+        setWards([]);
+        
+        // Reset district and ward when province changes
+        setFormData(prev => ({
+          ...prev,
+          district: '',
+          districtCode: '',
+          ward: '',
+          wardCode: ''
+        }));
+      } catch (error) {
+        console.error('Error fetching districts:', error);
+        toast.error('Không thể tải danh sách quận/huyện');
+      } finally {
+        setLoadingDistricts(false);
+      }
+    };
+
+    fetchDistricts();
+  }, [formData.cityCode]);
+
+  // Load wards when district changes
+  useEffect(() => {
+    const fetchWards = async () => {
+      if (!formData.districtCode) {
+        setWards([]);
+        return;
+      }
+
+      setLoadingWards(true);
+      try {
+        const response = await axios.get(
+          `https://provinces.open-api.vn/api/d/${formData.districtCode}?depth=2`
+        );
+        setWards(response.data.wards || []);
+        
+        // Reset ward when district changes
+        setFormData(prev => ({
+          ...prev,
+          ward: '',
+          wardCode: ''
+        }));
+      } catch (error) {
+        console.error('Error fetching wards:', error);
+        toast.error('Không thể tải danh sách phường/xã');
+      } finally {
+        setLoadingWards(false);
+      }
+    };
+
+    fetchWards();
+  }, [formData.districtCode]);
 
   // Load user data if authenticated
   useEffect(() => {
@@ -103,6 +202,60 @@ const PlaceOrder = () => {
     }
   };
 
+  // Handle province change
+  const handleProvinceChange = (e) => {
+    const selectedCode = e.target.value;
+    const selectedProvince = provinces.find(p => p.code.toString() === selectedCode);
+    
+    setFormData(prev => ({
+      ...prev,
+      cityCode: selectedCode,
+      city: selectedProvince ? selectedProvince.name : '',
+      districtCode: '',
+      district: '',
+      wardCode: '',
+      ward: ''
+    }));
+
+    if (errors.city) {
+      setErrors(prev => ({ ...prev, city: '' }));
+    }
+  };
+
+  // Handle district change
+  const handleDistrictChange = (e) => {
+    const selectedCode = e.target.value;
+    const selectedDistrict = districts.find(d => d.code.toString() === selectedCode);
+    
+    setFormData(prev => ({
+      ...prev,
+      districtCode: selectedCode,
+      district: selectedDistrict ? selectedDistrict.name : '',
+      wardCode: '',
+      ward: ''
+    }));
+
+    if (errors.district) {
+      setErrors(prev => ({ ...prev, district: '' }));
+    }
+  };
+
+  // Handle ward change
+  const handleWardChange = (e) => {
+    const selectedCode = e.target.value;
+    const selectedWard = wards.find(w => w.code.toString() === selectedCode);
+    
+    setFormData(prev => ({
+      ...prev,
+      wardCode: selectedCode,
+      ward: selectedWard ? selectedWard.name : ''
+    }));
+
+    if (errors.ward) {
+      setErrors(prev => ({ ...prev, ward: '' }));
+    }
+  };
+
   // Validate form
   const validateForm = () => {
     const newErrors = {};
@@ -128,11 +281,11 @@ const PlaceOrder = () => {
     }
 
     if (!formData.ward.trim()) {
-      newErrors.ward = 'Vui lòng nhập phường/xã';
+      newErrors.ward = 'Vui lòng chọn phường/xã';
     }
 
     if (!formData.district.trim()) {
-      newErrors.district = 'Vui lòng nhập quận/huyện';
+      newErrors.district = 'Vui lòng chọn quận/huyện';
     }
 
     if (!formData.city.trim()) {
@@ -207,8 +360,11 @@ const PlaceOrder = () => {
       } catch (apiError) {
         console.log('API not available, saving to localStorage:', apiError.message);
         
-        // Fallback: Save to localStorage
-        const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+        // Fallback: Save to localStorage for current user
+        const userId = getUserId();
+        const ordersKey = `orders_${userId}`;
+        const existingOrders = JSON.parse(localStorage.getItem(ordersKey) || '[]');
+        
         const newOrder = {
           id: `ORD-${Date.now()}`,
           orderDate: new Date().toISOString(),
@@ -236,7 +392,7 @@ const PlaceOrder = () => {
         };
 
         existingOrders.unshift(newOrder);
-        localStorage.setItem('orders', JSON.stringify(existingOrders));
+        localStorage.setItem(ordersKey, JSON.stringify(existingOrders));
         orderSaved = true;
       }
 
@@ -262,73 +418,6 @@ const PlaceOrder = () => {
       setIsSubmitting(false);
     }
   };
-
-  // Vietnamese cities
-  const cities = [
-    'Hà Nội',
-    'Hồ Chí Minh',
-    'Đà Nẵng',
-    'Hải Phòng',
-    'Cần Thơ',
-    'An Giang',
-    'Bà Rịa - Vũng Tàu',
-    'Bạc Liêu',
-    'Bắc Giang',
-    'Bắc Kạn',
-    'Bắc Ninh',
-    'Bến Tre',
-    'Bình Dương',
-    'Bình Định',
-    'Bình Phước',
-    'Bình Thuận',
-    'Cà Mau',
-    'Cao Bằng',
-    'Đắk Lắk',
-    'Đắk Nông',
-    'Điện Biên',
-    'Đồng Nai',
-    'Đồng Tháp',
-    'Gia Lai',
-    'Hà Giang',
-    'Hà Nam',
-    'Hà Tĩnh',
-    'Hải Dương',
-    'Hậu Giang',
-    'Hòa Bình',
-    'Hưng Yên',
-    'Khánh Hòa',
-    'Kiên Giang',
-    'Kon Tum',
-    'Lai Châu',
-    'Lâm Đồng',
-    'Lạng Sơn',
-    'Lào Cai',
-    'Long An',
-    'Nam Định',
-    'Nghệ An',
-    'Ninh Bình',
-    'Ninh Thuận',
-    'Phú Thọ',
-    'Phú Yên',
-    'Quảng Bình',
-    'Quảng Nam',
-    'Quảng Ngãi',
-    'Quảng Ninh',
-    'Quảng Trị',
-    'Sóc Trăng',
-    'Sơn La',
-    'Tây Ninh',
-    'Thái Bình',
-    'Thái Nguyên',
-    'Thanh Hóa',
-    'Thừa Thiên Huế',
-    'Tiền Giang',
-    'Trà Vinh',
-    'Tuyên Quang',
-    'Vĩnh Long',
-    'Vĩnh Phúc',
-    'Yên Bái',
-  ];
 
   return (
     <div className="pt-16 min-h-screen bg-gray-50">
@@ -439,10 +528,102 @@ const PlaceOrder = () => {
                 </h2>
 
                 <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* City/Province */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tỉnh/Thành phố <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="cityCode"
+                        value={formData.cityCode}
+                        onChange={handleProvinceChange}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition ${
+                          errors.city ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      >
+                        <option value="">Chọn Tỉnh/TP</option>
+                        {provinces.map((province) => (
+                          <option key={province.code} value={province.code}>
+                            {province.name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.city && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center">
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          {errors.city}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* District */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Quận/Huyện <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="districtCode"
+                        value={formData.districtCode}
+                        onChange={handleDistrictChange}
+                        disabled={!formData.cityCode || loadingDistricts}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                          errors.district ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      >
+                        <option value="">
+                          {loadingDistricts ? 'Đang tải...' : 'Chọn Quận/Huyện'}
+                        </option>
+                        {districts.map((district) => (
+                          <option key={district.code} value={district.code}>
+                            {district.name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.district && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center">
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          {errors.district}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Ward */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Phường/Xã <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="wardCode"
+                        value={formData.wardCode}
+                        onChange={handleWardChange}
+                        disabled={!formData.districtCode || loadingWards}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                          errors.ward ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      >
+                        <option value="">
+                          {loadingWards ? 'Đang tải...' : 'Chọn Phường/Xã'}
+                        </option>
+                        {wards.map((ward) => (
+                          <option key={ward.code} value={ward.code}>
+                            {ward.name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.ward && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center">
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          {errors.ward}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Address */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Địa chỉ <span className="text-red-500">*</span>
+                      Địa chỉ cụ thể <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -460,82 +641,6 @@ const PlaceOrder = () => {
                         {errors.address}
                       </p>
                     )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Ward */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phường/Xã <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="ward"
-                        value={formData.ward}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition ${
-                          errors.ward ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="Phường/Xã"
-                      />
-                      {errors.ward && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center">
-                          <AlertCircle className="w-3 h-3 mr-1" />
-                          {errors.ward}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* District */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Quận/Huyện <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="district"
-                        value={formData.district}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition ${
-                          errors.district ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="Quận/Huyện"
-                      />
-                      {errors.district && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center">
-                          <AlertCircle className="w-3 h-3 mr-1" />
-                          {errors.district}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* City */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tỉnh/Thành phố <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        name="city"
-                        value={formData.city}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition ${
-                          errors.city ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      >
-                        <option value="">Chọn Tỉnh/TP</option>
-                        {cities.map((city) => (
-                          <option key={city} value={city}>
-                            {city}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.city && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center">
-                          <AlertCircle className="w-3 h-3 mr-1" />
-                          {errors.city}
-                        </p>
-                      )}
-                    </div>
                   </div>
 
                   {/* Note */}
@@ -613,27 +718,28 @@ const PlaceOrder = () => {
                     </div>
                   </label>
                 </div>
+
                 {formData.paymentMethod === 'BANK_TRANSFER' && (
-  <div className="mt-4 p-4 border border-blue-300 rounded-lg bg-blue-50 text-center">
-    <h3 className="font-semibold text-gray-800 mb-2">
-      Quét mã QR để thanh toán
-    </h3>
-    <img
-      src={qrCode}
-      alt="QR chuyển khoản"
-      className="w-56 h-56 mx-auto mb-3 rounded-lg border"
-    />
-    <p className="text-sm text-gray-700">
-      💳 <span className="font-medium">Ngân hàng:</span> MB Bank
-      <br />
-      👤 <span className="font-medium">Chủ tài khoản:</span> NGHIEM XUAN QUAN
-      <br />
-      💰 <span className="font-medium">Số tiền:</span> {formatPrice(finalTotal)}  
-      <br />
-      📝 <span className="font-medium">Nội dung:</span> {formData.fullName || 'Tên khách hàng'}
-    </p>
-  </div>
-)}
+                  <div className="mt-4 p-4 border border-blue-300 rounded-lg bg-blue-50 text-center">
+                    <h3 className="font-semibold text-gray-800 mb-2">
+                      Quét mã QR để thanh toán
+                    </h3>
+                    <img
+                      src={qrCode}
+                      alt="QR chuyển khoản"
+                      className="w-56 h-56 mx-auto mb-3 rounded-lg border"
+                    />
+                    <p className="text-sm text-gray-700">
+                      💳 <span className="font-medium">Ngân hàng:</span> MB Bank
+                      <br />
+                      👤 <span className="font-medium">Chủ tài khoản:</span> NGHIEM XUAN QUAN
+                      <br />
+                      💰 <span className="font-medium">Số tiền:</span> {formatPrice(finalTotal)}  
+                      <br />
+                      📝 <span className="font-medium">Nội dung:</span> {formData.fullName || 'Tên khách hàng'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
   

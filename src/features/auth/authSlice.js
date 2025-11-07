@@ -162,6 +162,9 @@ const authSlice = createSlice({
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
+      
+      // Note: Cart and orders will be cleared automatically by reloadCart action
+      // which will be dispatched after logout
     },
     clearMessages: (state) => {
       state.error = null;

@@ -21,9 +21,32 @@ import {
   Box,
   AlertCircle,
   User,
+  X,
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";
+
+// Helper function to get orders for current user
+const getUserOrders = (userId) => {
+  try {
+    const ordersKey = `orders_${userId}`;
+    const savedOrders = localStorage.getItem(ordersKey);
+    return savedOrders ? JSON.parse(savedOrders) : [];
+  } catch (error) {
+    console.error('Error loading user orders:', error);
+    return [];
+  }
+};
+
+// Helper function to save orders for current user
+const saveUserOrders = (userId, orders) => {
+  try {
+    const ordersKey = `orders_${userId}`;
+    localStorage.setItem(ordersKey, JSON.stringify(orders));
+  } catch (error) {
+    console.error('Error saving user orders:', error);
+  }
+};
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -50,11 +73,22 @@ const Orders = () => {
     { id: "CANCELLED", name: "Đã hủy", icon: XCircle, color: "red" },
   ];
 
+  // Get user ID
+  const getUserId = () => {
+    return user?.id || user?.email || 'guest';
+  };
+
   // Fetch orders
   useEffect(() => {
     const fetchOrders = async () => {
+      if (!isAuthenticated || !user) {
+        navigate("/login");
+        return;
+      }
+
       try {
         setIsLoading(true);
+        const userId = getUserId();
 
         // Try to fetch from API first
         try {
@@ -67,14 +101,16 @@ const Orders = () => {
           if (response.data && response.data.data) {
             setOrders(response.data.data);
             setFilteredOrders(response.data.data);
+            // Save to localStorage for this user
+            saveUserOrders(userId, response.data.data);
             return;
           }
         } catch (apiError) {
-          console.log('API not available, using localStorage');
+          console.log('API not available, using localStorage for user:', userId);
         }
 
-        // Fallback to localStorage
-        const localOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+        // Fallback to localStorage for this specific user
+        const localOrders = getUserOrders(userId);
         
         setOrders(localOrders);
         setFilteredOrders(localOrders);
@@ -87,12 +123,8 @@ const Orders = () => {
       }
     };
 
-    if (isAuthenticated) {
-      fetchOrders();
-    } else {
-      navigate("/login");
-    }
-  }, [isAuthenticated, navigate]);
+    fetchOrders();
+  }, [isAuthenticated, user, navigate]);
 
   // Filter orders
   useEffect(() => {
@@ -123,16 +155,19 @@ const Orders = () => {
     return new Intl.NumberFormat("vi-VN").format(price) + "₫";
   };
 
-  // Format date
+  // Format date - Fix timezone issue
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    
+    // Get local date components
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
   // Get status info
@@ -174,19 +209,32 @@ const Orders = () => {
     }
 
     try {
-      // TODO: Call API to cancel order
-      // await axios.post(`http://localhost:8080/api/orders/${selectedOrder.id}/cancel`, {
-      //   reason: cancelReason
-      // });
-
-      // Update local state
-      setOrders(
-        orders.map((order) =>
-          order.id === selectedOrder.id
-            ? { ...order, status: "CANCELLED" }
-            : order
-        )
-      );
+      const userId = getUserId();
+      const cancelTime = new Date().toISOString();
+      
+      // Update local state with tracking
+      const updatedOrders = orders.map((order) => {
+        if (order.id === selectedOrder.id) {
+          return {
+            ...order,
+            status: "CANCELLED",
+            tracking: [
+              ...(order.tracking || []),
+              {
+                status: 'CANCELLED',
+                time: cancelTime,
+                description: `Đơn hàng đã bị hủy. Lý do: ${cancelReason}`
+              }
+            ]
+          };
+        }
+        return order;
+      });
+      
+      setOrders(updatedOrders);
+      
+      // Save to localStorage for this user
+      saveUserOrders(userId, updatedOrders);
 
       toast.success("Đã hủy đơn hàng thành công!");
       setShowCancelModal(false);
@@ -446,7 +494,7 @@ const Orders = () => {
                     </div>
 
                     {/* Estimated Delivery */}
-                    {order.status === "SHIPPING" && (
+                    {order.status === "SHIPPING" && order.estimatedDelivery && (
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
                         <Truck className="w-5 h-5 text-blue-600" />
                         <span className="text-sm text-blue-800">
@@ -470,122 +518,144 @@ const Orders = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-1">
+                <h2 className="text-2xl font-bold text-gray-900">
                   Chi tiết đơn hàng
                 </h2>
-                <p className="text-sm text-gray-600">
-                  Mã đơn hàng: <span className="font-medium">{selectedOrder.id}</span>
-                </p>
+                <p className="text-gray-600 mt-1">Mã đơn: {selectedOrder.id}</p>
               </div>
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
-                <XCircle className="w-6 h-6" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
-              {/* Order Status & Tracking */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Box className="w-5 h-5 text-[#3A6FB5]" />
+            <div className="p-6">
+              {/* Order Status */}
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-3">
                   Trạng thái đơn hàng
                 </h3>
-
-                <div className="space-y-4">
-                  {selectedOrder.tracking && selectedOrder.tracking.length > 0 ? selectedOrder.tracking.map((track, index) => {
-                    const isLast = index === selectedOrder.tracking.length - 1;
-                    const statusInfo = getStatusInfo(track.status);
-                    const TrackIcon = statusInfo.icon;
-
-                    return (
-                      <div key={`${track.status}-${track.time}-${index}`} className="flex gap-4">
-                        <div className="flex flex-col items-center">
-                          <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              isLast
-                                ? "bg-[#3A6FB5] text-white"
-                                : "bg-green-100 text-green-600"
-                            }`}
-                          >
-                            <TrackIcon className="w-5 h-5" />
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const statusInfo = getStatusInfo(selectedOrder.status);
+                      const StatusIcon = statusInfo.icon;
+                      return (
+                        <>
+                          <div className={`p-3 rounded-full ${getStatusColorClass(selectedOrder.status)}`}>
+                            <StatusIcon className="w-6 h-6" />
                           </div>
-                          {!isLast && (
-                            <div className="w-0.5 h-full bg-gray-300 my-1"></div>
-                          )}
+                          <div>
+                            <p className="font-bold text-gray-900">
+                              {statusInfo.name}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Cập nhật: {formatDate(selectedOrder.orderDate)}
+                            </p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Tracking Timeline */}
+                  {selectedOrder.tracking && selectedOrder.tracking.length > 0 && (
+                    <div className="mt-4 pl-4 border-l-2 border-gray-200 space-y-4">
+                      {[...selectedOrder.tracking].reverse().map((track, index) => (
+                        <div key={index} className="relative pl-6">
+                          <div className={`absolute left-0 top-1 -translate-x-1/2 w-3 h-3 rounded-full ${
+                            index === 0 ? 'bg-[#3A6FB5]' : 'bg-gray-300'
+                          }`}></div>
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {track.description}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {formatDate(track.time)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 pb-4">
-                          <p
-                            className={`font-medium mb-1 ${
-                              isLast ? "text-[#3A6FB5]" : "text-gray-700"
-                            }`}
-                          >
-                            {track.description}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {formatDate(track.time)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  }) : (
-                    <p className="text-center text-gray-500 py-4">Chưa có thông tin theo dõi</p>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Shipping Info */}
-              <div>
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-[#3A6FB5]" />
+              {/* Shipping Information */}
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
+                  <MapPin className="w-5 h-5 mr-2 text-[#3A6FB5]" />
                   Thông tin giao hàng
                 </h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <User className="w-5 h-5 text-gray-600 mt-0.5" />
+                  <div className="flex items-start gap-3">
+                    <User className="w-5 h-5 text-gray-400 mt-0.5" />
                     <div>
+                      <p className="text-sm text-gray-600">Người nhận</p>
                       <p className="font-medium text-gray-900">
-                        {selectedOrder.shipping?.fullName || 'N/A'}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {selectedOrder.shipping?.phone || 'N/A'}
+                        {selectedOrder.shipping?.fullName}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-5 h-5 text-gray-600 mt-0.5" />
-                    <p className="text-sm text-gray-700">
-                      {selectedOrder.shipping?.address || ''},{" "}
-                      {selectedOrder.shipping?.ward || ''},{" "}
-                      {selectedOrder.shipping?.district || ''},{" "}
-                      {selectedOrder.shipping?.city || ''}
-                    </p>
+                  <div className="flex items-start gap-3">
+                    <Phone className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-600">Số điện thoại</p>
+                      <p className="font-medium text-gray-900">
+                        {selectedOrder.shipping?.phone}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-600">Email</p>
+                      <p className="font-medium text-gray-900">
+                        {selectedOrder.shipping?.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-600">Địa chỉ</p>
+                      <p className="font-medium text-gray-900">
+                        {selectedOrder.shipping?.address}, {selectedOrder.shipping?.ward},{" "}
+                        {selectedOrder.shipping?.district}, {selectedOrder.shipping?.city}
+                      </p>
+                    </div>
                   </div>
                   {selectedOrder.note && (
-                    <div className="flex items-start gap-2 pt-2 border-t">
-                      <MessageCircle className="w-5 h-5 text-gray-600 mt-0.5" />
-                      <p className="text-sm text-gray-700">
-                        <span className="font-medium">Ghi chú:</span>{" "}
-                        {selectedOrder.note}
-                      </p>
+                    <div className="flex items-start gap-3">
+                      <MessageCircle className="w-5 h-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-gray-600">Ghi chú</p>
+                        <p className="font-medium text-gray-900">
+                          {selectedOrder.note}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Order Items */}
-              <div>
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Package className="w-5 h-5 text-[#3A6FB5]" />
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
+                  <Box className="w-5 h-5 mr-2 text-[#3A6FB5]" />
                   Sản phẩm ({selectedOrder.items?.length || 0})
                 </h3>
-                <div className="border border-gray-200 rounded-lg divide-y">
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                   {selectedOrder.items && selectedOrder.items.length > 0 ? selectedOrder.items.map((item, index) => (
-                    <div key={`${selectedOrder.id}-${item.productId}-${item.variantId || index}`} className="p-4 flex gap-4">
-                      <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                    <div
+                      key={index}
+                      className="flex gap-4 pb-3 border-b border-gray-200 last:border-0"
+                    >
+                      <div className="w-20 h-20 flex-shrink-0 bg-white rounded overflow-hidden">
                         <img
                           src={item.image}
                           alt={item.name}
@@ -593,13 +663,13 @@ const Orders = () => {
                         />
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-1">
+                        <h4 className="font-medium text-gray-900">
                           {item.name}
                         </h4>
-                        <p className="text-sm text-gray-600 mb-2">
+                        <p className="text-sm text-gray-600 mt-1">
                           {item.color} / {item.size}
                         </p>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mt-2">
                           <span className="text-sm text-gray-600">
                             x{item.quantity}
                           </span>
@@ -610,96 +680,84 @@ const Orders = () => {
                       </div>
                     </div>
                   )) : (
-                    <div className="p-8 text-center text-gray-500">
-                      Không có sản phẩm
-                    </div>
+                    <p className="text-center text-gray-500 py-4">Không có sản phẩm</p>
                   )}
                 </div>
               </div>
 
               {/* Payment Summary */}
               <div>
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-[#3A6FB5]" />
+                <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
+                  <CreditCard className="w-5 h-5 mr-2 text-[#3A6FB5]" />
                   Thanh toán
                 </h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between text-gray-700">
+                  <div className="flex justify-between text-gray-600">
                     <span>Tạm tính:</span>
                     <span className="font-medium">
                       {formatPrice(selectedOrder.payment?.subtotal || 0)}
                     </span>
                   </div>
-
+                  <div className="flex justify-between text-gray-600">
+                    <span>Phí vận chuyển:</span>
+                    <span className="font-medium">
+                      {selectedOrder.payment?.shippingFee === 0 ? (
+                        <span className="text-green-600">Miễn phí</span>
+                      ) : (
+                        formatPrice(selectedOrder.payment?.shippingFee || 0)
+                      )}
+                    </span>
+                  </div>
                   {selectedOrder.payment?.discount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Giảm giá:</span>
                       <span className="font-medium">
-                        -{formatPrice(selectedOrder.payment.discount)}
+                        -{formatPrice(selectedOrder.payment?.discount)}
                       </span>
                     </div>
                   )}
-
-                  <div className="flex justify-between text-gray-700">
-                    <span>Phí vận chuyển:</span>
-                    <span className="font-medium">
-                      {selectedOrder.payment?.shippingFee === 0
-                        ? "Miễn phí"
-                        : formatPrice(selectedOrder.payment?.shippingFee || 0)}
+                  <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
+                    <span className="text-lg font-bold text-gray-900">
+                      Tổng cộng:
                     </span>
-                  </div>
-
-                  <div className="border-t pt-3 flex justify-between items-center">
-                    <span className="font-bold text-gray-900">Tổng cộng:</span>
                     <span className="text-2xl font-bold text-red-600">
                       {formatPrice(selectedOrder.payment?.total || 0)}
                     </span>
                   </div>
-
-                  <div className="border-t pt-3">
-                    <p className="text-sm text-gray-600">
-                      Phương thức thanh toán:{" "}
-                      <span className="font-medium text-gray-900">
-                        {selectedOrder.payment?.method === "COD"
-                          ? "Thanh toán khi nhận hàng (COD)"
-                          : "Chuyển khoản ngân hàng"}
-                      </span>
-                    </p>
+                  <div className="pt-2">
+                    <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                      selectedOrder.payment?.method === "COD"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-green-100 text-green-800"
+                    }`}>
+                      {selectedOrder.payment?.method === "COD"
+                        ? "Thanh toán khi nhận hàng"
+                        : "Chuyển khoản ngân hàng"}
+                    </span>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Actions */}
-              <div className="flex gap-3">
-                {selectedOrder.status === "DELIVERED" && (
-                  <>
-                    <button
-                      onClick={() => handleReorder(selectedOrder)}
-                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-[#3A6FB5] text-white rounded-lg hover:bg-[#2E5C99] transition"
-                    >
-                      <RotateCcw className="w-5 h-5" />
-                      Mua lại
-                    </button>
-                    <button className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
-                      <MessageCircle className="w-5 h-5" />
-                      Đánh giá
-                    </button>
-                  </>
-                )}
-
-                {selectedOrder.status === "PENDING" && (
-                  <button
-                    onClick={() => {
-                      setShowDetailModal(false);
-                      handleCancelOrder(selectedOrder);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                  >
-                    <XCircle className="w-5 h-5" />
-                    Hủy đơn hàng
-                  </button>
-                )}
-              </div>
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Đóng
+              </button>
+              {selectedOrder.status === "PENDING" && (
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    handleCancelOrder(selectedOrder);
+                  }}
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  Hủy đơn hàng
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -708,48 +766,50 @@ const Orders = () => {
       {/* Cancel Order Modal */}
       {showCancelModal && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">
-              Hủy đơn hàng
-            </h3>
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <XCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Hủy đơn hàng
+                  </h3>
+                  <p className="text-sm text-gray-600">Mã đơn: {selectedOrder.id}</p>
+                </div>
+              </div>
 
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-yellow-800">
-                Bạn có chắc muốn hủy đơn hàng <span className="font-medium">{selectedOrder.id}</span>?
-              </p>
-            </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Lý do hủy đơn <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  rows="4"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none resize-none"
+                  placeholder="Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng..."
+                />
+              </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Lý do hủy đơn <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                rows="4"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none resize-none"
-                placeholder="Vui lòng cho chúng tôi biết lý do bạn hủy đơn hàng..."
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowCancelModal(false);
-                  setCancelReason("");
-                  setSelectedOrder(null);
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-              >
-                Đóng
-              </button>
-              <button
-                onClick={confirmCancelOrder}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-              >
-                Xác nhận hủy
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancelReason("");
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Không, giữ đơn hàng
+                </button>
+                <button
+                  onClick={confirmCancelOrder}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  Xác nhận hủy
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,9 +1,20 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-// Load cart from localStorage
+// Get current user ID
+const getCurrentUserId = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user'));
+    return user?.id || user?.email || 'guest';
+  } catch (error) {
+    return 'guest';
+  }
+};
+
+// Load cart from localStorage for current user
 const loadCartFromStorage = () => {
   try {
-    const savedCart = localStorage.getItem('cart');
+    const userId = getCurrentUserId();
+    const savedCart = localStorage.getItem(`cart_${userId}`);
     if (!savedCart) return [];
     
     const parsed = JSON.parse(savedCart);
@@ -11,7 +22,7 @@ const loadCartFromStorage = () => {
     // Ensure it's always an array
     if (!Array.isArray(parsed)) {
       console.warn('Cart data is not an array, resetting to empty array');
-      localStorage.removeItem('cart');
+      localStorage.removeItem(`cart_${userId}`);
       return [];
     }
     
@@ -26,22 +37,24 @@ const loadCartFromStorage = () => {
     
     if (!isValid) {
       console.warn('Cart data is invalid, resetting to empty array');
-      localStorage.removeItem('cart');
+      localStorage.removeItem(`cart_${userId}`);
       return [];
     }
     
     return parsed;
   } catch (error) {
     console.error('Error loading cart from localStorage:', error);
-    localStorage.removeItem('cart'); // Clear corrupted data
+    const userId = getCurrentUserId();
+    localStorage.removeItem(`cart_${userId}`); // Clear corrupted data
     return [];
   }
 };
 
-// Load selected items from localStorage
+// Load selected items from localStorage for current user
 const loadSelectedItemsFromStorage = () => {
   try {
-    const savedSelected = localStorage.getItem('selectedItems');
+    const userId = getCurrentUserId();
+    const savedSelected = localStorage.getItem(`selectedItems_${userId}`);
     if (!savedSelected) return [];
     
     const parsed = JSON.parse(savedSelected);
@@ -52,27 +65,29 @@ const loadSelectedItemsFromStorage = () => {
   }
 };
 
-// Save cart to localStorage
+// Save cart to localStorage for current user
 const saveCartToStorage = (items) => {
   try {
     if (!Array.isArray(items)) {
       console.error('Cannot save cart: items is not an array');
       return;
     }
-    localStorage.setItem('cart', JSON.stringify(items));
+    const userId = getCurrentUserId();
+    localStorage.setItem(`cart_${userId}`, JSON.stringify(items));
   } catch (error) {
     console.error('Error saving cart to localStorage:', error);
   }
 };
 
-// Save selected items to localStorage
+// Save selected items to localStorage for current user
 const saveSelectedItemsToStorage = (selectedItems) => {
   try {
     if (!Array.isArray(selectedItems)) {
       console.error('Cannot save selected items: not an array');
       return;
     }
-    localStorage.setItem('selectedItems', JSON.stringify(selectedItems));
+    const userId = getCurrentUserId();
+    localStorage.setItem(`selectedItems_${userId}`, JSON.stringify(selectedItems));
   } catch (error) {
     console.error('Error saving selected items to localStorage:', error);
   }
@@ -325,8 +340,18 @@ const cartSlice = createSlice({
       state.error = null;
       state.discountCode = null;
       state.discountAmount = 0;
-      localStorage.removeItem('cart');
-      localStorage.removeItem('selectedItems');
+      const userId = getCurrentUserId();
+      localStorage.removeItem(`cart_${userId}`);
+      localStorage.removeItem(`selectedItems_${userId}`);
+    },
+
+    // Reload cart when user changes
+    reloadCart: (state) => {
+      state.items = loadCartFromStorage();
+      state.selectedItems = loadSelectedItemsFromStorage();
+      state.discountCode = null;
+      state.discountAmount = 0;
+      state.error = null;
     },
   },
 });
@@ -399,6 +424,7 @@ export const {
   applyDiscount,
   removeDiscount,
   resetCart,
+  reloadCart,
 } = cartSlice.actions;
 
 // Reducer

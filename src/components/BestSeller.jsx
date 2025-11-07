@@ -1,119 +1,103 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Heart, ChevronRight } from "lucide-react";
+import axios from "axios";
 
-const BestSeller = () => {
+const BestSeller = ({ savedRef, setSavedCount }) => {
+  const navigate = useNavigate();
+  const [products, setProducts] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [selectedColors, setSelectedColors] = useState({});
 
-  const toggleFavorite = (id) =>
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get("http://localhost:8080/api/products");
+        // const res = await axios.get("https://fnzv9bcp-8080.asse.devtunnels.ms/api/products");
+        const data = Array.isArray(res.data?.data) ? res.data.data : [];
+
+        const mappedProducts = data.map((p) => {
+          const variants = Array.isArray(p.variants) ? p.variants : [];
+
+          const colors = variants.map((v) => ({
+            name: v.color_name || "Unknown",
+            code: v.color_hex || "#ccc",
+            image: v.image || "",
+          }));
+
+          return {
+            id: p.id,
+            name: p.name || "No name",
+            brand: p.brand || "Unknown",
+            price: p.price?.current || 0,
+            originalPrice: p.price?.original || 0,
+            discount: p.price?.discount_percent || 0,
+            image: p.images?.[0] || "",
+            colors,
+            moreColors: colors.length > 1 ? colors.length - 1 : 0,
+            // Use product ID for navigation
+            link: `/product/${p.id}`,
+            labels: Array.isArray(p.labels) ? p.labels : [],
+          };
+        });
+
+        setProducts(mappedProducts);
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setProducts([]);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  const toggleFavorite = (id, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     setFavorites((prev) =>
       prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
     );
 
-  const handleColorChange = (id, img) =>
-    setSelectedColors((prev) => ({ ...prev, [id]: img }));
+    if (savedRef?.current) {
+      const tymRect = e.target.getBoundingClientRect();
+      const savedRect = savedRef.current.getBoundingClientRect();
 
-  const products = [
-    {
-      id: 1,
-      name: "Áo bra tập gym yoga",
-      brand: "KHÁC",
-      price: 245000,
-      originalPrice: 300000,
-      discount: -19,
-      image:
-        "https://product.hstatic.net/200000695155/product/photo_2023-08-09_11.07.48_92d82ccacb8b49e3a602c8ba55bd732d_1024x1024.jpeg",
-      colors: [
-        {
-          name: "Đen",
-          code: "#000000",
-          image:
-            "https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=600&h=800&fit=crop",
-        },
-        {
-          name: "Xanh navy",
-          code: "#1e3a8a",
-          image:
-            "https://product.hstatic.net/200000695155/product/frame_47_8f37706fe9034437bb5e64128769ec22_1024x1024.jpg",
-        },
-      ],
-      moreColors: 4,
-      link: "/product/1",
-    },
-    {
-      id: 2,
-      name: "Áo bra tập gym yoga - Test",
-      brand: "KHÁC",
-      price: 245000,
-      originalPrice: 300000,
-      discount: -19,
-      image:
-        "https://product.hstatic.net/200000695155/product/frame_49_80e8c13966cd41e58d6ee1e783a48921_1024x1024.jpg",
-      colors: [
-        {
-          name: "Đen",
-          code: "#000000",
-          image:
-            "https://product.hstatic.net/200000695155/product/frame_49_80e8c13966cd41e58d6ee1e783a48921_1024x1024.jpg",
-        },
-      ],
-      moreColors: 0,
-      link: "/product/2",
-    },
-    {
-      id: 3,
-      name: "Áo croptop tập gym yoga",
-      brand: "YIHLI",
-      price: 290000,
-      originalPrice: 350000,
-      discount: -18,
-      image:
-        "https://product.hstatic.net/200000695155/product/image_114_9bf71f0ab30f449cb67f0eba40627f42_1024x1024.png",
-      colors: [
-        {
-          name: "Đen",
-          code: "#000000",
-          image:
-            "https://product.hstatic.net/200000695155/product/image_114_9bf71f0ab30f449cb67f0eba40627f42_1024x1024.png",
-        },
-        {
-          name: "Be",
-          code: "#D2B48C",
-          image:
-            "https://product.hstatic.net/200000695155/product/image_115_8c295f79b690410a8f1bb72e3821c2ea_1024x1024.png",
-        },
-      ],
-      moreColors: 7,
-      link: "/product/3",
-    },
-    {
-      id: 4,
-      name: "Áo khoác thể thao",
-      brand: "EGA",
-      price: 350000,
-      originalPrice: 450000,
-      discount: -23,
-      image:
-        "https://product.hstatic.net/200000695155/product/image_83_6246419341e9426ca85a2ec86e41d9e0_1024x1024.jpg",
-      colors: [
-        {
-          name: "Hồng",
-          code: "#FFC0CB",
-          image:
-            "https://product.hstatic.net/200000695155/product/image_82_b6b195c0c5694202b3d257fc5356e71f_1024x1024.jpg",
-        },
-        {
-          name: "Đen",
-          code: "#000000",
-          image:
-            "https://product.hstatic.net/200000695155/product/image_85_24f072606da84af2abc7babf7f103927_1024x1024.jpg",
-        },
-      ],
-      moreColors: 4,
-      link: "/product/4",
-    },
-  ];
+      const flyEl = document.createElement("div");
+      flyEl.innerText = "+1";
+      flyEl.style.position = "fixed";
+      flyEl.style.left = `${tymRect.left + tymRect.width / 2}px`;
+      flyEl.style.top = `${tymRect.top}px`;
+      flyEl.style.fontWeight = "bold";
+      flyEl.style.color = "red";
+      flyEl.style.transition = "all 0.7s ease-in-out";
+      flyEl.style.zIndex = 1000;
+
+      document.body.appendChild(flyEl);
+
+      requestAnimationFrame(() => {
+        flyEl.style.left = `${savedRect.left + savedRect.width / 2}px`;
+        flyEl.style.top = `${savedRect.top}px`;
+        flyEl.style.transform = "scale(0.5)";
+        flyEl.style.opacity = 0;
+      });
+
+      flyEl.addEventListener("transitionend", () => {
+        document.body.removeChild(flyEl);
+        if (setSavedCount) {
+          setSavedCount((prev) => prev + 1);
+        }
+      });
+    }
+  };
+
+  const handleColorChange = (id, img) => {
+    setSelectedColors((prev) => ({ ...prev, [id]: img }));
+  };
+
+  const handleProductClick = (productId) => {
+    navigate(`/product/${productId}`);
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 bg-white">
@@ -135,26 +119,46 @@ const BestSeller = () => {
 
       {/* Product List */}
       <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 hide-scrollbar">
-        {/* Mobile: 1.5 products | Tablet (768-1200): 3.5 products | Desktop (>1200): Grid 4 columns */}
-        <div className="flex gap-3 md:gap-4 lg:grid lg:grid-cols-4 lg:gap-4">
+        <div
+          className="
+      flex gap-3 md:gap-4
+      lg:flex-nowrap lg:overflow-x-auto lg:gap-4
+      xl:justify-start hide-scrollbar
+    "
+        >
           {products.map((p) => (
             <div
               key={p.id}
-              className="flex-none w-[65%] md:w-[27.5%] lg:flex-auto lg:w-auto bg-white rounded-xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-transform"
+              onClick={() => handleProductClick(p.id)}
+              className="
+          flex-none w-[65%] md:w-[27.5%]
+          lg:w-1/4 
+          bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md 
+          transition-transform hover:-translate-y-1 relative overflow-hidden cursor-pointer
+        "
             >
-              <Link to={p.link} className="block relative aspect-[3/4]">
-                <img
-                  src={selectedColors[p.id] || p.image}
-                  alt={p.name}
-                  className="w-full h-full object-cover rounded-t-xl"
-                />
-                {/* Favorite */}
+              <div className="block relative aspect-[3/4]">
+                {p.image ? (
+                  <img
+                    src={selectedColors[p.id] || p.image}
+                    alt={p.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
+                    No Image
+                  </div>
+                )}
+
+                {p.labels.includes("Bán chạy") && (
+                  <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
+                    Bán chạy
+                  </div>
+                )}
+
                 <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    toggleFavorite(p.id);
-                  }}
-                  className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition ${
+                  onClick={(e) => toggleFavorite(p.id, e)}
+                  className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition z-10 ${
                     favorites.includes(p.id)
                       ? "text-red-500"
                       : "text-gray-400 hover:text-[#3A6FB5]"
@@ -165,70 +169,78 @@ const BestSeller = () => {
                     fill={favorites.includes(p.id) ? "currentColor" : "none"}
                   />
                 </button>
-              </Link>
+
+                <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
+                  <span className="bg-[#3A6FB5] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm">
+                    FREESHIP
+                  </span>
+                  <div className="bg-[#003EA7] text-white text-[11px] font-semibold px-2 py-[2px] rounded-md shadow-md">
+                    MUA 2 CHỈ CÒN{" "}
+                    <span className="text-yellow-300">
+                      {p.comboPrice || "999.000₫"}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               <div className="p-3">
-                <p className="text-gray-500 text-xs">{p.brand}</p>
-                <Link
-                  to={p.link}
-                  className="block font-semibold text-gray-800 text-sm mt-1 mb-1 line-clamp-2 hover:text-[#3A6FB5] transition"
-                >
-                  {p.name}
-                </Link>
+                <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">
+                  {p.brand || "YINLI"}
+                </p>
+                <div className="block font-medium text-gray-800 text-[15px] leading-snug hover:text-[#3A6FB5] transition line-clamp-2">
+                  {p.name || "Áo croptop tập gym yoga"}
+                </div>
 
-                {/* Price */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[#3A6FB5] font-bold text-sm">
+                <div className="flex items-center gap-1 mt-1">
+                  <span className="text-[#111] font-bold text-[15px]">
                     {p.price.toLocaleString("vi-VN")}₫
                   </span>
-                  {p.originalPrice && (
+                  {p.originalPrice > p.price && (
                     <>
-                      <span className="text-gray-400 text-xs line-through">
+                      <span className="text-gray-400 text-xs line-through ml-1">
                         {p.originalPrice.toLocaleString("vi-VN")}₫
                       </span>
-                      <span className="text-red-500 text-xs font-medium">
-                        {p.discount}%
+                      <span className="text-red-500 text-xs font-medium ml-1">
+                        -{p.discount}%
                       </span>
                     </>
                   )}
                 </div>
 
-                {/* Colors */}
                 <div className="flex items-center gap-1.5 mt-2">
                   {p.colors.map((c, i) => (
                     <button
                       key={i}
-                      onClick={() => handleColorChange(p.id, c.image)}
-                      className={`w-5 h-5 rounded-full border-2 transition ${
-                        (selectedColors[p.id] || p.image) === c.image
-                          ? "border-[#3A6FB5] scale-110"
-                          : "border-gray-300 hover:border-[#3A6FB5]"
+                      onMouseEnter={(e) => {
+                        e.stopPropagation();
+                        handleColorChange(p.id, c.image);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className={`w-5 h-5 rounded-full border ${
+                        selectedColors[p.id] === c.image
+                          ? "border-gray-800"
+                          : "border-gray-300"
                       }`}
                       style={{ backgroundColor: c.code }}
-                      title={c.name}
                     ></button>
                   ))}
                   {p.moreColors > 0 && (
-                    <span className="text-gray-500 text-xs">
+                    <span className="text-gray-400 text-xs">
                       +{p.moreColors}
                     </span>
                   )}
+                </div>
+
+                <div className="flex items-center gap-1 mt-3">
+                  <span className="bg-[#FF6600] text-white text-[11px] font-semibold px-2 py-[2px] rounded-md">
+                    🔥 HOT DEAL
+                  </span>
                 </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* View All Button (Mobile & Tablet) */}
-      {/* <div className="mt-6 text-center lg:hidden">
-        <Link
-          to="/collection"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm bg-[#3A6FB5] text-white rounded-full hover:bg-[#2E5C99] transition shadow-sm"
-        >
-          Xem tất cả <ChevronRight className="w-4 h-4" />
-        </Link>
-      </div> */}
     </div>
   );
 };

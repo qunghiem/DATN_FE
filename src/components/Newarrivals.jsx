@@ -54,7 +54,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
   const toggleFavorite = (id, e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     setFavorites((prev) =>
       prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
     );
@@ -119,19 +119,28 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
 
       {/* Product List */}
       <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 hide-scrollbar">
-        <div className="flex gap-3 md:gap-4 lg:grid lg:grid-cols-4 lg:gap-4">
+        <div
+          className="
+      flex gap-3 md:gap-4
+      lg:flex-nowrap lg:overflow-x-auto lg:gap-4
+      xl:justify-start hide-scrollbar
+    "
+        >
           {products.map((p) => (
             <div
               key={p.id}
               onClick={() => handleProductClick(p.id)}
-              className="flex-none w-[65%] md:w-[27.5%] lg:flex-auto lg:w-auto bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1 relative overflow-hidden cursor-pointer"
+              className="
+          flex-none w-[65%] md:w-[27.5%]
+          lg:w-1/4 
+          bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md 
+          transition-transform hover:-translate-y-1 relative overflow-hidden cursor-pointer
+        "
             >
               <div className="block relative aspect-[3/4]">
-                {/* Ảnh sản phẩm */}
                 {p.image ? (
                   <img
                     src={selectedColors[p.id] || p.image}
-                    // src={selectedColors[p.id] || `https://fnzv9bcp-8080.asse.devtunnels.ms/${p.image}`}
                     alt={p.name}
                     className="w-full h-full object-cover"
                   />
@@ -141,14 +150,12 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                   </div>
                 )}
 
-                {/* Nhãn "Bán chạy" */}
                 {p.labels.includes("Bán chạy") && (
                   <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
                     Bán chạy
                   </div>
                 )}
 
-                {/* Nút yêu thích */}
                 <button
                   onClick={(e) => toggleFavorite(p.id, e)}
                   className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition z-10 ${
@@ -163,7 +170,6 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                   />
                 </button>
 
-                {/* FREESHIP + MUA 2 CHỈ CÒN */}
                 <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
                   <span className="bg-[#3A6FB5] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm">
                     FREESHIP
@@ -177,17 +183,14 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                 </div>
               </div>
 
-              {/* Thông tin sản phẩm */}
               <div className="p-3">
                 <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">
                   {p.brand || "YINLI"}
                 </p>
-
                 <div className="block font-medium text-gray-800 text-[15px] leading-snug hover:text-[#3A6FB5] transition line-clamp-2">
                   {p.name || "Áo croptop tập gym yoga"}
                 </div>
 
-                {/* Giá và giảm giá */}
                 <div className="flex items-center gap-1 mt-1">
                   <span className="text-[#111] font-bold text-[15px]">
                     {p.price.toLocaleString("vi-VN")}₫
@@ -204,7 +207,6 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                   )}
                 </div>
 
-                {/* Màu sắc */}
                 <div className="flex items-center gap-1.5 mt-2">
                   {p.colors.map((c, i) => (
                     <button
@@ -229,7 +231,6 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                   )}
                 </div>
 
-                {/* HOT DEAL Badge */}
                 <div className="flex items-center gap-1 mt-3">
                   <span className="bg-[#FF6600] text-white text-[11px] font-semibold px-2 py-[2px] rounded-md">
                     🔥 HOT DEAL
