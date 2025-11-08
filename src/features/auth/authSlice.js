@@ -36,7 +36,7 @@ export const loginWithGoogle = createAsyncThunk(
   'auth/loginWithGoogle',
   async ({ idToken }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/google`, { idToken });
+      const response = await axios.post(`${API_URL}/login/google`, { idToken });
       
       if (response.data.success) {
         localStorage.setItem('access_token', response.data.data.tokens.access_token);
@@ -52,6 +52,7 @@ export const loginWithGoogle = createAsyncThunk(
     }
   }
 );
+
 
 export const register = createAsyncThunk(
   'auth/register',
@@ -196,22 +197,22 @@ const authSlice = createSlice({
 
     // Login with Google
     builder
-      .addCase(loginWithGoogle.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(loginWithGoogle.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.user = action.payload.user;
-        state.access_token = action.payload.tokens.access_token;
-        state.refresh_token = action.payload.tokens.refresh_token;
-        state.isAuthenticated = true;
-        state.error = null;
-      })
-      .addCase(loginWithGoogle.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload;
-      });
+  .addCase(loginWithGoogle.pending, (state) => {
+    state.isLoading = true;
+    state.error = null;
+  })
+  .addCase(loginWithGoogle.fulfilled, (state, action) => {
+    state.isLoading = false;
+    state.user = action.payload.user;
+    state.access_token = action.payload.tokens.access_token;
+    state.refresh_token = action.payload.tokens.refresh_token;
+    state.isAuthenticated = true;
+    state.error = null;
+  })
+  .addCase(loginWithGoogle.rejected, (state, action) => {
+    state.isLoading = false;
+    state.error = action.payload;
+  });
 
     // Register
     builder
