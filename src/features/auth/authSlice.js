@@ -53,7 +53,6 @@ export const loginWithGoogle = createAsyncThunk(
   }
 );
 
-
 export const register = createAsyncThunk(
   'auth/register',
   async ({ fullName, email, password, confirmPassword, phone, captcha_token }, { rejectWithValue }) => {
@@ -83,7 +82,7 @@ export const register = createAsyncThunk(
 );
 
 export const forgotPassword = createAsyncThunk(
-  'auth/forgotPassword',
+  'auth/forgot-password',
   async ({ email }, { rejectWithValue }) => {
     try {
       const response = await axios.post(`${API_URL}/forgot-password`, { email });
@@ -94,6 +93,10 @@ export const forgotPassword = createAsyncThunk(
         return rejectWithValue(response.data.message);
       }
     } catch (error) {
+      // Xử lý lỗi từ server (code !== 1000)
+      if (error.response?.data?.code) {
+        return rejectWithValue(error.response.data.message);
+      }
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.');
     }
   }
@@ -111,6 +114,10 @@ export const verifyOTP = createAsyncThunk(
         return rejectWithValue(response.data.message);
       }
     } catch (error) {
+      // Xử lý lỗi từ server (code !== 1000)
+      if (error.response?.data?.code) {
+        return rejectWithValue(error.response.data.message);
+      }
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.');
     }
   }
@@ -133,6 +140,10 @@ export const resetPassword = createAsyncThunk(
         return rejectWithValue(response.data.message);
       }
     } catch (error) {
+      // Xử lý lỗi từ server (code !== 1000)
+      if (error.response?.data?.code) {
+        return rejectWithValue(error.response.data.message);
+      }
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.');
     }
   }
@@ -160,12 +171,10 @@ const authSlice = createSlice({
       state.access_token = null;
       state.refresh_token = null;
       state.isAuthenticated = false;
+      state.resetToken = null; // Clear reset token khi logout
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      
-      // Note: Cart and orders will be cleared automatically by reloadCart action
-      // which will be dispatched after logout
     },
     clearMessages: (state) => {
       state.error = null;
@@ -174,6 +183,10 @@ const authSlice = createSlice({
     setResetToken: (state, action) => {
       state.resetToken = action.payload;
     },
+    // Thêm action để clear error khi chuyển view
+    clearError: (state) => {
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     // Login
@@ -181,6 +194,7 @@ const authSlice = createSlice({
       .addCase(login.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.success = null; // Clear success message
       })
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -197,28 +211,30 @@ const authSlice = createSlice({
 
     // Login with Google
     builder
-  .addCase(loginWithGoogle.pending, (state) => {
-    state.isLoading = true;
-    state.error = null;
-  })
-  .addCase(loginWithGoogle.fulfilled, (state, action) => {
-    state.isLoading = false;
-    state.user = action.payload.user;
-    state.access_token = action.payload.tokens.access_token;
-    state.refresh_token = action.payload.tokens.refresh_token;
-    state.isAuthenticated = true;
-    state.error = null;
-  })
-  .addCase(loginWithGoogle.rejected, (state, action) => {
-    state.isLoading = false;
-    state.error = action.payload;
-  });
+      .addCase(loginWithGoogle.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+        state.success = null;
+      })
+      .addCase(loginWithGoogle.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.access_token = action.payload.tokens.access_token;
+        state.refresh_token = action.payload.tokens.refresh_token;
+        state.isAuthenticated = true;
+        state.error = null;
+      })
+      .addCase(loginWithGoogle.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
 
     // Register
     builder
       .addCase(register.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.success = null;
       })
       .addCase(register.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -239,14 +255,17 @@ const authSlice = createSlice({
       .addCase(forgotPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.success = null;
       })
       .addCase(forgotPassword.fulfilled, (state, action) => {
         state.isLoading = false;
         state.success = action.payload.message;
+        state.error = null;
       })
       .addCase(forgotPassword.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+        state.success = null;
       });
 
     // Verify OTP
@@ -254,15 +273,18 @@ const authSlice = createSlice({
       .addCase(verifyOTP.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.success = null;
       })
       .addCase(verifyOTP.fulfilled, (state, action) => {
         state.isLoading = false;
         state.success = action.payload.message;
         state.resetToken = action.payload.resetToken;
+        state.error = null;
       })
       .addCase(verifyOTP.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+        state.success = null;
       });
 
     // Reset Password
@@ -270,18 +292,21 @@ const authSlice = createSlice({
       .addCase(resetPassword.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.success = null;
       })
       .addCase(resetPassword.fulfilled, (state, action) => {
         state.isLoading = false;
         state.success = action.payload.message;
-        state.resetToken = null;
+        state.resetToken = null; // Clear reset token sau khi thành công
+        state.error = null;
       })
       .addCase(resetPassword.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+        state.success = null;
       });
   },
 });
 
-export const { logout, clearMessages, setResetToken } = authSlice.actions;
+export const { logout, clearMessages, setResetToken, clearError } = authSlice.actions;
 export default authSlice.reducer;
