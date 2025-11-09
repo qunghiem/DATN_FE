@@ -15,6 +15,7 @@ import Navbar from "./components/Navbar";
 import Collection from "./pages/Collection";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
+import Profile from "./pages/Profile";
 
 const App = () => {
   return (
@@ -32,6 +33,7 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/place-order" element={<PlaceOrder />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/product/:productId" element={<Product />} />
       </Routes>
       <Footer />
