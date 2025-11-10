@@ -40,9 +40,12 @@ const Cart = () => {
     (state) => state.cart
   );
 
+  const [itemToRemove, setItemToRemove] = useState(null);
+
   const [voucherCode, setVoucherCode] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [showRemoveSelectedConfirm, setShowRemoveSelectedConfirm] = useState(false);
+  const [showRemoveSelectedConfirm, setShowRemoveSelectedConfirm] =
+    useState(false);
 
   // Format price
   const formatPrice = (price) => {
@@ -90,8 +93,14 @@ const Cart = () => {
 
   // Handle remove item
   const handleRemoveItem = (productId, variantId) => {
-    if (window.confirm("Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?")) {
-      dispatch(removeFromCart({ productId, variantId }));
+    setItemToRemove({ productId, variantId });
+  };
+  // xác nhân xóa item
+  const confirmRemoveItem = () => {
+    if (itemToRemove) {
+      dispatch(removeFromCart(itemToRemove));
+      toast.success("Đã xóa sản phẩm khỏi giỏ hàng!");
+      setItemToRemove(null);
     }
   };
 
@@ -481,11 +490,14 @@ const Cart = () => {
               </button>
 
               {/* Free shipping notice */}
-              {!hasFreeShip && subtotal < 300000 && selectedItems.length > 0 && (
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-                  Mua thêm {formatPrice(300000 - subtotal)} để dùng mã FREESHIP!
-                </div>
-              )}
+              {!hasFreeShip &&
+                subtotal < 300000 &&
+                selectedItems.length > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                    Mua thêm {formatPrice(300000 - subtotal)} để dùng mã
+                    FREESHIP!
+                  </div>
+                )}
             </div>
           </div>
         </div>
@@ -493,8 +505,8 @@ const Cart = () => {
 
       {/* Clear cart confirmation modal */}
       {showClearConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/30 backdrop-blur-sm">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-6 max-w-sm w-full transform transition-all duration-200 scale-100 hover:scale-[1.02]">
             <h3 className="text-lg font-bold text-gray-900 mb-2">
               Xóa tất cả sản phẩm?
             </h3>
@@ -521,13 +533,14 @@ const Cart = () => {
 
       {/* Remove selected confirmation modal */}
       {showRemoveSelectedConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/30 backdrop-blur-sm">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-6 max-w-sm w-full transform transition-all duration-200 scale-100 hover:scale-[1.02]">
             <h3 className="text-lg font-bold text-gray-900 mb-2">
               Xóa sản phẩm đã chọn?
             </h3>
             <p className="text-gray-600 mb-6">
-              Bạn có chắc muốn xóa {selectedItems.length} sản phẩm đã chọn không?
+              Bạn có chắc muốn xóa {selectedItems.length} sản phẩm đã chọn
+              không?
             </p>
             <div className="flex gap-3">
               <button
@@ -538,6 +551,34 @@ const Cart = () => {
               </button>
               <button
                 onClick={confirmRemoveSelected}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove single item confirmation modal */}
+      {itemToRemove && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/30 backdrop-blur-sm">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-6 max-w-sm w-full transform transition-all duration-200 scale-100 hover:scale-[1.02]">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Xóa sản phẩm này?
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng không?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setItemToRemove(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmRemoveItem}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
               >
                 Xóa

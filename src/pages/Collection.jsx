@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Heart, Menu, X, ChevronDown, Info } from "lucide-react";
 import axios from "axios";
 import Vouchers from "../components/Vouchers";
+import FilterSection from "../components/FilterSection";
 
 const Collection = () => {
   const navigate = useNavigate();
@@ -15,9 +16,16 @@ const Collection = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [favorites, setFavorites] = useState([]);
   const [selectedColors, setSelectedColors] = useState({});
-  
+
+  // Dynamic data from API
+  const [brands, setBrands] = useState([""]);
+  const [categories, setCategories] = useState([""]);
+  const [shippingOptions, setShippingOptions] = useState([]);
+
   // Filter states
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("search") || ""
+  );
   const [selectedBrand, setSelectedBrand] = useState([]);
   const [selectedColorFilter, setSelectedColorFilter] = useState([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState([]);
@@ -26,9 +34,10 @@ const Collection = () => {
   const [sortBy, setSortBy] = useState("default");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Filter options
-  const brands = ["Khác", "EGA", "YIHLI"];
-  
+  // custom price range
+  const [customMinPrice, setCustomMinPrice] = useState("");
+  const [customMaxPrice, setCustomMaxPrice] = useState("");
+  // Filter options - Static
   const colors = [
     { name: "Đen", code: "#000000" },
     { name: "Xanh đen", code: "#1a1a2e" },
@@ -38,20 +47,12 @@ const Collection = () => {
   ];
 
   const priceRanges = [
-    { id: "0-1000000", label: "Giá dưới 1,000,000đ" },
-    { id: "1000000-2000000", label: "1,000,000đ - 2,000,000đ" },
+    { id: "0-300000", label: "Giá dưới 300,000đ" },
+    { id: "300000-5000000", label: "300,000đ - 500,000đ" },
+    { id: "5000000-10000000", label: "500,000đ - 1,000,000đ" },
+    { id: "1000000-20000000", label: "1,000,000đ - 2,000,000đ" },
     { id: "2000000-3000000", label: "2,000,000đ - 3,000,000đ" },
-    { id: "3000000-5000000", label: "3,000,000đ - 5,000,000đ" },
-    { id: "5000000-7000000", label: "5,000,000đ - 7,000,000đ" },
-    { id: "7000000-above", label: "Giá trên 10,000,000đ" },
-  ];
-
-  const categories = ["Khác", "Áo tập"];
-
-  const shippingOptions = [
-    "Miễn phí giao hàng",
-    "Giao hàng nhanh 4h",
-    "Giao hàng tận nơi"
+    { id: "3000000-above", label: "Giá trên 3,000,000đ" },
   ];
 
   const sortOptions = [
@@ -63,41 +64,55 @@ const Collection = () => {
     { id: "best-selling", name: "Bán chạy nhất" },
   ];
 
-  // Voucher data
-  const vouchers = [
-    {
-      id: 1,
-      icon: "🚚",
-      title: "MIỄN PHÍ VẬN CHUYỂN",
-      description: "Áp dụng cho đơn từ 500k",
-      code: "ECAFREESHIP",
-      expiry: "30/12/2025"
-    },
-    {
-      id: 2,
-      icon: "💵",
-      title: "GIẢM 50K",
-      description: "Áp dụng cho đơn hàng từ 600đk",
-      code: "GIAM50K",
-      expiry: "06/01/2025"
-    },
-    {
-      id: 3,
-      icon: "💲",
-      title: "GIẢM 30%",
-      description: "Cho sản phẩm giảm đến 4tr trở lên",
-      code: "GIAM30",
-      expiry: "05/06/2025"
-    },
-    {
-      id: 4,
-      icon: "💰",
-      title: "GIẢM 40%",
-      description: "Cho sản phẩm giảm đến 4tr trong Mùa Đông",
-      code: "GIAM40",
-      expiry: "20/01/2025"
-    }
-  ];
+  // Fetch brands, categories, and labels
+  useEffect(() => {
+    const fetchBrandsCategoriesLabels = async () => {
+      try {
+        // Fetch brands
+        const brandsRes = await axios.get("http://localhost:8080/api/brands");
+        const brandsData = brandsRes.data?.result || brandsRes.data?.data || [];
+        const brandNames = brandsData
+          .filter((b) => b.isActive !== false)
+          .map((b) => b.name);
+        setBrands([...brandNames, "Khác"]);
+
+        // Fetch categories
+        const categoriesRes = await axios.get(
+          "http://localhost:8080/api/categories"
+        );
+        const categoriesData =
+          categoriesRes.data?.result || categoriesRes.data?.data || [];
+        const categoryNames = categoriesData.map((c) => c.name);
+        setCategories([...categoryNames, "Khác"]);
+
+        // Fetch labels for shipping options
+        const labelsRes = await axios.get("http://localhost:8080/api/labels");
+        const labelsData = labelsRes.data?.result || labelsRes.data?.data || [];
+
+        // Filter labels that are related to shipping/delivery
+        // You can adjust the filtering logic based on your label structure
+        const shippingLabels = labelsData
+          .filter((label) => {
+            const name = (label.name || "").toLowerCase();
+            return (
+              name.includes("giao hàng") ||
+              name.includes("freeship") ||
+              name.includes("miễn phí") ||
+              name.includes("ship") ||
+              name.includes("vận chuyển")
+            );
+          })
+          .map((label) => label.name);
+
+        setShippingOptions(shippingLabels);
+      } catch (err) {
+        console.error("Error fetching brands/categories/labels:", err);
+        // Keep default values if API fails
+      }
+    };
+
+    fetchBrandsCategoriesLabels();
+  }, []);
 
   // Fetch products
   useEffect(() => {
@@ -105,29 +120,91 @@ const Collection = () => {
       try {
         setIsLoading(true);
         const res = await axios.get("http://localhost:8080/api/products");
-        const data = Array.isArray(res.data?.data) ? res.data.data : [];
+
+        // API trả về { code, message, result } hoặc { code, message, data }
+        const data = Array.isArray(res.data?.result)
+          ? res.data.result
+          : Array.isArray(res.data?.data)
+          ? res.data.data
+          : [];
 
         const mappedProducts = data.map((p) => {
+          // Xử lý images - giống BestSeller
+          const images = Array.isArray(p.images)
+            ? p.images
+                .filter((img) => {
+                  // Kiểm tra cả image_url và imageUrl để tương thích
+                  const url = img.image_url || img.imageUrl;
+                  return url && url.trim() !== "";
+                })
+                .map((img) => {
+                  // Hỗ trợ cả 2 format: image_url và imageUrl
+                  const url = img.image_url || img.imageUrl;
+
+                  // Convert relative path thành full URL
+                  const fullUrl = url.startsWith("http")
+                    ? url
+                    : `http://localhost:8080/${url}`;
+
+                  const altText =
+                    img.alt_text || img.altText || p.name || "Product image";
+
+                  return {
+                    url: fullUrl,
+                    altText: altText,
+                  };
+                })
+            : [];
+
+          // Xử lý giá - hỗ trợ cả 2 cấu trúc API
+          let currentPrice, originalPrice, discountPercent;
+
+          if (p.price && typeof p.price === "object") {
+            // Cấu trúc nested: { price: { discount_price, price, discount_percent } }
+            currentPrice = p.price.discount_price || p.price.price || 0;
+            originalPrice = p.price.price || 0;
+            discountPercent = p.price.discount_percent || 0;
+          } else {
+            // Cấu trúc flat: { price, discountPercent }
+            originalPrice = p.price || 0;
+            discountPercent = p.discountPercent || 0;
+            currentPrice =
+              originalPrice - (originalPrice * discountPercent) / 100;
+          }
+
+          // Xử lý variants cho colors
           const variants = Array.isArray(p.variants) ? p.variants : [];
           const colors = variants.map((v) => ({
-            name: v.color_name || "Unknown",
-            code: v.color_hex || "#ccc",
+            name: v.color_name || v.colorName || "Unknown",
+            code: v.color_hex || v.colorHex || "#ccc",
             image: v.image || "",
           }));
 
           return {
             id: p.id,
             name: p.name || "No name",
-            brand: p.brand || "Khác",
-            category: p.category || "Khác",
-            price: p.price?.current || 0,
-            originalPrice: p.price?.original || 0,
-            discount: p.price?.discount_percent || 0,
-            image: p.images?.[0] || "",
+            brand: p.brand?.name || p.brandName || "Unknown",
+            price: currentPrice,
+            originalPrice: originalPrice,
+            discount: discountPercent,
+            images: images,
+            mainImage: images[0]?.url || "",
             colors,
             moreColors: colors.length > 1 ? colors.length - 1 : 0,
             link: `/product/${p.id}`,
-            labels: Array.isArray(p.labels) ? p.labels : [],
+            labels: Array.isArray(p.labels)
+              ? p.labels.map((label) =>
+                  typeof label === "string" ? label : label.name
+                )
+              : [],
+            categories: Array.isArray(p.categories)
+              ? p.categories.map((cat) =>
+                  typeof cat === "string" ? cat : cat.name
+                )
+              : [],
+            category: p.categories?.[0]?.name || p.categoryName || "Khác",
+            sold: p.sold || 0,
+            totalCount: p.total_count || 0,
           };
         });
 
@@ -171,22 +248,47 @@ const Collection = () => {
     }
 
     // Price range filter
-    if (selectedPriceRange.length > 0) {
+    if (selectedPriceRange.length > 0 || customMinPrice || customMaxPrice) {
       filtered = filtered.filter((p) => {
-        return selectedPriceRange.some((range) => {
-          const [min, max] = range.split("-").map(Number);
-          if (max) {
-            return p.price >= min && p.price <= max;
-          } else {
-            return p.price >= min;
-          }
-        });
+        // Check custom range first
+        const min = customMinPrice ? Number(customMinPrice) : 0;
+        const max = customMaxPrice ? Number(customMaxPrice) : Infinity;
+        const matchesCustomRange = p.price >= min && p.price <= max;
+
+        // Check predefined ranges
+        const matchesPredefinedRange =
+          selectedPriceRange.length === 0 ||
+          selectedPriceRange.some((range) => {
+            const [min, max] = range.split("-").map(Number);
+            if (max) {
+              return p.price >= min && p.price <= max;
+            } else {
+              return p.price >= min;
+            }
+          });
+
+        // If only custom range is set, use it; otherwise combine with predefined
+        if (
+          selectedPriceRange.length === 0 &&
+          (customMinPrice || customMaxPrice)
+        ) {
+          return matchesCustomRange;
+        }
+
+        return matchesPredefinedRange && matchesCustomRange;
       });
     }
 
     // Category filter
     if (selectedCategory.length > 0) {
       filtered = filtered.filter((p) => selectedCategory.includes(p.category));
+    }
+
+    // Shipping filter - filter by labels
+    if (selectedShipping.length > 0) {
+      filtered = filtered.filter((p) =>
+        p.labels.some((label) => selectedShipping.includes(label))
+      );
     }
 
     // Sort
@@ -201,10 +303,10 @@ const Collection = () => {
         filtered.sort((a, b) => b.name.localeCompare(a.name));
         break;
       case "best-selling":
-        filtered = filtered.filter(p => p.labels.includes("Bán chạy"));
+        filtered = filtered.filter((p) => p.labels.includes("Bán chạy"));
         break;
       case "newest":
-        filtered = filtered.filter(p => p.labels.includes("Mới"));
+        filtered = filtered.filter((p) => p.labels.includes("Mới"));
         break;
       default: // name-asc
         filtered.sort((a, b) => a.name.localeCompare(b.name));
@@ -212,7 +314,18 @@ const Collection = () => {
     }
 
     setFilteredProducts(filtered);
-  }, [products, searchParams, selectedBrand, selectedColorFilter, selectedPriceRange, selectedCategory, sortBy]);
+  }, [
+    products,
+    searchParams,
+    selectedBrand,
+    selectedColorFilter,
+    selectedPriceRange,
+    selectedCategory,
+    selectedShipping,
+    sortBy,
+    customMinPrice,
+    customMaxPrice,
+  ]);
 
   // Handlers
   const toggleFavorite = (id, e) => {
@@ -233,7 +346,7 @@ const Collection = () => {
 
   const toggleFilter = (filterArray, setFilterArray, value) => {
     if (filterArray.includes(value)) {
-      setFilterArray(filterArray.filter(v => v !== value));
+      setFilterArray(filterArray.filter((v) => v !== value));
     } else {
       setFilterArray([...filterArray, value]);
     }
@@ -246,129 +359,13 @@ const Collection = () => {
     setSelectedCategory([]);
     setSelectedShipping([]);
     setSortBy("default");
+    setCustomMinPrice("");
+    setCustomMaxPrice("");
   };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN").format(price) + "đ";
   };
-
-  const FilterSection = ({ isMobile = false }) => (
-    <div className={isMobile ? "p-4" : ""}>
-      {/* Brand Filter */}
-      <div className="mb-6">
-        <h4 className="font-bold text-gray-900 mb-3 uppercase text-sm">THƯƠNG HIỆU</h4>
-        <div className="space-y-2">
-          {brands.map((brand) => (
-            <label
-              key={brand}
-              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition"
-            >
-              <input
-                type="checkbox"
-                checked={selectedBrand.includes(brand)}
-                onChange={() => toggleFilter(selectedBrand, setSelectedBrand, brand)}
-                className="w-4 h-4 text-[#3A6FB5] border-gray-300 rounded focus:ring-[#3A6FB5]"
-              />
-              <span className="text-sm text-gray-700">{brand}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Color Filter */}
-      <div className="mb-6">
-        <h4 className="font-bold text-gray-900 mb-3 uppercase text-sm">MÀU SẮC</h4>
-        <div className="space-y-2">
-          {colors.map((color) => (
-            <label
-              key={color.name}
-              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition"
-            >
-              <div className="flex items-center gap-2 flex-1">
-                <div
-                  className="w-6 h-6 rounded-full border border-gray-300"
-                  style={{ backgroundColor: color.code }}
-                />
-                <span className="text-sm text-gray-700">{color.name}</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={selectedColorFilter.includes(color.name)}
-                onChange={() => toggleFilter(selectedColorFilter, setSelectedColorFilter, color.name)}
-                className="w-4 h-4 text-[#3A6FB5] border-gray-300 rounded focus:ring-[#3A6FB5]"
-              />
-            </label>
-          ))}
-          <button className="text-sm text-[#3A6FB5] hover:underline flex items-center gap-1">
-            Xem thêm <ChevronDown className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Price Range Filter */}
-      <div className="mb-6">
-        <h4 className="font-bold text-gray-900 mb-3 uppercase text-sm">MỨC GIÁ</h4>
-        <div className="space-y-2">
-          {priceRanges.map((range) => (
-            <label
-              key={range.id}
-              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition"
-            >
-              <input
-                type="checkbox"
-                checked={selectedPriceRange.includes(range.id)}
-                onChange={() => toggleFilter(selectedPriceRange, setSelectedPriceRange, range.id)}
-                className="w-4 h-4 text-[#3A6FB5] border-gray-300 rounded focus:ring-[#3A6FB5]"
-              />
-              <span className="text-sm text-gray-700">{range.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Category Filter */}
-      <div className="mb-6">
-        <h4 className="font-bold text-gray-900 mb-3 uppercase text-sm">LOẠI</h4>
-        <div className="space-y-2">
-          {categories.map((cat) => (
-            <label
-              key={cat}
-              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition"
-            >
-              <input
-                type="checkbox"
-                checked={selectedCategory.includes(cat)}
-                onChange={() => toggleFilter(selectedCategory, setSelectedCategory, cat)}
-                className="w-4 h-4 text-[#3A6FB5] border-gray-300 rounded focus:ring-[#3A6FB5]"
-              />
-              <span className="text-sm text-gray-700">{cat}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Shipping Filter */}
-      <div className="mb-6">
-        <h4 className="font-bold text-gray-900 mb-3 uppercase text-sm">DỊCH VỤ GIAO HÀNG</h4>
-        <div className="space-y-2">
-          {shippingOptions.map((option) => (
-            <label
-              key={option}
-              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition"
-            >
-              <input
-                type="checkbox"
-                checked={selectedShipping.includes(option)}
-                onChange={() => toggleFilter(selectedShipping, setSelectedShipping, option)}
-                className="w-4 h-4 text-[#3A6FB5] border-gray-300 rounded focus:ring-[#3A6FB5]"
-              />
-              <span className="text-sm text-gray-700">{option}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="pt-16 min-h-screen bg-gray-50">
@@ -380,24 +377,48 @@ const Collection = () => {
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex gap-1">
                   {[...Array(6)].map((_, i) => (
-                    <div key={i} className="w-1 h-4 bg-white opacity-50 skew-x-12" />
+                    <div
+                      key={i}
+                      className="w-1 h-4 bg-white opacity-50 skew-x-12"
+                    />
                   ))}
                 </div>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-2">GIẢM ĐẾN 50%</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2">
+                GIẢM ĐẾN 50%
+              </h2>
               <p className="text-sm opacity-90">TỪ 20/12 - 30/12</p>
               <div className="flex gap-1 mt-2">
                 {[...Array(8)].map((_, i) => (
-                  <div key={i} className="w-1 h-4 bg-white opacity-50 skew-x-12" />
+                  <div
+                    key={i}
+                    className="w-1 h-4 bg-white opacity-50 skew-x-12"
+                  />
                 ))}
               </div>
             </div>
-            
+
             <div className="hidden md:flex items-center gap-4">
-              <img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=150&h=150&fit=crop" alt="" className="w-20 h-24 object-cover rounded" />
-              <img src="https://images.unsplash.com/photo-1434682772747-f16d3ea162c3?w=150&h=150&fit=crop" alt="" className="w-20 h-24 object-cover rounded" />
-              <img src="https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=150&h=150&fit=crop" alt="" className="w-20 h-24 object-cover rounded" />
-              <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=150&h=150&fit=crop" alt="" className="w-20 h-24 object-cover rounded" />
+              <img
+                src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=150&h=150&fit=crop"
+                alt=""
+                className="w-20 h-24 object-cover rounded"
+              />
+              <img
+                src="https://images.unsplash.com/photo-1434682772747-f16d3ea162c3?w=150&h=150&fit=crop"
+                alt=""
+                className="w-20 h-24 object-cover rounded"
+              />
+              <img
+                src="https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=150&h=150&fit=crop"
+                alt=""
+                className="w-20 h-24 object-cover rounded"
+              />
+              <img
+                src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=150&h=150&fit=crop"
+                alt=""
+                className="w-20 h-24 object-cover rounded"
+              />
             </div>
 
             <button className="ml-4 bg-white text-black px-6 py-2 rounded font-bold hover:bg-gray-100 transition">
@@ -423,7 +444,25 @@ const Collection = () => {
                 </button>
               </div>
               <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
-                <FilterSection />
+                <FilterSection
+                  brands={brands}
+                  selectedBrand={selectedBrand}
+                  setSelectedBrand={setSelectedBrand}
+                  priceRanges={priceRanges}
+                  selectedPriceRange={selectedPriceRange}
+                  setSelectedPriceRange={setSelectedPriceRange}
+                  customMinPrice={customMinPrice}
+                  setCustomMinPrice={setCustomMinPrice}
+                  customMaxPrice={customMaxPrice}
+                  setCustomMaxPrice={setCustomMaxPrice}
+                  categories={categories}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={setSelectedCategory}
+                  shippingOptions={shippingOptions}
+                  selectedShipping={selectedShipping}
+                  setSelectedShipping={setSelectedShipping}
+                  toggleFilter={toggleFilter}
+                />
               </div>
             </div>
           </div>
@@ -437,42 +476,54 @@ const Collection = () => {
           </button>
 
           {/* Mobile Filters Modal - Screens < 992px */}
+          {/* Mobile Filters Modal - Screens < 992px */}
+          {/* Mobile Filters Modal - Screens < 992px */}
           {showMobileFilters && (
-            <>
-              {/* Backdrop */}
-              <div 
-                className="hidden fixed inset-0 bg-black bg-opacity-50 z-50"
-                onClick={() => setShowMobileFilters(false)}
-              />
-              
-              {/* Sidebar from right */}
-              <div className="lg:hidden fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white z-50 shadow-xl overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
-                  <button onClick={() => setShowMobileFilters(false)}>
-                    <X className="w-6 h-6" />
-                  </button>
-                  <h3 className="font-bold">Tìm theo</h3>
-                  <div className="w-6" />
-                </div>
-
-                <FilterSection isMobile />
-
-                <div className="sticky bottom-0 bg-white border-t p-4 flex gap-3">
-                  <button
-                    onClick={clearAllFilters}
-                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                  >
-                    Xóa bộ lọc
-                  </button>
-                  <button
-                    onClick={() => setShowMobileFilters(false)}
-                    className="flex-1 px-4 py-3 bg-[#3A6FB5] text-white rounded-lg hover:bg-[#2E5C99] transition"
-                  >
-                    Áp dụng
-                  </button>
-                </div>
+            <div className="lg:hidden fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white z-[100] shadow-xl overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
+                <button onClick={() => setShowMobileFilters(false)}>
+                  <X className="w-6 h-6" />
+                </button>
+                <h3 className="font-bold">Tìm theo</h3>
+                <div className="w-6" />
               </div>
-            </>
+
+              <FilterSection
+                isMobile
+                brands={brands}
+                selectedBrand={selectedBrand}
+                setSelectedBrand={setSelectedBrand}
+                priceRanges={priceRanges}
+                selectedPriceRange={selectedPriceRange}
+                setSelectedPriceRange={setSelectedPriceRange}
+                customMinPrice={customMinPrice}
+                setCustomMinPrice={setCustomMinPrice}
+                customMaxPrice={customMaxPrice}
+                setCustomMaxPrice={setCustomMaxPrice}
+                categories={categories}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                shippingOptions={shippingOptions}
+                selectedShipping={selectedShipping}
+                setSelectedShipping={setSelectedShipping}
+                toggleFilter={toggleFilter}
+              />
+
+              <div className="sticky bottom-0 bg-white border-t p-4 flex gap-3">
+                <button
+                  onClick={clearAllFilters}
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Xóa bộ lọc
+                </button>
+                <button
+                  onClick={() => setShowMobileFilters(false)}
+                  className="flex-1 px-4 py-3 bg-[#3A6FB5] text-white rounded-lg hover:bg-[#2E5C99] transition"
+                >
+                  Áp dụng
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Products */}
@@ -480,9 +531,7 @@ const Collection = () => {
             {/* Header & Sort */}
             <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">
-                  Tất cả sản phẩm
-                </span>
+                <span className="text-sm text-gray-600">Tất cả sản phẩm</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">Sắp xếp:</span>
                   <select
@@ -534,19 +583,25 @@ const Collection = () => {
                   <div
                     key={p.id}
                     onClick={() => handleProductClick(p.id)}
-                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition cursor-pointer overflow-hidden group"
+                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-transform hover:-translate-y-1 cursor-pointer overflow-hidden group border border-gray-100"
                   >
                     <div className="relative aspect-[3/4] bg-gray-100">
-                      <img
-                        src={selectedColors[p.id] || p.image}
-                        alt={p.name}
-                        className="w-full h-full object-cover"
-                      />
+                      {p.mainImage ? (
+                        <img
+                          src={selectedColors[p.id] || p.mainImage}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                          No Image
+                        </div>
+                      )}
 
                       {/* Labels */}
                       <div className="absolute top-2 left-2 flex flex-col gap-1">
                         {p.labels.includes("Bán chạy") && (
-                          <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                          <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">
                             Bán chạy
                           </span>
                         )}
@@ -568,66 +623,129 @@ const Collection = () => {
                       >
                         <Heart
                           className="w-4 h-4"
-                          fill={favorites.includes(p.id) ? "currentColor" : "none"}
+                          fill={
+                            favorites.includes(p.id) ? "currentColor" : "none"
+                          }
                         />
                       </button>
 
-                      {/* Hover overlay with seller info */}
-                      <div className="absolute bottom-2 left-2 right-2 bg-white rounded p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-gray-300 rounded-full" />
-                          <span className="text-xs font-medium">{p.brand}</span>
-                        </div>
+                      {/* Additional Labels at bottom */}
+                      <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
+                        {p.labels.map((label, idx) => {
+                          // Skip "Bán chạy" vì đã hiển thị ở trên
+                          if (label === "Bán chạy") return null;
+
+                          // Xác định style dựa trên tên label
+                          const isFreeship =
+                            label.toLowerCase().includes("freeship") ||
+                            label.toLowerCase().includes("free ship");
+                          const isCombo =
+                            label.toLowerCase().includes("mua 2") ||
+                            label.toLowerCase().includes("combo");
+
+                          if (isFreeship) {
+                            return (
+                              <span
+                                key={idx}
+                                className="bg-[#3A6FB5] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm"
+                              >
+                                {label}
+                              </span>
+                            );
+                          }
+
+                          if (isCombo) {
+                            return (
+                              <div
+                                key={idx}
+                                className="bg-[#003EA7] text-white text-[11px] font-semibold px-2 py-[2px] rounded-md shadow-md"
+                              >
+                                {label}
+                              </div>
+                            );
+                          }
+
+                          // Label mặc định
+                          return (
+                            <span
+                              key={idx}
+                              className="bg-[#003EA7] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm"
+                            >
+                              {label}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
 
                     <div className="p-3">
-                      <p className="text-gray-400 text-xs uppercase mb-1">{p.brand}</p>
-                      <h3 className="font-medium text-sm text-gray-900 line-clamp-2 mb-2 min-h-[2.5rem]">
+                      <p className="text-gray-400 text-xs uppercase mb-1 tracking-wide">
+                        {p.brand || "YINLI"}
+                      </p>
+                      <h3 className="font-medium text-sm text-gray-900 line-clamp-2 mb-2 min-h-[2.5rem] leading-snug hover:text-[#3A6FB5] transition">
                         {p.name}
                       </h3>
 
-                      <div className="flex items-baseline gap-2 mb-2">
-                        <span className="text-red-600 font-bold">
-                          {formatPrice(p.price)}
+                      <div className="flex items-center gap-1 mb-2">
+                        <span className="text-[#111] font-bold text-[15px]">
+                          {Math.round(p.price).toLocaleString("vi-VN")}₫
                         </span>
                         {p.originalPrice > p.price && (
                           <>
-                            <span className="text-gray-400 text-xs line-through">
-                              {formatPrice(p.originalPrice)}
+                            <span className="text-gray-400 text-xs line-through ml-1">
+                              {Math.round(p.originalPrice).toLocaleString(
+                                "vi-VN"
+                              )}
+                              ₫
                             </span>
-                            <span className="text-red-500 text-xs">
+                            <span className="text-red-500 text-xs font-medium ml-1">
                               -{p.discount}%
                             </span>
                           </>
                         )}
                       </div>
 
-                      {/* Colors */}
-                      <div className="flex items-center gap-1.5">
-                        {p.colors.slice(0, 4).map((c, i) => (
-                          <button
-                            key={i}
-                            onMouseEnter={(e) => {
-                              e.stopPropagation();
-                              handleColorChange(p.id, c.image);
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-4 h-4 rounded-full border border-gray-300"
-                            style={{ backgroundColor: c.code }}
-                          />
-                        ))}
-                        {p.moreColors > 0 && (
-                          <span className="text-gray-400 text-xs">
-                            +{p.moreColors}
-                          </span>
-                        )}
-                      </div>
+                      {/* Thumbnail images nếu có nhiều hình */}
+                      {p.images.length > 1 && (
+                        <div className="flex items-center gap-1.5 mt-2">
+                          {p.images.slice(0, 4).map((img, i) => (
+                            <div key={i} className="relative">
+                              <button
+                                onMouseEnter={(e) => {
+                                  e.stopPropagation();
+                                  handleColorChange(p.id, img.url);
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className={`w-8 h-8 rounded-full border overflow-hidden group/thumb ${
+                                  selectedColors[p.id] === img.url
+                                    ? "border-gray-800 border-2"
+                                    : "border-gray-300"
+                                }`}
+                              >
+                                <img
+                                  src={img.url}
+                                  alt={img.altText}
+                                  className="w-full h-full object-cover"
+                                />
 
-                      {/* Shipping badge */}
-                      <div className="mt-2 text-xs text-green-600 font-medium">
-                        Giao hàng miễn phí
-                      </div>
+                                {/* Tooltip - chỉ hiện khi hover vào thumbnail */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded whitespace-nowrap opacity-0 invisible group-hover/thumb:opacity-100 group-hover/thumb:visible transition-all duration-200 pointer-events-none z-20">
+                                  {img.altText}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                              </button>
+                            </div>
+                          ))}
+                          {p.images.length > 4 && (
+                            <span className="text-gray-400 text-xs">
+                              +{p.images.length - 4}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
