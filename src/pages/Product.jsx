@@ -461,13 +461,6 @@ const Product = () => {
                   {product.brand}
                 </span>
               </div>
-              <span className="text-gray-300">|</span>
-              <div>
-                Mã sản phẩm:{" "}
-                <span className="text-[#3A6FB5] font-medium">
-                  {product.slug}
-                </span>
-              </div>
             </div>
 
             {/* Flash Sale */}

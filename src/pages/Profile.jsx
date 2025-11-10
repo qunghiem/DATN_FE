@@ -128,7 +128,6 @@ const Profile = () => {
 
       if (response.data.code === 1000) {
         toast.success('Cập nhật thông tin thành công!');
-        
         // Update user in localStorage
         const updatedUser = {
           ...user,
