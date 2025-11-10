@@ -32,6 +32,36 @@ const Login = () => {
     captcha_response: "",
   });
 
+  const [countdown, setCountdown] = useState(300);
+  const [canResend, setCanResend] = useState(false);
+
+  useEffect( () => {
+    if (countdown > 0) {
+      const timer = setInterval( () => {
+        setCountdown( prev => prev - 1)
+      }, 1000)
+      return () => clearInterval(timer)
+    } else {
+      setCanResend(true)
+    }
+  }, [countdown])
+
+  // Hàm format thời gian
+const formatTime = (seconds) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Hàm reset countdown khi gửi lại OTP
+const handleResendOTP = () => {
+  if (canResend) {
+    handleForgotPassword();
+    setCountdown(300);
+    setCanResend(false);
+  }
+};
+
   useEffect(() => {
     if (isAuthenticated && view === "login") {
       navigate("/");
@@ -327,6 +357,7 @@ const Login = () => {
             placeholder="example@email.com"
             required
           />
+          
         </div>
       </div>
 
@@ -394,9 +425,20 @@ const Login = () => {
           maxLength="6"
           required
         />
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          Mã OTP có hiệu lực trong 5 phút
-        </p>
+         <p className="text-xs text-gray-500 mt-2 text-center">
+      {countdown > 0 ? (
+        <>
+          Mã OTP có hiệu lực trong{" "}
+          <span className="font-semibold text-sky-600">
+            {formatTime(countdown)}
+          </span>
+        </>
+      ) : (
+        <span className="text-red-500 font-medium">
+          Mã OTP đã hết hạn. Vui lòng gửi lại.
+        </span>
+      )}
+    </p>
       </div>
 
       <button
@@ -420,7 +462,7 @@ const Login = () => {
         disabled={isLoading}
         className="w-full text-sky-600 hover:text-sky-700 py-2 text-sm font-medium transition"
       >
-        Gửi lại mã OTP
+        {canResend ? "Gửi lại mã OTP" : `Gửi lại sau ${formatTime(countdown)}`}
       </button>
     </form>
   </>

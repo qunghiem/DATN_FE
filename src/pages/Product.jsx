@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Heart, Minus, Plus, ShoppingCart, Truck, CreditCard, RotateCcw, Loader2 } from "lucide-react";
+import {
+  Heart,
+  Minus,
+  Plus,
+  ShoppingCart,
+  Truck,
+  CreditCard,
+  RotateCcw,
+  Loader2,
+} from "lucide-react";
 import axios from "axios";
 import { addToCart } from "../features/cart/cartSlice";
 import { toast } from "react-toastify";
@@ -32,7 +41,7 @@ const Product = () => {
         setError(null);
 
         console.log("Fetching product ID:", productId);
-        
+
         const response = await axios.get(
           `http://localhost:8080/api/products/${productId}`
           // `https://fnzv9bcp-8080.asse.devtunnels.ms/api/products/${productId}`
@@ -40,7 +49,8 @@ const Product = () => {
 
         console.log("API Response:", response.data);
 
-        const productData = response.data.data || response.data.result || response.data;
+        const productData =
+          response.data.data || response.data.result || response.data;
 
         if (!productData || !productData.id) {
           throw new Error("Product not found");
@@ -50,29 +60,41 @@ const Product = () => {
           id: productData.id,
           name: productData.name,
           slug: productData.slug,
-          brand: productData.brand,
+          sold: productData.sold,
+          brand: productData.brand?.name || "Unknown", // ← Thay đổi: lấy brand.name
           description: productData.description,
           price: {
-            current: productData.price?.current,
-            original: productData.price?.original,
+            current:
+              productData.price?.discount_price ||
+              productData.price?.price ||
+              0, // ← Thay đổi: discount_price
+            original: productData.price?.price || 0, // ← Thay đổi: price là giá gốc
             currency: productData.price?.currency || "VND",
-            discount_percent: productData.price?.discount_percent || 0
+            discount_percent: productData.price?.discount_percent || 0,
           },
-          images: productData.images || [],
+          // ← Thay đổi: xử lý images với image_url và alt_text
+          images: Array.isArray(productData.images)
+            ? productData.images.map(
+                (img) => img.image_url || img.imageUrl || img
+              )
+            : [],
           variants: productData.variants || [],
-          labels: productData.labels || [],
+          // ← Thay đổi: labels.name
+          labels: Array.isArray(productData.labels)
+            ? productData.labels.map((label) => label.name)
+            : [],
           url: productData.url,
           total_count: productData.total_count || 0,
           is_wishlisted: productData.is_wishlisted || false,
           is_best_seller: productData.is_best_seller || false,
-          is_new_arrival: productData.is_new_arrival || false
+          is_new_arrival: productData.is_new_arrival || false,
         };
 
         console.log("Transformed product:", transformedProduct);
 
         setProduct(transformedProduct);
         setIsFavorite(transformedProduct.is_wishlisted);
-        
+
         if (transformedProduct.images.length > 0) {
           setSelectedImage(transformedProduct.images[0]);
         }
@@ -84,7 +106,7 @@ const Product = () => {
           setSelectedColor({
             name: firstVariant.color_name,
             hex: firstVariant.color_hex,
-            image: firstVariant.image
+            image: firstVariant.image,
           });
         }
 
@@ -92,32 +114,49 @@ const Product = () => {
           const relatedResponse = await axios.get(
             `http://localhost:8080/api/products`
           );
-          
-          const relatedData = relatedResponse.data.data || relatedResponse.data.result || relatedResponse.data;
+
+          const relatedData =
+            relatedResponse.data.data ||
+            relatedResponse.data.result ||
+            relatedResponse.data;
           const relatedArray = Array.isArray(relatedData) ? relatedData : [];
-          
+
           const filtered = relatedArray
-            .filter(p => p.id !== productData.id && p.brand === productData.brand)
+            .filter(
+              (p) =>
+                p.id !== productData.id &&
+                p.brand?.name === productData.brand?.name
+            ) // ← Thay đổi: brand.name
             .slice(0, 5)
-            .map(p => ({
+            .map((p) => ({
               id: p.id,
               name: p.name,
-              price: p.price,
-              brand: p.brand,
-              image: p.images?.[0],
-              url: p.url
+              price: {
+                current: p.price?.discount_price || p.price?.price || 0, // ← Thay đổi
+                original: p.price?.price || 0, // ← Thay đổi
+                discount_percent: p.price?.discount_percent || 0,
+              },
+              brand: p.brand?.name || "Unknown", // ← Thay đổi: brand.name
+              // ← Thay đổi: image_url
+              image:
+                p.images?.[0]?.image_url ||
+                p.images?.[0]?.imageUrl ||
+                p.images?.[0] ||
+                "",
+              url: p.url,
             }));
-          
+
           setRelatedProducts(filtered);
         } catch (err) {
           console.log("Error fetching related products:", err);
           setRelatedProducts([]);
         }
-
       } catch (err) {
         console.error("Error fetching product:", err);
         setError(
-          err.response?.data?.message || err.message || "Không thể tải sản phẩm. Vui lòng thử lại sau."
+          err.response?.data?.message ||
+            err.message ||
+            "Không thể tải sản phẩm. Vui lòng thử lại sau."
         );
       } finally {
         setIsLoading(false);
@@ -137,7 +176,7 @@ const Product = () => {
     setSelectedColor({
       name: variant.color_name,
       hex: variant.color_hex,
-      image: variant.image
+      image: variant.image,
     });
     if (variant.image) {
       setSelectedImage(variant.image);
@@ -165,87 +204,93 @@ const Product = () => {
   };
 
   const handleAddToCart = () => {
-  if (!selectedVariant || !selectedSize) {
-    toast.warning("Vui lòng chọn kích thước!");
-    return;
-  }
+    if (!selectedVariant || !selectedSize) {
+      toast.warning("Vui lòng chọn kích thước!");
+      return;
+    }
 
-  if (selectedVariant.stock === 0) {
-    toast.error("Sản phẩm đã hết hàng!");
-    return;
-  }
+    if (selectedVariant.stock === 0) {
+      toast.error("Sản phẩm đã hết hàng!");
+      return;
+    }
 
-  // Tạo variantId từ color và size nếu variant không có id
-  const variantId = selectedVariant.id || `${product.id}-${selectedColor.name}-${selectedSize}`;
+    // Tạo variantId từ color và size nếu variant không có id
+    const variantId =
+      selectedVariant.id ||
+      `${product.id}-${selectedColor.name}-${selectedSize}`;
 
-  const cartItem = {
-    productId: product.id,
-    variantId: variantId,  // ← Sử dụng variantId đã tạo
-    name: product.name,
-    price: product.price.current,
-    image: selectedImage || product.images[0],
-    color: selectedColor.name,
-    size: selectedSize,
-    quantity: quantity,
-    stock: selectedVariant.stock,
+    const cartItem = {
+      productId: product.id,
+      variantId: variantId, // ← Sử dụng variantId đã tạo
+      name: product.name,
+      price: product.price.current,
+      image: selectedImage || product.images[0],
+      color: selectedColor.name,
+      size: selectedSize,
+      quantity: quantity,
+      stock: selectedVariant.stock,
+    };
+
+    console.log("🛒 Adding to cart:", cartItem);
+
+    dispatch(addToCart(cartItem));
+
+    // Log sau khi dispatch
+    setTimeout(() => {
+      const currentCart = JSON.parse(localStorage.getItem("cart") || "[]");
+      console.log("✅ Cart after adding:", currentCart);
+      console.log("📊 Total items in cart:", currentCart.length);
+    }, 100);
+
+    toast.success("Đã thêm vào giỏ hàng!");
   };
 
-  console.log('🛒 Adding to cart:', cartItem);
-
-  dispatch(addToCart(cartItem));
-
-  // Log sau khi dispatch
-  setTimeout(() => {
-    const currentCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    console.log('✅ Cart after adding:', currentCart);
-    console.log('📊 Total items in cart:', currentCart.length);
-  }, 100);
-
-  toast.success("Đã thêm vào giỏ hàng!");
-};
-
   const handleBuyNow = () => {
-  if (!selectedVariant || !selectedSize) {
-    toast.warning("Vui lòng chọn kích thước!");
-    return;
-  }
+    if (!selectedVariant || !selectedSize) {
+      toast.warning("Vui lòng chọn kích thước!");
+      return;
+    }
 
-  if (selectedVariant.stock === 0) {
-    toast.error("Sản phẩm đã hết hàng!");
-    return;
-  }
+    if (selectedVariant.stock === 0) {
+      toast.error("Sản phẩm đã hết hàng!");
+      return;
+    }
 
-  // Tạo variantId từ color và size nếu variant không có id
-  const variantId = selectedVariant.id || `${product.id}-${selectedColor.name}-${selectedSize}`;
+    // Tạo variantId từ color và size nếu variant không có id
+    const variantId =
+      selectedVariant.id ||
+      `${product.id}-${selectedColor.name}-${selectedSize}`;
 
-  dispatch(addToCart({
-    productId: product.id,
-    variantId: variantId,  // ← Sử dụng variantId đã tạo
-    name: product.name,
-    price: product.price.current,
-    image: selectedImage || product.images[0],
-    color: selectedColor.name,
-    size: selectedSize,
-    quantity: quantity,
-    stock: selectedVariant.stock,
-  }));
+    dispatch(
+      addToCart({
+        productId: product.id,
+        variantId: variantId, // ← Sử dụng variantId đã tạo
+        name: product.name,
+        price: product.price.current,
+        image: selectedImage || product.images[0],
+        color: selectedColor.name,
+        size: selectedSize,
+        quantity: quantity,
+        stock: selectedVariant.stock,
+      })
+    );
 
-  navigate("/place-order");
-};
+    navigate("/place-order");
+  };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
+    return new Intl.NumberFormat("vi-VN").format(price) + "đ";
   };
 
   const getUniqueColors = () => {
     const colorMap = new Map();
-    product?.variants?.forEach(variant => {
+    product?.variants?.forEach((variant) => {
       if (!colorMap.has(variant.color_name)) {
         colorMap.set(variant.color_name, {
           name: variant.color_name,
           hex: variant.color_hex,
           image: variant.image,
-          variant: variant
+          variant: variant,
         });
       }
     });
@@ -253,7 +298,7 @@ const Product = () => {
   };
 
   const getVariantsByColor = (colorName) => {
-    return product?.variants?.filter(v => v.color_name === colorName) || [];
+    return product?.variants?.filter((v) => v.color_name === colorName) || [];
   };
 
   // Loading state
@@ -274,7 +319,9 @@ const Product = () => {
       <div className="pt-16 min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md px-4">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Có lỗi xảy ra</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Có lỗi xảy ra
+          </h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => navigate("/collection")}
@@ -311,7 +358,7 @@ const Product = () => {
   }
 
   const uniqueColors = getUniqueColors();
-  const availableSizes = selectedColor 
+  const availableSizes = selectedColor
     ? getVariantsByColor(selectedColor.name)
     : product.variants;
 
@@ -348,11 +395,17 @@ const Product = () => {
                   key={index}
                   onClick={() => setSelectedImage(img)}
                   className={`w-20 h-24 border-2 cursor-pointer overflow-hidden ${
-                    selectedImage === img ? 'border-gray-800' : 'border-gray-200'
+                    selectedImage === img
+                      ? "border-gray-800"
+                      : "border-gray-200"
                   }`}
                 >
                   <img
-                    src={img}
+                    src={
+                      typeof img === "string"
+                        ? img
+                        : img.image_url || img.imageUrl
+                    }
                     alt={`Thumbnail ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
@@ -367,7 +420,7 @@ const Product = () => {
                 alt={product.name}
                 className="w-full h-auto object-cover"
               />
-              
+
               {/* Labels */}
               {product.labels && product.labels.length > 0 && (
                 <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -398,7 +451,9 @@ const Product = () => {
                 className="ml-4"
               >
                 <Heart
-                  className={`w-6 h-6 ${isFavorite ? "text-red-500 fill-red-500" : "text-gray-400"}`}
+                  className={`w-6 h-6 ${
+                    isFavorite ? "text-red-500 fill-red-500" : "text-gray-400"
+                  }`}
                 />
               </button>
             </div>
@@ -406,11 +461,17 @@ const Product = () => {
             {/* Brand */}
             <div className="flex items-center gap-4 text-sm">
               <div>
-                Thương hiệu: <span className="text-[#3A6FB5] font-medium">{product.brand}</span>
+                Thương hiệu:{" "}
+                <span className="text-[#3A6FB5] font-medium">
+                  {product.brand}
+                </span>
               </div>
               <span className="text-gray-300">|</span>
               <div>
-                Mã sản phẩm: <span className="text-[#3A6FB5] font-medium">{product.slug}</span>
+                Mã sản phẩm:{" "}
+                <span className="text-[#3A6FB5] font-medium">
+                  {product.slug}
+                </span>
               </div>
             </div>
 
@@ -424,15 +485,22 @@ const Product = () => {
             )}
 
             {/* Total Sold */}
-            {product.total_count > 0 && (
+            {product.sold === 0 && (
               <>
                 <div className="text-sm text-gray-600">
-                  Đã bán <span className="font-semibold">{product.total_count}</span> sản phẩm
+                  Đã bán{" "}
+                  <span className="font-semibold">{product.sold}</span>{" "}
+                  sản phẩm
                 </div>
                 <div className="h-2 bg-gray-200 rounded-full">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full" 
-                    style={{width: `${Math.min((product.total_count / 500) * 100, 100)}%`}}
+                  <div
+                    className="h-full bg-blue-500 rounded-full"
+                    style={{
+                      width: `${Math.min(
+                        (product.total_count / 500) * 100,
+                        100
+                      )}%`,
+                    }}
                   ></div>
                 </div>
               </>
@@ -444,29 +512,38 @@ const Product = () => {
                 <span className="text-3xl font-bold text-red-600">
                   {formatPrice(product.price.current)}
                 </span>
-                {product.price.original && product.price.original > product.price.current && (
-                  <>
-                    <span className="text-lg text-gray-400 line-through">
-                      {formatPrice(product.price.original)}
-                    </span>
-                    <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-medium">
-                      -{product.price.discount_percent}%
-                    </span>
-                  </>
-                )}
+                {product.price.original &&
+                  product.price.original > product.price.current && (
+                    <>
+                      <span className="text-lg text-gray-400 line-through">
+                        {formatPrice(product.price.original)}
+                      </span>
+                      <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-medium">
+                        -{product.price.discount_percent}%
+                      </span>
+                    </>
+                  )}
               </div>
-              {product.price.original && product.price.original > product.price.current && (
-                <div className="text-sm text-gray-600 mt-1">
-                  (Tiết kiệm {formatPrice(product.price.original - product.price.current)})
-                </div>
-              )}
+              {product.price.original &&
+                product.price.original > product.price.current && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    (Tiết kiệm{" "}
+                    {formatPrice(
+                      product.price.original - product.price.current
+                    )}
+                    )
+                  </div>
+                )}
             </div>
 
             {/* Colors */}
             {uniqueColors.length > 0 && (
               <div>
                 <div className="text-sm font-medium text-gray-700 mb-3">
-                  Màu sắc: {selectedColor && <span className="text-gray-900">{selectedColor.name}</span>}
+                  Màu sắc:{" "}
+                  {selectedColor && (
+                    <span className="text-gray-900">{selectedColor.name}</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   {uniqueColors.map((color, index) => (
@@ -491,9 +568,14 @@ const Product = () => {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <div className="text-sm font-medium text-gray-700">
-                    Kích thước: {selectedSize && <span className="text-red-600">{selectedSize}</span>}
+                    Kích thước:{" "}
+                    {selectedSize && (
+                      <span className="text-red-600">{selectedSize}</span>
+                    )}
                   </div>
-                  <button className="text-sm text-blue-600 underline">Hướng dẫn chọn size</button>
+                  <button className="text-sm text-blue-600 underline">
+                    Hướng dẫn chọn size
+                  </button>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   {availableSizes.map((variant, index) => (
@@ -510,7 +592,9 @@ const Product = () => {
                       }`}
                     >
                       {variant.size}
-                      {variant.stock === 0 && <span className="block text-xs">(Hết hàng)</span>}
+                      {variant.stock === 0 && (
+                        <span className="block text-xs">(Hết hàng)</span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -520,7 +604,11 @@ const Product = () => {
             {/* Stock info */}
             {selectedVariant && (
               <div className="text-sm text-gray-600">
-                Còn lại: <span className="font-semibold text-green-600">{selectedVariant.stock}</span> sản phẩm
+                Còn lại:{" "}
+                <span className="font-semibold text-green-600">
+                  {selectedVariant.stock}
+                </span>{" "}
+                sản phẩm
               </div>
             )}
 
@@ -534,11 +622,15 @@ const Product = () => {
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <span className="px-6 py-2 font-medium min-w-[60px] text-center">{quantity}</span>
+                <span className="px-6 py-2 font-medium min-w-[60px] text-center">
+                  {quantity}
+                </span>
                 <button
                   onClick={() => handleQuantityChange("increase")}
                   className="px-4 py-2 hover:bg-gray-100 transition"
-                  disabled={selectedVariant && quantity >= selectedVariant.stock}
+                  disabled={
+                    selectedVariant && quantity >= selectedVariant.stock
+                  }
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -576,11 +668,15 @@ const Product = () => {
               </div>
               <div className="text-center">
                 <CreditCard className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-                <p className="text-xs text-gray-600">Tích điểm tất cả sản phẩm</p>
+                <p className="text-xs text-gray-600">
+                  Tích điểm tất cả sản phẩm
+                </p>
               </div>
               <div className="text-center">
                 <RotateCcw className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-                <p className="text-xs text-gray-600">Giảm 5% khi mua sắm online</p>
+                <p className="text-xs text-gray-600">
+                  Giảm 5% khi mua sắm online
+                </p>
               </div>
             </div>
           </div>
@@ -599,7 +695,7 @@ const Product = () => {
               Chính sách đổi trả
             </button>
           </div>
-          
+
           {product.description && (
             <div className="py-6">
               <div className="prose max-w-none">
@@ -634,13 +730,17 @@ const Product = () => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-gray-400 text-sm">Không có ảnh</span>
+                        <span className="text-gray-400 text-sm">
+                          Không có ảnh
+                        </span>
                       </div>
                     )}
                   </div>
                   <div className="p-3">
                     {item.brand && (
-                      <p className="text-xs text-gray-500 mb-1 uppercase">{item.brand}</p>
+                      <p className="text-xs text-gray-500 mb-1 uppercase">
+                        {item.brand}
+                      </p>
                     )}
                     <h3 className="font-medium text-sm text-gray-900 line-clamp-2 mb-2">
                       {item.name}
@@ -649,11 +749,12 @@ const Product = () => {
                       <span className="text-red-600 font-bold">
                         {formatPrice(item.price?.current)}
                       </span>
-                      {item.price?.original && item.price.original > item.price.current && (
-                        <span className="text-gray-400 text-xs line-through">
-                          {formatPrice(item.price.original)}
-                        </span>
-                      )}
+                      {item.price?.original &&
+                        item.price.original > item.price.current && (
+                          <span className="text-gray-400 text-xs line-through">
+                            {formatPrice(item.price.original)}
+                          </span>
+                        )}
                     </div>
                   </div>
                 </div>

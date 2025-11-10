@@ -1,51 +1,94 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const ProductCategories = () => {
-  const categories = [
-    {
-      id: 1,
-      name: 'Áo ngực thể thao',
-      productCount: 12,
-      image: '//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16',
-      link: '/collection?category=sports-bra'
-    },
-    {
-      id: 2,
-      name: 'Quần short',
-      productCount: 0,
-      image: '//theme.hstatic.net/200000695155/1001373964/14/season_coll_2_img_large.png?v=16',
-      link: '/collection?category=shorts'
-    },
-    {
-      id: 3,
-      name: 'Áo khoác thể thao',
-      productCount: 1,
-      image: '//theme.hstatic.net/200000695155/1001373964/14/season_coll_3_img_large.png?v=16',
-      link: '/collection?category=jacket'
-    },
-    {
-      id: 4,
-      name: 'Quần legging',
-      productCount: 8,
-      image: '//theme.hstatic.net/200000695155/1001373964/14/season_coll_4_img_large.png?v=16',
-      link: '/collection?category=legging'
-    },
-    {
-      id: 5,
-      name: 'Áo thun thể thao',
-      productCount: 12,
-      image: '//theme.hstatic.net/200000695155/1001373964/14/season_coll_5_img_large.png?v=16',
-      link: '/collection?category=t-shirt'
-    },
-    {
-      id: 6,
-      name: 'Set đồ tập',
-      productCount: 19,
-      image: '//theme.hstatic.net/200000695155/1001373964/14/season_coll_6_img_large.png?v=16',
-      link: '/collection?category=set'
-    }
-  ];
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:8080/api/categories');
+        
+        if (!response.ok) {
+          throw new Error('Không thể tải danh mục');
+        }
+        
+        const apiResponse = await response.json();
+        
+        // Check if API call was successful
+        if (apiResponse.code !== 1000) {
+          throw new Error(apiResponse.message || 'Lỗi khi tải dữ liệu');
+        }
+        
+        // Get data from result field
+        const data = apiResponse.result;
+        
+        if (!Array.isArray(data)) {
+          throw new Error('Dữ liệu không đúng định dạng');
+        }
+        
+        // Transform API data to match component structure
+        const transformedData = data.map((category) => ({
+          id: category.id,
+          name: category.name,
+          productCount: 0, // API không có field này, có thể cập nhật sau
+          image: category.image || '//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16',
+          link: `/collection?category=${category.id}`,
+          description: category.description
+        }));
+        
+        setCategories(transformedData);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 md:py-10 bg-white">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#3A6FB5]"></div>
+          <p className="mt-4 text-gray-600">Đang tải danh mục...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 md:py-10 bg-white">
+        <div className="text-center text-red-600">
+          <p className="text-lg font-medium">Lỗi: {error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 py-2 bg-[#3A6FB5] text-white rounded-lg hover:bg-[#2d5a94] transition-colors"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (categories.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 md:py-10 bg-white">
+        <div className="text-center text-gray-600">
+          <p className="text-lg">Chưa có danh mục nào</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 md:py-10 bg-white">
@@ -114,6 +157,9 @@ const CategoryCard = ({ category }) => {
           src={category.image}
           alt={category.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          onError={(e) => {
+            e.target.src = '//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
