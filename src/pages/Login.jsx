@@ -260,7 +260,7 @@ const handleResendOTP = () => {
                   <ReCAPTCHA
                     sitekey="6Lc1lwAsAAAAAKLMPjj46NxekGoIwzEvePUjVKRO"
                     onChange={(value) => {
-                      console.log("✅ Captcha token nhận được:", value); // ← log ra DevTools
+                      console.log("Captcha token nhận được:", value); // ← log ra DevTools
                       setFormData({ ...formData, captcha_response: value });
                     }}
                   />

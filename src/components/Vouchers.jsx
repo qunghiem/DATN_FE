@@ -46,10 +46,10 @@ export default function Vouchers() {
       </div>
 
       {/* Tablet: Hiển thị 2.5 voucher (768px - 991px) */}
-      <div className="hidden md:block lg:hidden overflow-x-auto scrollbar-hide">
-        <div className="flex gap-4" style={{ width: 'fit-content' }}>
+      <div className="hidden md:block lg:hidden overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex gap-4 w-fit">
           {vouchers.map((v) => (
-            <div key={v.id} style={{ minWidth: 'calc(40% - 12px)' }}>
+            <div key={v.id} className="min-w-[calc(40%-12px)]">
               <VoucherCard
                 voucher={v}
                 copied={copied}
@@ -63,10 +63,10 @@ export default function Vouchers() {
       </div>
 
       {/* Mobile: Hiển thị 1.5 voucher (< 768px) */}
-      <div className="block md:hidden overflow-x-auto scrollbar-hide">
-        <div className="flex gap-3" style={{ width: 'fit-content' }}>
+      <div className="block md:hidden overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex gap-3 w-fit">
           {vouchers.map((v) => (
-            <div key={v.id} style={{ minWidth: 'calc(66.666% - 8px)' }}>
+            <div key={v.id} className="min-w-[calc(66.666%-8px)]">
               <VoucherCard
                 voucher={v}
                 copied={copied}
@@ -78,16 +78,6 @@ export default function Vouchers() {
           ))}
         </div>
       </div>
-
-      <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </div>
   );
 }

@@ -14,9 +14,9 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
       try {
         const res = await axios.get("http://localhost:8080/api/products");
         const data = Array.isArray(res.data?.data) ? res.data.data : [];
-        console.log(res.data);
+        // console.log(res.data);
         const mappedProducts = data.map((p) => {
-          console.log(p);
+          // console.log(p);
           const images = Array.isArray(p.images)
             ? p.images
                 .filter((img) => {

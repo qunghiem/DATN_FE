@@ -110,8 +110,6 @@ const cartSlice = createSlice({
   reducers: {
     // Add item to cart
     addToCart: (state, action) => {
-      console.log('🔵 CartSlice - addToCart called with:', action.payload);
-      
       const { 
         productId, 
         variantId, 
@@ -130,8 +128,8 @@ const cartSlice = createSlice({
         state.items = [];
       }
 
-      console.log('📦 Current cart items:', state.items);
-      console.log('🔍 Items is array?', Array.isArray(state.items));
+      // console.log('Current cart items:', state.items);
+      // console.log('Items is array?', Array.isArray(state.items));
 
       // Validate input
       if (!productId || !variantId) {
@@ -152,19 +150,19 @@ const cartSlice = createSlice({
       );
 
       if (existingItem) {
-        console.log('🔄 Item already exists, updating quantity');
+        // console.log('Item already exists, updating quantity');
         // Update quantity if item exists
         const newQuantity = existingItem.quantity + quantity;
         if (newQuantity <= stock) {
           existingItem.quantity = newQuantity;
-          console.log('✅ Updated quantity to:', newQuantity);
+          // console.log('Updated quantity to:', newQuantity);
         } else {
-          console.error('❌ Exceeds stock:', { newQuantity, stock });
+          console.error('Exceeds stock:', { newQuantity, stock });
           state.error = `Chỉ còn ${stock} sản phẩm trong kho!`;
           return;
         }
       } else {
-        console.log('➕ Adding new item to cart');
+        // console.log('Adding new item to cart');
         // Add new item
         const newItem = {
           productId,
@@ -187,14 +185,14 @@ const cartSlice = createSlice({
         }
       }
 
-      console.log('✅ Cart after update:', state.items);
-      console.log('📊 Total items:', state.items.length);
+      // console.log('Cart after update:', state.items);
+      console.log('Total items:', state.items.length);
       
       saveCartToStorage(state.items);
       saveSelectedItemsToStorage(state.selectedItems);
       state.error = null;
       
-      console.log('💾 Saved to localStorage');
+      // console.log('Saved to localStorage');
     },
 
     // Remove item from cart

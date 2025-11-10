@@ -10,6 +10,7 @@ import {
   CreditCard,
   RotateCcw,
   Loader2,
+  X,
 } from "lucide-react";
 import axios from "axios";
 import { addToCart } from "../features/cart/cartSlice";
@@ -32,6 +33,7 @@ const Product = () => {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
 
   // Fetch product data from API
   useEffect(() => {
@@ -40,14 +42,13 @@ const Product = () => {
         setIsLoading(true);
         setError(null);
 
-        console.log("Fetching product ID:", productId);
+        // console.log("Fetching product ID:", productId);
 
         const response = await axios.get(
           `http://localhost:8080/api/products/${productId}`
-          // `https://fnzv9bcp-8080.asse.devtunnels.ms/api/products/${productId}`
         );
 
-        console.log("API Response:", response.data);
+        // console.log("API Response:", response.data);
 
         const productData =
           response.data.data || response.data.result || response.data;
@@ -61,25 +62,23 @@ const Product = () => {
           name: productData.name,
           slug: productData.slug,
           sold: productData.sold,
-          brand: productData.brand?.name || "Unknown", // ← Thay đổi: lấy brand.name
+          brand: productData.brand?.name || "Unknown",
           description: productData.description,
           price: {
             current:
               productData.price?.discount_price ||
               productData.price?.price ||
-              0, // ← Thay đổi: discount_price
-            original: productData.price?.price || 0, // ← Thay đổi: price là giá gốc
+              0,
+            original: productData.price?.price || 0,
             currency: productData.price?.currency || "VND",
             discount_percent: productData.price?.discount_percent || 0,
           },
-          // ← Thay đổi: xử lý images với image_url và alt_text
           images: Array.isArray(productData.images)
             ? productData.images.map(
                 (img) => img.image_url || img.imageUrl || img
               )
             : [],
           variants: productData.variants || [],
-          // ← Thay đổi: labels.name
           labels: Array.isArray(productData.labels)
             ? productData.labels.map((label) => label.name)
             : [],
@@ -90,7 +89,7 @@ const Product = () => {
           is_new_arrival: productData.is_new_arrival || false,
         };
 
-        console.log("Transformed product:", transformedProduct);
+        // console.log("Transformed product:", transformedProduct);
 
         setProduct(transformedProduct);
         setIsFavorite(transformedProduct.is_wishlisted);
@@ -126,18 +125,17 @@ const Product = () => {
               (p) =>
                 p.id !== productData.id &&
                 p.brand?.name === productData.brand?.name
-            ) // ← Thay đổi: brand.name
+            )
             .slice(0, 5)
             .map((p) => ({
               id: p.id,
               name: p.name,
               price: {
-                current: p.price?.discount_price || p.price?.price || 0, // ← Thay đổi
-                original: p.price?.price || 0, // ← Thay đổi
+                current: p.price?.discount_price || p.price?.price || 0,
+                original: p.price?.price || 0,
                 discount_percent: p.price?.discount_percent || 0,
               },
-              brand: p.brand?.name || "Unknown", // ← Thay đổi: brand.name
-              // ← Thay đổi: image_url
+              brand: p.brand?.name || "Unknown",
               image:
                 p.images?.[0]?.image_url ||
                 p.images?.[0]?.imageUrl ||
@@ -214,14 +212,13 @@ const Product = () => {
       return;
     }
 
-    // Tạo variantId từ color và size nếu variant không có id
     const variantId =
       selectedVariant.id ||
       `${product.id}-${selectedColor.name}-${selectedSize}`;
 
     const cartItem = {
       productId: product.id,
-      variantId: variantId, // ← Sử dụng variantId đã tạo
+      variantId: variantId,
       name: product.name,
       price: product.price.current,
       image: selectedImage || product.images[0],
@@ -231,15 +228,14 @@ const Product = () => {
       stock: selectedVariant.stock,
     };
 
-    console.log("🛒 Adding to cart:", cartItem);
+    console.log("Adding to cart:", cartItem);
 
     dispatch(addToCart(cartItem));
 
-    // Log sau khi dispatch
     setTimeout(() => {
       const currentCart = JSON.parse(localStorage.getItem("cart") || "[]");
-      console.log("✅ Cart after adding:", currentCart);
-      console.log("📊 Total items in cart:", currentCart.length);
+      console.log("Cart after adding:", currentCart);
+      console.log("Total items in cart:", currentCart.length);
     }, 100);
 
     toast.success("Đã thêm vào giỏ hàng!");
@@ -256,7 +252,6 @@ const Product = () => {
       return;
     }
 
-    // Tạo variantId từ color và size nếu variant không có id
     const variantId =
       selectedVariant.id ||
       `${product.id}-${selectedColor.name}-${selectedSize}`;
@@ -264,7 +259,7 @@ const Product = () => {
     dispatch(
       addToCart({
         productId: product.id,
-        variantId: variantId, // ← Sử dụng variantId đã tạo
+        variantId: variantId,
         name: product.name,
         price: product.price.current,
         image: selectedImage || product.images[0],
@@ -573,7 +568,10 @@ const Product = () => {
                       <span className="text-red-600">{selectedSize}</span>
                     )}
                   </div>
-                  <button className="text-sm text-blue-600 underline">
+                  <button 
+                    onClick={() => setShowSizeGuide(true)}
+                    className="text-sm text-blue-600 underline cursor-pointer hover:text-blue-800"
+                  >
                     Hướng dẫn chọn size
                   </button>
                 </div>
@@ -763,6 +761,216 @@ const Product = () => {
           </div>
         )}
       </div>
+
+      {/* Size Guide Modal */}
+      {showSizeGuide && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Hướng dẫn chọn size</h2>
+              <button
+                onClick={() => setShowSizeGuide(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Intro */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-gray-700">
+                  <strong>Lưu ý:</strong> Để chọn size phù hợp nhất, vui lòng đo số đo cơ thể của bạn và đối chiếu với bảng size bên dưới. Nếu bạn có thắc mắc, vui lòng liên hệ hotline <strong>1800.0000</strong> để được tư vấn.
+                </p>
+              </div>
+
+              {/* How to Measure */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Cách đo số đo cơ thể</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">1. Vòng ngực</h4>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Đo vòng quanh phần rộng nhất của ngực, giữ thước dây nằm ngang và song song với mặt đất.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">2. Vòng eo</h4>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Đo vòng quanh phần nhỏ nhất của eo, thường là phần trên rốn.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">3. Vòng mông</h4>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Đo vòng quanh phần rộng nhất của mông, giữ thước dây nằm ngang.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">4. Chiều cao</h4>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Đứng thẳng, đo từ đỉnh đầu đến gót chân khi không đi giày.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Women's Size Chart */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Bảng size nữ</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Size</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Chiều cao (cm)</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Cân nặng (kg)</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Vòng ngực (cm)</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Vòng eo (cm)</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Vòng mông (cm)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">XS</td>
+                        <td className="border border-gray-300 px-4 py-2">150-155</td>
+                        <td className="border border-gray-300 px-4 py-2">42-48</td>
+                        <td className="border border-gray-300 px-4 py-2">78-82</td>
+                        <td className="border border-gray-300 px-4 py-2">60-64</td>
+                        <td className="border border-gray-300 px-4 py-2">84-88</td>
+                      </tr>
+                      <tr className="bg-gray-50">
+                        <td className="border border-gray-300 px-4 py-2 font-medium">S</td>
+                        <td className="border border-gray-300 px-4 py-2">155-160</td>
+                        <td className="border border-gray-300 px-4 py-2">48-53</td>
+                        <td className="border border-gray-300 px-4 py-2">82-86</td>
+                        <td className="border border-gray-300 px-4 py-2">64-68</td>
+                        <td className="border border-gray-300 px-4 py-2">88-92</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">M</td>
+                        <td className="border border-gray-300 px-4 py-2">160-165</td>
+                        <td className="border border-gray-300 px-4 py-2">53-58</td>
+                        <td className="border border-gray-300 px-4 py-2">86-90</td>
+                        <td className="border border-gray-300 px-4 py-2">68-72</td>
+                        <td className="border border-gray-300 px-4 py-2">92-96</td>
+                      </tr>
+                      <tr className="bg-gray-50">
+                        <td className="border border-gray-300 px-4 py-2 font-medium">L</td>
+                        <td className="border border-gray-300 px-4 py-2">165-170</td>
+                        <td className="border border-gray-300 px-4 py-2">58-63</td>
+                        <td className="border border-gray-300 px-4 py-2">90-94</td>
+                        <td className="border border-gray-300 px-4 py-2">72-76</td>
+                        <td className="border border-gray-300 px-4 py-2">96-100</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">XL</td>
+                        <td className="border border-gray-300 px-4 py-2">170-175</td>
+                        <td className="border border-gray-300 px-4 py-2">63-68</td>
+                        <td className="border border-gray-300 px-4 py-2">94-98</td>
+                        <td className="border border-gray-300 px-4 py-2">76-80</td>
+                        <td className="border border-gray-300 px-4 py-2">100-104</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Men's Size Chart */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Bảng size nam</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Size</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Chiều cao (cm)</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Cân nặng (kg)</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Vòng ngực (cm)</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Vòng eo (cm)</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Vòng mông (cm)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">S</td>
+                        <td className="border border-gray-300 px-4 py-2">160-165</td>
+                        <td className="border border-gray-300 px-4 py-2">55-60</td>
+                        <td className="border border-gray-300 px-4 py-2">86-90</td>
+                        <td className="border border-gray-300 px-4 py-2">70-74</td>
+                        <td className="border border-gray-300 px-4 py-2">90-94</td>
+                      </tr>
+                      <tr className="bg-gray-50">
+                        <td className="border border-gray-300 px-4 py-2 font-medium">M</td>
+                        <td className="border border-gray-300 px-4 py-2">165-170</td>
+                        <td className="border border-gray-300 px-4 py-2">60-68</td>
+                        <td className="border border-gray-300 px-4 py-2">90-94</td>
+                        <td className="border border-gray-300 px-4 py-2">74-78</td>
+                        <td className="border border-gray-300 px-4 py-2">94-98</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">L</td>
+                        <td className="border border-gray-300 px-4 py-2">170-175</td>
+                        <td className="border border-gray-300 px-4 py-2">68-75</td>
+                        <td className="border border-gray-300 px-4 py-2">94-98</td>
+                        <td className="border border-gray-300 px-4 py-2">78-82</td>
+                        <td className="border border-gray-300 px-4 py-2">98-102</td>
+                      </tr>
+                      <tr className="bg-gray-50">
+                        <td className="border border-gray-300 px-4 py-2 font-medium">XL</td>
+                        <td className="border border-gray-300 px-4 py-2">175-180</td>
+                        <td className="border border-gray-300 px-4 py-2">75-82</td>
+                        <td className="border border-gray-300 px-4 py-2">98-102</td>
+                        <td className="border border-gray-300 px-4 py-2">82-86</td>
+                        <td className="border border-gray-300 px-4 py-2">102-106</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-300 px-4 py-2 font-medium">XXL</td>
+                        <td className="border border-gray-300 px-4 py-2">180-185</td>
+                        <td className="border border-gray-300 px-4 py-2">82-90</td>
+                        <td className="border border-gray-300 px-4 py-2">102-106</td>
+                        <td className="border border-gray-300 px-4 py-2">86-90</td>
+                        <td className="border border-gray-300 px-4 py-2">106-110</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Tips */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-2">💡 Một số lưu ý khi chọn size:</h4>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li>• Nếu số đo của bạn nằm giữa 2 size, hãy chọn size lớn hơn để thoải mái hơn khi vận động.</li>
+                  <li>• Với đồ tập gym/yoga, nên chọn size vừa khít để tối ưu hiệu quả tập luyện.</li>
+                  <li>• Vải thể thao có độ co giãn tốt, nên bạn không cần lo lắng về việc quá chật.</li>
+                  <li>• Mỗi dòng sản phẩm có thể có độ vừa vặn khác nhau, hãy xem đánh giá từ khách hàng khác.</li>
+                </ul>
+              </div>
+
+              {/* Contact */}
+              <div className="text-center pt-4 border-t">
+                <p className="text-sm text-gray-600 mb-2">
+                  Vẫn chưa chắc chắn về size của mình?
+                </p>
+                <p className="text-sm font-medium text-gray-900">
+                  Liên hệ ngay với chúng tôi qua hotline: <span className="text-[#3A6FB5]">1800.0000</span> hoặc chat trực tuyến để được tư vấn miễn phí!
+                </p>
+              </div>
+
+              {/* Close Button */}
+              <div className="flex justify-center pt-4">
+                <button
+                  onClick={() => setShowSizeGuide(false)}
+                  className="px-8 py-3 bg-[#3A6FB5] text-white rounded-lg font-medium hover:bg-[#2E5C99] transition"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
