@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchAllProducts,
+  fetchProductVariants,
   createProduct,
   createProductVariant,
   updateProduct,
+  updateProductVariant,
   deleteProduct,
+  deleteProductVariant,
   clearMessages,
   setCurrentProduct,
+  clearProductVariants,
 } from "../../features/admin/adminProductsSlice";
 import {
   fetchBrands,
@@ -24,6 +28,7 @@ const Products = () => {
   const {
     products = [],
     currentProduct,
+    productVariants = [],
     isLoading,
     error,
     success,
@@ -38,7 +43,8 @@ const Products = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [modalStep, setModalStep] = useState(1); // 1: Product Info, 2: Variants
+  const [modalStep, setModalStep] = useState(1); // 1: Product Info, 2: Variants, 3: Edit Variants
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Product Form Data
   const [productForm, setProductForm] = useState({
@@ -51,7 +57,6 @@ const Products = () => {
     labelIds: [],
     images: [{ imageUrl: "", altText: "" }],
   });
-
   // Variant Form Data
   const [variants, setVariants] = useState([
     {
@@ -61,6 +66,9 @@ const Products = () => {
       images: [""],
     },
   ]);
+
+  // Edit variant data - chỉ lưu số lượng import thêm
+  const [editingVariants, setEditingVariants] = useState({});
 
   useEffect(() => {
     dispatch(fetchAllProducts());
@@ -80,14 +88,21 @@ const Products = () => {
       toast.success(success);
       dispatch(clearMessages());
 
-      // Nếu vừa tạo product thành công, chuyển sang bước 2
       if (success.includes("Tạo sản phẩm thành công") && currentProduct) {
         setModalStep(2);
       }
 
-      // Nếu thêm variant thành công, reset form variant
       if (success.includes("Thêm biến thể thành công")) {
         setVariants([{ colorId: "", sizeId: "", stock: "", images: [""] }]);
+      }
+
+      if (success.includes("Cập nhật tồn kho thành công")) {
+        // Refresh variants list
+        if (currentProduct) {
+          dispatch(fetchProductVariants(currentProduct.id));
+        }
+        // Clear editing state for this variant
+        setEditingVariants({});
       }
     }
   }, [error, success, dispatch, currentProduct]);
@@ -104,8 +119,11 @@ const Products = () => {
       images: [{ imageUrl: "", altText: "" }],
     });
     setVariants([{ colorId: "", sizeId: "", stock: "", images: [""] }]);
+    setEditingVariants({});
     setModalStep(1);
+    setIsEditMode(false);
     dispatch(setCurrentProduct(null));
+    dispatch(clearProductVariants());
   };
 
   const handleDelete = (id) => {
@@ -115,7 +133,6 @@ const Products = () => {
   };
 
   const handleEdit = (product) => {
-    // Chuẩn bị dữ liệu cho form
     setProductForm({
       name: product.name || "",
       description: product.description || "",
@@ -128,18 +145,23 @@ const Products = () => {
       labelIds: product.labelIds || product.labels?.map((l) => l.id) || [],
       images: product.images?.map((img) => ({
         id: img.id || null,
-        imageUrl: img.image_url || "", // chú ý img.image_url
-        altText: img.alt_text || "", // chú ý img.alt_text
+        imageUrl: img.image_url || "",
+        altText: img.alt_text || "",
       })) || [{ imageUrl: "", altText: "" }],
     });
 
-    // Lưu product hiện tại để dùng update
     dispatch(setCurrentProduct(product));
-
-    // Mở modal
+    setIsEditMode(true);
     setModalStep(1);
     setShowModal(true);
-    console.log("Editing product images:", product.images);
+  };
+
+  const handleEditVariants = (product) => {
+    dispatch(setCurrentProduct(product));
+    dispatch(fetchProductVariants(product.id));
+    setIsEditMode(true);
+    setModalStep(3); // Step 3 là Edit Variants
+    setShowModal(true);
   };
 
   const handleProductChange = (field, value) => {
@@ -178,36 +200,37 @@ const Products = () => {
     setProductForm({ ...productForm, labelIds: newLabels });
   };
 
-const handleProductSubmit = (e) => {
-  e.preventDefault();
+  const handleProductSubmit = (e) => {
+    e.preventDefault();
 
-  if (!productForm.brandId) {
-    toast.error("Vui lòng chọn thương hiệu");
-    return;
-  }
-  if (productForm.categoryIds.length === 0) {
-    toast.error("Vui lòng chọn ít nhất 1 danh mục");
-    return;
-  }
+    if (!productForm.brandId) {
+      toast.error("Vui lòng chọn thương hiệu");
+      return;
+    }
+    if (productForm.categoryIds.length === 0) {
+      toast.error("Vui lòng chọn ít nhất 1 danh mục");
+      return;
+    }
 
-  const payload = {
-    ...productForm,
-    price: Number(productForm.price),
-    discountPercent: Number(productForm.discountPercent),
-    brandId: Number(productForm.brandId),
-    categoryIds: productForm.categoryIds.map(Number),
-    labelIds: productForm.labelIds.map(Number),
+    const payload = {
+      ...productForm,
+      price: Number(productForm.price),
+      discountPercent: Number(productForm.discountPercent),
+      brandId: Number(productForm.brandId),
+      categoryIds: productForm.categoryIds.map(Number),
+      labelIds: productForm.labelIds.map(Number),
+    };
+
+    if (!currentProduct || !isEditMode) {
+      dispatch(createProduct(payload));
+    } else {
+      dispatch(updateProduct({ id: currentProduct.id, ...payload })).then(() => {
+        setShowModal(false);
+        resetForm();
+        dispatch(fetchAllProducts());
+      });
+    }
   };
-
-  if (!currentProduct) {
-    // Tạo mới
-    dispatch(createProduct(payload));
-  } else {
-    // Cập nhật sản phẩm
-    dispatch(updateProduct({ id: currentProduct.id, ...payload }));
-  }
-};
-
 
   const handleVariantChange = (index, field, value) => {
     const newVariants = [...variants];
@@ -263,6 +286,34 @@ const handleProductSubmit = (e) => {
     };
 
     dispatch(createProductVariant(payload));
+  };
+
+  // Handle edit existing variant - chỉ cho phép thêm tồn kho
+  const handleImportStockChange = (variantId, value) => {
+    setEditingVariants((prev) => ({
+      ...prev,
+      [variantId]: value,
+    }));
+  };
+
+  const handleUpdateVariantStock = (variantId) => {
+    const importNewStock = editingVariants[variantId];
+
+    if (!importNewStock || Number(importNewStock) <= 0) {
+      toast.error("Vui lòng nhập số lượng tồn kho cần thêm (> 0)");
+      return;
+    }
+
+    dispatch(updateProductVariant({ 
+      variantId, 
+      importNewStock: Number(importNewStock) 
+    }));
+  };
+
+  const handleDeleteVariant = (variantId) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa biến thể này?")) {
+      dispatch(deleteProductVariant(variantId));
+    }
   };
 
   const finishAddingProduct = () => {
@@ -364,12 +415,21 @@ const handleProductSubmit = (e) => {
                         <button
                           onClick={() => handleEdit(product)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                          title="Sửa sản phẩm"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleEditVariants(product)}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded transition"
+                          title="Sửa biến thể"
                         >
                           <Edit className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDelete(product.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                          title="Xóa sản phẩm"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -398,6 +458,7 @@ const handleProductSubmit = (e) => {
           categories={categories}
           labels={labels}
           isLoading={isLoading}
+          isEditMode={isEditMode}
           onClose={() => {
             setShowModal(false);
             resetForm();
@@ -405,7 +466,7 @@ const handleProductSubmit = (e) => {
         />
       )}
 
-      {/* Modal - Step 2: Variants */}
+      {/* Modal - Step 2: Variants (Thêm mới) */}
       {showModal && modalStep === 2 && currentProduct && (
         <VariantFormModal
           currentProduct={currentProduct}
@@ -421,6 +482,23 @@ const handleProductSubmit = (e) => {
           sizes={sizes}
           isLoading={isLoading}
           onFinish={finishAddingProduct}
+        />
+      )}
+
+      {/* Modal - Step 3: Edit Variants */}
+      {showModal && modalStep === 3 && currentProduct && (
+        <EditVariantsModal
+          currentProduct={currentProduct}
+          productVariants={productVariants}
+          editingVariants={editingVariants}
+          handleImportStockChange={handleImportStockChange}
+          handleUpdateVariantStock={handleUpdateVariantStock}
+          handleDeleteVariant={handleDeleteVariant}
+          isLoading={isLoading}
+          onClose={() => {
+            setShowModal(false);
+            resetForm();
+          }}
         />
       )}
     </div>
@@ -441,12 +519,15 @@ const ProductFormModal = ({
   categories,
   labels,
   isLoading,
+  isEditMode,
   onClose,
 }) => (
   <div className="fixed inset-0 bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
       <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
-        <h2 className="text-2xl font-bold">Bước 1: Thông tin sản phẩm</h2>
+        <h2 className="text-2xl font-bold">
+          {isEditMode ? "Sửa sản phẩm" : "Bước 1: Thông tin sản phẩm"}
+        </h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
           <X className="w-6 h-6" />
         </button>
@@ -635,7 +716,7 @@ const ProductFormModal = ({
             disabled={isLoading}
             className="px-6 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition disabled:opacity-50"
           >
-            {isLoading ? "Đang xử lý..." : "Tiếp theo: Sửa biến thể"}
+            {isLoading ? "Đang xử lý..." : isEditMode ? "Cập nhật" : "Tiếp theo: Thêm biến thể"}
           </button>
         </div>
       </form>
@@ -643,7 +724,7 @@ const ProductFormModal = ({
   </div>
 );
 
-// Component con cho Variant Form Modal
+// Component con cho Variant Form Modal (Thêm mới)
 const VariantFormModal = ({
   currentProduct,
   variants,
@@ -837,5 +918,162 @@ const VariantFormModal = ({
     </div>
   </div>
 );
+
+// Component con cho Edit Variants Modal (Sửa biến thể có sẵn)
+const EditVariantsModal = ({
+  currentProduct,
+  productVariants,
+  editingVariants,
+  handleImportStockChange,
+  handleUpdateVariantStock,
+  handleDeleteVariant,
+  isLoading,
+  onClose,
+}) => {
+  return (
+    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
+          <div>
+            <h2 className="text-2xl font-bold">Quản lý biến thể sản phẩm</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Sản phẩm: <span className="font-medium">{currentProduct.name}</span>
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {productVariants.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <p>Chưa có biến thể nào cho sản phẩm này</p>
+            </div>
+          ) : (
+            productVariants.map((variant) => {
+              return (
+                <div
+                  key={variant.id}
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        {variant.color?.name || "N/A"} - {variant.size?.name || "N/A"}
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Mã biến thể: #{variant.id} | Tồn kho hiện tại: <span className="font-semibold text-blue-600">{variant.stock}</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteVariant(variant.id)}
+                      className="text-red-600 hover:bg-red-50 p-2 rounded"
+                      title="Xóa biến thể"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 mb-4">
+                    {/* Hiển thị thông tin (read-only) */}
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-white rounded-lg">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Màu sắc
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-6 h-6 rounded border border-gray-300"
+                            style={{ backgroundColor: variant.color?.hexCode || '#ccc' }}
+                          />
+                          <span className="text-gray-800 font-medium">{variant.color?.name || "N/A"}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Kích thước
+                        </label>
+                        <span className="text-gray-800 font-medium">{variant.size?.name || "N/A"}</span>
+                      </div>
+                    </div>
+
+                    {/* Hiển thị hình ảnh nếu có */}
+                    {/* {variant.images && variant.images.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Hình ảnh biến thể
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {variant.images.map((image, idx) => (
+                            <div key={idx} className="relative w-20 h-20 border rounded overflow-hidden">
+                              <img 
+                                src={`http://localhost:8080/${image}`}
+                                alt={`Variant ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.src = 'https://via.placeholder.com/80?text=No+Image';
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )} */}
+
+                    {/* Form nhập thêm tồn kho */}
+                    <div className="border-t pt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nhập thêm tồn kho
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          value={editingVariants[variant.id] || ""}
+                          onChange={(e) =>
+                            handleImportStockChange(variant.id, e.target.value)
+                          }
+                          placeholder="Nhập số lượng cần thêm"
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
+                          min="1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateVariantStock(variant.id)}
+                          disabled={isLoading}
+                          className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {isLoading ? "Đang cập nhật..." : "Thêm tồn kho"}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        * Nhập số lượng cần thêm vào kho. Tồn kho mới sẽ là: {variant.stock} + {editingVariants[variant.id] || 0} = {variant.stock + Number(editingVariants[variant.id] || 0)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          <div className="flex justify-end space-x-4 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default Products;

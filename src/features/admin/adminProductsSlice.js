@@ -1,14 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-// Sử dụng relative URL để tận dụng Vite proxy
-// Vite sẽ tự động proxy /api/* đến http://localhost:8080/api/*
 const API_URL = '/api';
 
-// Lấy token từ localStorage
 const getAuthHeader = () => {
   const token = localStorage.getItem('access_token');
-  // Chỉ thêm Authorization header nếu có token
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
@@ -18,9 +14,20 @@ export const fetchAllProducts = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(`${API_URL}/products`);
-      // Backend trả về { success: true, data: [...] }
-      // Chuyển đổi sang format mà frontend expect
       return response.data.data || response.data.result || [];
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
+// Lấy danh sách variants của một product
+export const fetchProductVariants = createAsyncThunk(
+  'adminProducts/fetchVariants',
+  async (productId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/product-variants/product/${productId}`);
+      return response.data.result || [];
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -55,7 +62,38 @@ export const createProductVariant = createAsyncThunk(
   }
 );
 
-// Async thunk updateProduct
+// Cập nhật variant
+export const updateProductVariant = createAsyncThunk(
+  'adminProducts/updateVariant',
+  async ({ variantId, ...variantData }, { rejectWithValue }) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/product-variants/${variantId}`,
+        variantData,
+        { headers: getAuthHeader() }
+      );
+      return response.data.result;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
+// Xóa variant
+export const deleteProductVariant = createAsyncThunk(
+  'adminProducts/deleteVariant',
+  async (variantId, { rejectWithValue }) => {
+    try {
+      await axios.delete(`${API_URL}/product-variants/${variantId}`, {
+        headers: getAuthHeader(),
+      });
+      return variantId;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
 export const updateProduct = createAsyncThunk(
   'adminProducts/update',
   async ({ id, ...productData }, { rejectWithValue }) => {
@@ -63,13 +101,12 @@ export const updateProduct = createAsyncThunk(
       const response = await axios.put(`${API_URL}/products/${id}`, productData, {
         headers: getAuthHeader(),
       });
-      return response.data.result; // backend trả về product mới
+      return response.data.result;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
   }
 );
-
 
 export const deleteProduct = createAsyncThunk(
   'adminProducts/delete',
@@ -87,7 +124,8 @@ export const deleteProduct = createAsyncThunk(
 
 const initialState = {
   products: [],
-  currentProduct: null, // Sản phẩm vừa tạo để add variants
+  currentProduct: null,
+  productVariants: [], // Danh sách variants của product hiện tại
   isLoading: false,
   error: null,
   success: null,
@@ -103,6 +141,9 @@ const adminProductsSlice = createSlice({
     },
     setCurrentProduct: (state, action) => {
       state.currentProduct = action.payload;
+    },
+    clearProductVariants: (state) => {
+      state.productVariants = [];
     },
   },
   extraReducers: (builder) => {
@@ -120,6 +161,19 @@ const adminProductsSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
+      // Fetch product variants
+      .addCase(fetchProductVariants.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchProductVariants.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.productVariants = action.payload;
+      })
+      .addCase(fetchProductVariants.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
       // Create product
       .addCase(createProduct.pending, (state) => {
         state.isLoading = true;
@@ -127,7 +181,7 @@ const adminProductsSlice = createSlice({
       })
       .addCase(createProduct.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.currentProduct = action.payload; // Lưu sản phẩm vừa tạo
+        state.currentProduct = action.payload;
         state.success = 'Tạo sản phẩm thành công! Tiếp tục thêm biến thể.';
       })
       .addCase(createProduct.rejected, (state, action) => {
@@ -144,6 +198,41 @@ const adminProductsSlice = createSlice({
         state.success = 'Thêm biến thể thành công!';
       })
       .addCase(createProductVariant.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // Update product variant
+      .addCase(updateProductVariant.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateProductVariant.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const index = state.productVariants.findIndex(
+          v => v.id === action.payload.id
+        );
+        if (index !== -1) {
+          state.productVariants[index] = action.payload;
+        }
+        state.success = 'Cập nhật biến thể thành công';
+      })
+      .addCase(updateProductVariant.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // Delete product variant
+      .addCase(deleteProductVariant.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(deleteProductVariant.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.productVariants = state.productVariants.filter(
+          v => v.id !== action.payload
+        );
+        state.success = 'Xóa biến thể thành công';
+      })
+      .addCase(deleteProductVariant.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
@@ -181,5 +270,5 @@ const adminProductsSlice = createSlice({
   },
 });
 
-export const { clearMessages, setCurrentProduct } = adminProductsSlice.actions;
+export const { clearMessages, setCurrentProduct, clearProductVariants } = adminProductsSlice.actions;
 export default adminProductsSlice.reducer;
