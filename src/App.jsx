@@ -1,5 +1,5 @@
 import React from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Home from "./pages/Home";
@@ -16,12 +16,16 @@ import Collection from "./pages/Collection";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
 import Profile from "./pages/Profile";
+import AdminLayout from "./layouts/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
 
 const App = () => {
+  const location = useLocation();
+  const hideLayout = location.pathname.startsWith("/admin");
   return (
     <div className="">
-      <Navbar />
-        <ScrollToTop />
+      {!hideLayout && <Navbar />}
+      <ScrollToTop />
 
       <Routes>
         <Route path="/" element={<Home />} />
@@ -35,9 +39,14 @@ const App = () => {
         <Route path="/place-order" element={<PlaceOrder />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/product/:productId" element={<Product />} />
+
+        {/* Admin routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Dashboard />} />
+        </Route>
       </Routes>
-      <Footer />
-      
+      {!hideLayout && <Footer />}
+
       {/* Toast notifications */}
       <ToastContainer
         position="top-right"
