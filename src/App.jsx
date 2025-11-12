@@ -17,7 +17,14 @@ import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
 import Profile from "./pages/Profile";
 import AdminLayout from "./layouts/AdminLayout";
-import Dashboard from "./pages/admin/Dashboard";
+// import Dashboard from "./pages/admin/Dashboard";
+import AdminProducts from "./pages/admin/Products"
+// import AdminOrders  from "./pages/admin/Orders"
+// import AdminCustomers   from "./pages/admin/Customers"
+// import AdminRevenue   from "./pages/admin/Revenue"
+import AdminBrands from "./pages/admin/Brands";
+import AdminCategories from "./pages/admin/Categories";
+// import AdminLabels from "./pages/admin/Labels";
 
 const App = () => {
   const location = useLocation();
@@ -26,7 +33,7 @@ const App = () => {
     <div className="">
       {!hideLayout && <Navbar />}
       <ScrollToTop />
-
+      {/* customer  */}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/collection" element={<Collection />} />
@@ -42,7 +49,14 @@ const App = () => {
 
         {/* Admin routes */}
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Dashboard />} />
+          {/* <Route index element={<Dashboard />} /> */}
+          <Route path="products" element={<AdminProducts />} />
+          {/* <Route path="orders" element={<AdminOrders />} /> */}
+          {/* <Route path="customers" element={<AdminCustomers />} /> */}
+          {/* <Route path="revenue" element={<AdminRevenue />} /> */}
+          <Route path="brands" element={<AdminBrands />} />
+          <Route path="categories" element={<AdminCategories />} />
+          {/* <Route path="labels" element={<AdminLabels />} /> */}
         </Route>
       </Routes>
       {!hideLayout && <Footer />}
