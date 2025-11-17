@@ -5,7 +5,6 @@ const API_URL = '/api';
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('access_token');
-  // Chỉ thêm Authorization header nếu có token
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
@@ -17,7 +16,11 @@ export const fetchBrands = createAsyncThunk(
       const response = await axios.get(`${API_URL}/brands`, {
         headers: getAuthHeader(),
       });
-      return response.data.result;
+      
+      if (response.data.code === 1000) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -32,7 +35,11 @@ export const fetchCategories = createAsyncThunk(
       const response = await axios.get(`${API_URL}/categories`, {
         headers: getAuthHeader(),
       });
-      return response.data.result;
+      
+      if (response.data.code === 1000) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -47,7 +54,11 @@ export const fetchLabels = createAsyncThunk(
       const response = await axios.get(`${API_URL}/labels`, {
         headers: getAuthHeader(),
       });
-      return response.data.result;
+      
+      if (response.data.code === 1000) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -62,7 +73,11 @@ export const fetchColors = createAsyncThunk(
       const response = await axios.get(`${API_URL}/colors`, {
         headers: getAuthHeader(),
       });
-      return response.data.result;
+      
+      if (response.data.code === 1000) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -77,7 +92,11 @@ export const fetchSizes = createAsyncThunk(
       const response = await axios.get(`${API_URL}/sizes`, {
         headers: getAuthHeader(),
       });
-      return response.data.result;
+      
+      if (response.data.code === 1000) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchCategories } from '../../features/admin/metadataSlice';
-import { Plus, Edit, Trash2, Search, X, Layers } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, Layers, Upload, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api';
+const API_URL = '/api';
 
 const Categories = () => {
   const dispatch = useDispatch();
@@ -19,6 +19,8 @@ const Categories = () => {
     name: '',
     description: '',
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -32,8 +34,36 @@ const Categories = () => {
 
   const resetForm = () => {
     setFormData({ name: '', description: '' });
+    setImageFile(null);
+    setImagePreview('');
     setEditMode(false);
     setCurrentCategory(null);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Vui lòng chọn file ảnh hợp lệ');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Kích thước ảnh không được vượt quá 5MB');
+        return;
+      }
+
+      setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleEdit = (category) => {
@@ -43,6 +73,7 @@ const Categories = () => {
       name: category.name,
       description: category.description || '',
     });
+    setImagePreview(category.image || '');
     setShowModal(true);
   };
 
@@ -50,13 +81,25 @@ const Categories = () => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa danh mục này?')) return;
 
     try {
-      await axios.delete(`${API_URL}/categories/${id}`, {
+      const response = await axios.delete(`${API_URL}/categories/${id}`, {
         headers: getAuthHeader(),
       });
-      toast.success('Xóa danh mục thành công');
-      dispatch(fetchCategories());
+
+      if (response.data.code === 1000) {
+        toast.success(response.data.message || 'Xóa danh mục thành công');
+        dispatch(fetchCategories());
+      }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra';
+      const errorCode = error.response?.data?.code;
+
+      if (errorCode === 2011) {
+        toast.error('Danh mục đang chứa sản phẩm, không thể xóa');
+      } else if (errorCode === 2004) {
+        toast.error('Danh mục không tồn tại');
+      } else {
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -65,20 +108,38 @@ const Categories = () => {
     setSubmitting(true);
 
     try {
-      if (editMode && currentCategory) {
-        await axios.put(`${API_URL}/categories/${currentCategory.id}`, formData, {
-          headers: getAuthHeader(),
-        });
-        toast.success('Cập nhật danh mục thành công');
-      } else {
-        await axios.post(`${API_URL}/categories`, formData, {
-          headers: getAuthHeader(),
-        });
-        toast.success('Thêm danh mục thành công');
+      // Create FormData for multipart/form-data
+      const submitData = new FormData();
+      submitData.append('name', formData.name);
+      submitData.append('description', formData.description);
+      
+      if (imageFile) {
+        submitData.append('image', imageFile);
       }
-      setShowModal(false);
-      resetForm();
-      dispatch(fetchCategories());
+
+      let response;
+      if (editMode && currentCategory) {
+        response = await axios.put(`${API_URL}/categories/${currentCategory.id}`, submitData, {
+          headers: {
+            ...getAuthHeader(),
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else {
+        response = await axios.post(`${API_URL}/categories`, submitData, {
+          headers: {
+            ...getAuthHeader(),
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      }
+
+      if (response.data.code === 1000) {
+        toast.success(response.data.message);
+        setShowModal(false);
+        resetForm();
+        dispatch(fetchCategories());
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
     } finally {
@@ -132,6 +193,7 @@ const Categories = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left py-3 px-4 text-gray-600 font-medium w-16">#</th>
+                  <th className="text-left py-3 px-4 text-gray-600 font-medium w-24">Hình ảnh</th>
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">Tên danh mục</th>
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">Mô tả</th>
                   <th className="text-left py-3 px-4 text-gray-600 font-medium w-32">Hành động</th>
@@ -140,7 +202,7 @@ const Categories = () => {
               <tbody>
                 {filteredCategories.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="text-center py-12">
+                    <td colSpan="5" className="text-center py-12">
                       <Layers className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                       <p className="text-gray-500">Không tìm thấy danh mục nào</p>
                     </td>
@@ -149,6 +211,19 @@ const Categories = () => {
                   filteredCategories.map((category, index) => (
                     <tr key={category.id} className="border-b hover:bg-gray-50 transition">
                       <td className="py-3 px-4 text-gray-600">{index + 1}</td>
+                      <td className="py-3 px-4">
+                        {category.image ? (
+                          <img
+                            src={category.image}
+                            alt={category.name}
+                            className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <ImageIcon className="w-8 h-8 text-gray-400" />
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-4">
                         <span className="font-semibold text-gray-800">{category.name}</span>
                       </td>
@@ -192,8 +267,8 @@ const Categories = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
               <h2 className="text-2xl font-bold text-gray-800">
                 {editMode ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới'}
               </h2>
@@ -238,15 +313,71 @@ const Categories = () => {
                 </p>
               </div>
 
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hình ảnh danh mục
+                </label>
+                <div className="flex items-start space-x-4">
+                  <div className="flex-1">
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-500">
+                          <span className="font-semibold">Nhấn để tải ảnh</span> hoặc kéo thả
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP (Max 5MB)</p>
+                      </div>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                      />
+                    </label>
+                  </div>
+                  
+                  {/* Image Preview */}
+                  {imagePreview && (
+                    <div className="relative">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-32 h-32 object-cover rounded-lg border-2 border-gray-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImageFile(null);
+                          setImagePreview('');
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Preview */}
               {formData.name && (
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <p className="text-xs text-gray-600 mb-2 font-medium">Preview:</p>
-                  <div className="bg-white p-3 rounded border border-gray-200">
-                    <h4 className="font-semibold text-gray-800">{formData.name}</h4>
-                    {formData.description && (
-                      <p className="text-sm text-gray-600 mt-1">{formData.description}</p>
+                  <div className="bg-white p-4 rounded border border-gray-200 flex items-start space-x-4">
+                    {imagePreview && (
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-20 h-20 object-cover rounded-lg"
+                      />
                     )}
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800">{formData.name}</h4>
+                      {formData.description && (
+                        <p className="text-sm text-gray-600 mt-1">{formData.description}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

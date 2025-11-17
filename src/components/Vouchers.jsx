@@ -117,16 +117,7 @@ function VoucherCard({ voucher: v, copied, saved, onCopy, onSave }) {
             {copied === v.code ? <><FiCheck /> Đã sao chép</> : <><FiCopy /> Sao chép</>}
           </button>
 
-          <button
-            onClick={() => onSave(v.id)}
-            className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md border transition ${
-              saved.includes(v.id)
-                ? "bg-green-100 border-green-400 text-green-600"
-                : "border-gray-300 hover:border-[#3A6FB5] text-gray-600"
-            }`}
-          >
-            {saved.includes(v.id) ? "Đã lưu" : "Lưu"}
-          </button>
+          
         </div>
       </div>
     </div>
