@@ -7,12 +7,14 @@ import adminProductsReducer from './features/admin/adminProductsSlice';
 // import adminCustomersReducer from './features/admin/adminCustomersSlice';
 // import adminRevenueReducer from './features/admin/adminRevenueSlice';
 import metadataReducer from './features/admin/metadataSlice';
+import wishlistReducer from './features/wishlist/wishlistSlice';
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     products: productsReducer,
     cart: cartReducer,
+    wishlist: wishlistReducer,
     adminProducts: adminProductsReducer,
     // adminOrders: adminOrdersReducer,
     // adminCustomers: adminCustomersReducer,

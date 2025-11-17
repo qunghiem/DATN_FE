@@ -25,6 +25,7 @@ import AdminProducts from "./pages/admin/Products"
 import AdminBrands from "./pages/admin/Brands";
 import AdminCategories from "./pages/admin/Categories";
 // import AdminLabels from "./pages/admin/Labels";
+import Wishlist from "./pages/Wishlist";
 
 const App = () => {
   const location = useLocation();
@@ -45,8 +46,9 @@ const App = () => {
         <Route path="/orders" element={<Orders />} />
         <Route path="/place-order" element={<PlaceOrder />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/product/:productId" element={<Product />} />
-
+        
         {/* Admin routes */}
         <Route path="/admin" element={<AdminLayout />}>
           {/* <Route index element={<Dashboard />} /> */}

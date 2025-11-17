@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { FaRegHeart, FaBars, FaTimes } from "react-icons/fa";
 import { logout } from "../features/auth/authSlice";
+import { fetchWishlist, selectWishlistCount } from "../features/wishlist/wishlistSlice";
 import logo from "../assets/logo.png";
 import cart from "../assets/cart.png";
 import search from "../assets/search.png";
@@ -13,10 +14,10 @@ const Navbar = () => {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const cartState = useSelector((state) => state.cart);
   const items = cartState?.items || [];
+  const wishlistCount = useSelector(selectWishlistCount);
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
-  const [savedCount, setSavedCount] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
@@ -26,6 +27,13 @@ const Navbar = () => {
   const cartCount = Array.isArray(items)
     ? items.reduce((total, item) => total + (item.quantity || 0), 0)
     : 0;
+
+  // Fetch wishlist when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchWishlist());
+    }
+  }, [isAuthenticated, dispatch]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -66,7 +74,6 @@ const Navbar = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* TOP ROW: luôn có height cố định để giữ căn giữa dọc */}
         <div className="flex items-center h-16 justify-between">
           {/* Logo */}
           <div className="flex-shrink-0">
@@ -75,7 +82,7 @@ const Navbar = () => {
             </NavLink>
           </div>
 
-          {/* Center menu (giữ căn giữa dọc nhờ items-center ở parent) */}
+          {/* Center menu */}
           <div className="hidden md:flex flex-1 justify-center space-x-8">
             <NavLink
               to="/"
@@ -131,9 +138,9 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* RIGHT ICONS (khi searchOpen vẫn giữ ở hàng trên) */}
+          {/* RIGHT ICONS */}
           <div className="flex items-center space-x-4 h-10 relative">
-            {/* Search icon toggles the extra search bar below */}
+            {/* Search icon */}
             <img
               src={search}
               className="w-5 h-5 cursor-pointer hover:opacity-70 transition"
@@ -205,18 +212,18 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* Saved / Heart */}
-            <div className="relative">
+            {/* Wishlist / Heart */}
+            <NavLink to="/wishlist" className="relative">
               <FaRegHeart
                 ref={savedRef}
                 className="text-gray-700 hover:text-sky-600 cursor-pointer transition w-5 h-5"
               />
-              {savedCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] bg-black text-white rounded-full flex items-center justify-center">
-                  {savedCount}
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] bg-red-500 text-white rounded-full flex items-center justify-center">
+                  {wishlistCount}
                 </span>
               )}
-            </div>
+            </NavLink>
 
             {/* Cart icon */}
             <NavLink to="/cart" className="relative">
@@ -244,7 +251,7 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* SEARCH BAR: xuất hiện dưới top row, không làm thay đổi căn giữa của top row */}
+        {/* SEARCH BAR */}
         {searchOpen && (
           <form
             onSubmit={handleSearchSubmit}
@@ -294,13 +301,22 @@ const Navbar = () => {
             LIÊN HỆ
           </NavLink>
           {isAuthenticated && (
-            <NavLink
-              to="/orders"
-              className="block px-4 py-3 font-medium uppercase text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
-              onClick={() => setMobileMenu(false)}
-            >
-              ĐƠN HÀNG
-            </NavLink>
+            <>
+              <NavLink
+                to="/orders"
+                className="block px-4 py-3 font-medium uppercase text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+                onClick={() => setMobileMenu(false)}
+              >
+                ĐƠN HÀNG
+              </NavLink>
+              <NavLink
+                to="/wishlist"
+                className="block px-4 py-3 font-medium uppercase text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+                onClick={() => setMobileMenu(false)}
+              >
+                YÊU THÍCH
+              </NavLink>
+            </>
           )}
         </div>
       )}
@@ -308,4 +324,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default Navbar;  

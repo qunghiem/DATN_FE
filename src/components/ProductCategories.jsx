@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 const ProductCategories = () => {
   const [categories, setCategories] = useState([]);
@@ -10,41 +10,45 @@ const ProductCategories = () => {
     const fetchCategories = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:8080/api/categories');
-        
+        const response = await fetch("http://localhost:8080/api/categories");
+
         if (!response.ok) {
-          throw new Error('Không thể tải danh mục');
+          throw new Error("Không thể tải danh mục");
         }
-        
+
         const apiResponse = await response.json();
-        
+
         // Check if API call was successful
         if (apiResponse.code !== 1000) {
-          throw new Error(apiResponse.message || 'Lỗi khi tải dữ liệu');
+          throw new Error(apiResponse.message || "Lỗi khi tải dữ liệu");
         }
-        
+
         // Get data from result field
         const data = apiResponse.result;
-        
+
         if (!Array.isArray(data)) {
-          throw new Error('Dữ liệu không đúng định dạng');
+          throw new Error("Dữ liệu không đúng định dạng");
         }
-        
+
         // Transform API data to match component structure
         const transformedData = data.map((category) => ({
           id: category.id,
           name: category.name,
           productCount: 0, // API không có field này, có thể cập nhật sau
-          image: category.image || '//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16',
+          image:
+            category.image ||
+            "//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16",
           // FIX: Truyền cả id và name vào URL để Collection page có thể filter
-          link: `/collection?categoryId=${category.id}&categoryName=${encodeURIComponent(category.name)}`,
-          description: category.description
+          link: `/collection?categoryId=${
+            category.id
+          }&categoryName=${encodeURIComponent(category.name)}`,
+          description: category.description,
         }));
-        
+
         setCategories(transformedData);
         setError(null);
       } catch (err) {
-        console.error('Error fetching categories:', err);
+        console.error("Error fetching categories:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -70,7 +74,7 @@ const ProductCategories = () => {
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 md:py-10 bg-white">
         <div className="text-center text-red-600">
           <p className="text-lg font-medium">Lỗi: {error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="mt-4 px-6 py-2 bg-[#3A6FB5] text-white rounded-lg hover:bg-[#2d5a94] transition-colors"
           >
@@ -112,9 +116,12 @@ const ProductCategories = () => {
 
       {/* Tablet: Hiển thị 3.5 item (768px - 991px) */}
       <div className="hidden md:block lg:hidden overflow-x-auto scrollbar-hide">
-        <div className="flex gap-4" style={{ width: 'fit-content' }}>
+        <div className="flex gap-4" style={{ width: "fit-content" }}>
           {categories.map((category) => (
-            <div key={category.id} style={{ minWidth: 'calc(28.57% - 11.43px)' }}>
+            <div
+              key={category.id}
+              style={{ minWidth: "calc(28.57% - 11.43px)" }}
+            >
               <CategoryCard category={category} />
             </div>
           ))}
@@ -123,24 +130,14 @@ const ProductCategories = () => {
 
       {/* Mobile: Hiển thị 2.5 item (< 768px) */}
       <div className="block md:hidden overflow-x-auto scrollbar-hide">
-        <div className="flex gap-3" style={{ width: 'fit-content' }}>
+        <div className="flex gap-3" style={{ width: "fit-content" }}>
           {categories.map((category) => (
-            <div key={category.id} style={{ minWidth: 'calc(40% - 9.6px)' }}>
+            <div key={category.id} style={{ minWidth: "calc(40% - 9.6px)" }}>
               <CategoryCard category={category} />
             </div>
           ))}
         </div>
       </div>
-
-      <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </div>
   );
 };
@@ -159,7 +156,8 @@ const CategoryCard = ({ category }) => {
           alt={category.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
-            e.target.src = '//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16';
+            e.target.src =
+              "//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16";
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
