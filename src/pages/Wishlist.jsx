@@ -8,7 +8,7 @@ import {
   selectWishlistItems,
   selectWishlistCount,
 } from '../features/wishlist/wishlistSlice';
-import { addToCart } from '../features/cart/cartSlice';
+import { addToCartAPI } from '../features/cart/cartSlice';
 import { Heart, ShoppingCart, Trash2, Loader2, Package } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -62,7 +62,7 @@ const Wishlist = () => {
       stock: 100, // Default stock
     };
 
-    dispatch(addToCart(cartItem));
+    dispatch(addToCartAPI(cartItem));
     toast.success('Đã thêm vào giỏ hàng!');
   };
 

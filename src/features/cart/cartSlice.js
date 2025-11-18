@@ -1,102 +1,151 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
 
-// Get current user ID
-const getCurrentUserId = () => {
-  try {
-    const user = JSON.parse(localStorage.getItem('user'));
-    return user?.id || user?.email || 'guest';
-  } catch (error) {
-    return 'guest';
-  }
+const API_URL = 'http://localhost:8080/api/cart';
+
+// Helper function to get access token
+const getAccessToken = () => {
+  return localStorage.getItem('access_token');
 };
 
-// Load cart from localStorage for current user
-const loadCartFromStorage = () => {
-  try {
-    const userId = getCurrentUserId();
-    const savedCart = localStorage.getItem(`cart_${userId}`);
-    if (!savedCart) return [];
-    
-    const parsed = JSON.parse(savedCart);
-    
-    // Ensure it's always an array
-    if (!Array.isArray(parsed)) {
-      console.warn('Cart data is not an array, resetting to empty array');
-      localStorage.removeItem(`cart_${userId}`);
-      return [];
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = getAccessToken();
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+};
+
+// Async thunks for API calls
+
+// Fetch cart from API
+export const fetchCart = createAsyncThunk(
+  'cart/fetchCart',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(API_URL, {
+        headers: getAuthHeaders(),
+      });
+      
+      if (response.data.code === 1000) {
+        return response.data.result;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Không thể tải giỏ hàng'
+      );
     }
-    
-    // Validate each item has required fields
-    const isValid = parsed.every(item => 
-      item && 
-      typeof item === 'object' &&
-      item.productId &&
-      item.variantId &&
-      typeof item.quantity === 'number'
-    );
-    
-    if (!isValid) {
-      console.warn('Cart data is invalid, resetting to empty array');
-      localStorage.removeItem(`cart_${userId}`);
-      return [];
-    }
-    
-    return parsed;
-  } catch (error) {
-    console.error('Error loading cart from localStorage:', error);
-    const userId = getCurrentUserId();
-    localStorage.removeItem(`cart_${userId}`); // Clear corrupted data
-    return [];
   }
-};
+);
 
-// Load selected items from localStorage for current user
-const loadSelectedItemsFromStorage = () => {
-  try {
-    const userId = getCurrentUserId();
-    const savedSelected = localStorage.getItem(`selectedItems_${userId}`);
-    if (!savedSelected) return [];
-    
-    const parsed = JSON.parse(savedSelected);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error('Error loading selected items:', error);
-    return [];
-  }
-};
-
-// Save cart to localStorage for current user
-const saveCartToStorage = (items) => {
-  try {
-    if (!Array.isArray(items)) {
-      console.error('Cannot save cart: items is not an array');
-      return;
+// Add item to cart via API
+export const addToCartAPI = createAsyncThunk(
+  'cart/addToCartAPI',
+  async ({ productVariantId, quantity }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/add`,
+        {
+          productVariantId,
+          quantity,
+        },
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+      
+      if (response.data.code === 1000) {
+        return response.data.result;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Không thể thêm vào giỏ hàng'
+      );
     }
-    const userId = getCurrentUserId();
-    localStorage.setItem(`cart_${userId}`, JSON.stringify(items));
-  } catch (error) {
-    console.error('Error saving cart to localStorage:', error);
   }
-};
+);
 
-// Save selected items to localStorage for current user
-const saveSelectedItemsToStorage = (selectedItems) => {
-  try {
-    if (!Array.isArray(selectedItems)) {
-      console.error('Cannot save selected items: not an array');
-      return;
+// Update cart item quantity via API
+export const updateCartItemAPI = createAsyncThunk(
+  'cart/updateCartItemAPI',
+  async ({ cartItemId, quantity }, { rejectWithValue }) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/update/${cartItemId}?quantity=${quantity}`,
+        {},
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+      
+      if (response.data.code === 1000) {
+        return response.data.result;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Không thể cập nhật giỏ hàng'
+      );
     }
-    const userId = getCurrentUserId();
-    localStorage.setItem(`selectedItems_${userId}`, JSON.stringify(selectedItems));
-  } catch (error) {
-    console.error('Error saving selected items to localStorage:', error);
   }
-};
+);
+
+// Remove item from cart via API
+export const removeFromCartAPI = createAsyncThunk(
+  'cart/removeFromCartAPI',
+  async (cartItemId, { rejectWithValue }) => {
+    try {
+      const response = await axios.delete(`${API_URL}/remove/${cartItemId}`, {
+        headers: getAuthHeaders(),
+      });
+      
+      if (response.data.code === 1000) {
+        return response.data.result;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Không thể xóa sản phẩm'
+      );
+    }
+  }
+);
+
+// Clear entire cart via API
+export const clearCartAPI = createAsyncThunk(
+  'cart/clearCartAPI',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.delete(`${API_URL}/clear`, {
+        headers: getAuthHeaders(),
+      });
+      
+      if (response.data.code === 1000) {
+        return null;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Không thể xóa giỏ hàng'
+      );
+    }
+  }
+);
 
 // Initial state
 const initialState = {
-  items: loadCartFromStorage(),
-  selectedItems: loadSelectedItemsFromStorage(), // Danh sách productId-variantId được chọn
+  cartId: null,
+  items: [],
+  totalAmount: 0,
+  selectedItems: [], // Danh sách ID của items được chọn để thanh toán
   isLoading: false,
   error: null,
   discountCode: null,
@@ -108,209 +157,25 @@ const cartSlice = createSlice({
   name: 'cart',
   initialState,
   reducers: {
-    // Add item to cart
-    addToCart: (state, action) => {
-      const { 
-        productId, 
-        variantId, 
-        name, 
-        price, 
-        image, 
-        color, 
-        size, 
-        quantity,
-        stock 
-      } = action.payload;
-
-      // Ensure items is always an array
-      if (!Array.isArray(state.items)) {
-        console.warn('⚠️ Cart items was not an array, resetting to empty array');
-        state.items = [];
-      }
-
-      // console.log('Current cart items:', state.items);
-      // console.log('Items is array?', Array.isArray(state.items));
-
-      // Validate input
-      if (!productId || !variantId) {
-        console.error('❌ Invalid product info');
-        state.error = 'Thông tin sản phẩm không hợp lệ';
-        return;
-      }
-
-      if (typeof quantity !== 'number' || quantity <= 0) {
-        console.error('❌ Invalid quantity:', quantity);
-        state.error = 'Số lượng không hợp lệ';
-        return;
-      }
-
-      // Check if item already exists in cart
-      const existingItem = state.items.find(
-        item => item.productId === productId && item.variantId === variantId
-      );
-
-      if (existingItem) {
-        // console.log('Item already exists, updating quantity');
-        // Update quantity if item exists
-        const newQuantity = existingItem.quantity + quantity;
-        if (newQuantity <= stock) {
-          existingItem.quantity = newQuantity;
-          // console.log('Updated quantity to:', newQuantity);
-        } else {
-          console.error('Exceeds stock:', { newQuantity, stock });
-          state.error = `Chỉ còn ${stock} sản phẩm trong kho!`;
-          return;
-        }
-      } else {
-        // console.log('Adding new item to cart');
-        // Add new item
-        const newItem = {
-          productId,
-          variantId,
-          name,
-          price,
-          image,
-          color,
-          size,
-          quantity,
-          stock,
-          addedAt: new Date().toISOString(),
-        };
-        state.items.push(newItem);
-        
-        // Tự động chọn item mới thêm vào
-        const itemKey = `${productId}-${variantId}`;
-        if (!state.selectedItems.includes(itemKey)) {
-          state.selectedItems.push(itemKey);
-        }
-      }
-
-      // console.log('Cart after update:', state.items);
-      console.log('Total items:', state.items.length);
-      
-      saveCartToStorage(state.items);
-      saveSelectedItemsToStorage(state.selectedItems);
-      state.error = null;
-      
-      // console.log('Saved to localStorage');
-    },
-
-    // Remove item from cart
-    removeFromCart: (state, action) => {
-      const { productId, variantId } = action.payload;
-      
-      // Ensure items is an array
-      if (!Array.isArray(state.items)) {
-        state.items = [];
-        return;
-      }
-      
-      state.items = state.items.filter(
-        item => !(item.productId === productId && item.variantId === variantId)
-      );
-      
-      // Xóa khỏi danh sách đã chọn
-      const itemKey = `${productId}-${variantId}`;
-      state.selectedItems = state.selectedItems.filter(key => key !== itemKey);
-      
-      saveCartToStorage(state.items);
-      saveSelectedItemsToStorage(state.selectedItems);
-    },
-
-    // Update item quantity
-    updateQuantity: (state, action) => {
-      const { productId, variantId, quantity } = action.payload;
-      
-      // Ensure items is an array
-      if (!Array.isArray(state.items)) {
-        state.items = [];
-        return;
-      }
-      
-      const item = state.items.find(
-        item => item.productId === productId && item.variantId === variantId
-      );
-
-      if (item) {
-        if (quantity <= 0) {
-          // Remove item if quantity is 0 or less
-          state.items = state.items.filter(
-            item => !(item.productId === productId && item.variantId === variantId)
-          );
-          // Xóa khỏi danh sách đã chọn
-          const itemKey = `${productId}-${variantId}`;
-          state.selectedItems = state.selectedItems.filter(key => key !== itemKey);
-        } else if (quantity <= item.stock) {
-          item.quantity = quantity;
-        } else {
-          state.error = `Chỉ còn ${item.stock} sản phẩm trong kho!`;
-          return;
-        }
-      }
-
-      saveCartToStorage(state.items);
-      saveSelectedItemsToStorage(state.selectedItems);
-      state.error = null;
-    },
-
     // Toggle select item
     toggleSelectItem: (state, action) => {
-      const { productId, variantId } = action.payload;
-      const itemKey = `${productId}-${variantId}`;
+      const itemId = action.payload;
       
-      if (state.selectedItems.includes(itemKey)) {
-        state.selectedItems = state.selectedItems.filter(key => key !== itemKey);
+      if (state.selectedItems.includes(itemId)) {
+        state.selectedItems = state.selectedItems.filter(id => id !== itemId);
       } else {
-        state.selectedItems.push(itemKey);
+        state.selectedItems.push(itemId);
       }
-      
-      saveSelectedItemsToStorage(state.selectedItems);
     },
 
     // Select all items
     selectAllItems: (state) => {
-      state.selectedItems = state.items.map(
-        item => `${item.productId}-${item.variantId}`
-      );
-      saveSelectedItemsToStorage(state.selectedItems);
+      state.selectedItems = state.items.map(item => item.id);
     },
 
     // Deselect all items
     deselectAllItems: (state) => {
       state.selectedItems = [];
-      saveSelectedItemsToStorage(state.selectedItems);
-    },
-
-    // Remove selected items
-    removeSelectedItems: (state) => {
-      state.items = state.items.filter(
-        item => !state.selectedItems.includes(`${item.productId}-${item.variantId}`)
-      );
-      state.selectedItems = [];
-      saveCartToStorage(state.items);
-      saveSelectedItemsToStorage(state.selectedItems);
-    },
-
-    // Clear only selected items after checkout
-    clearSelectedItems: (state) => {
-      state.items = state.items.filter(
-        item => !state.selectedItems.includes(`${item.productId}-${item.variantId}`)
-      );
-      state.selectedItems = [];
-      state.discountCode = null;
-      state.discountAmount = 0;
-      saveCartToStorage(state.items);
-      saveSelectedItemsToStorage(state.selectedItems);
-    },
-
-    // Clear all items from cart
-    clearCart: (state) => {
-      state.items = [];
-      state.selectedItems = [];
-      state.discountCode = null;
-      state.discountAmount = 0;
-      saveCartToStorage([]);
-      saveSelectedItemsToStorage([]);
     },
 
     // Clear error
@@ -329,35 +194,137 @@ const cartSlice = createSlice({
       state.discountCode = null;
       state.discountAmount = 0;
     },
-    
-    // Reset cart to safe state (for debugging)
+
+    // Clear selected items after checkout
+    clearSelectedItems: (state) => {
+      state.selectedItems = [];
+      state.discountCode = null;
+      state.discountAmount = 0;
+    },
+
+    // Reset cart state
     resetCart: (state) => {
+      state.cartId = null;
       state.items = [];
+      state.totalAmount = 0;
       state.selectedItems = [];
       state.isLoading = false;
       state.error = null;
       state.discountCode = null;
       state.discountAmount = 0;
-      const userId = getCurrentUserId();
-      localStorage.removeItem(`cart_${userId}`);
-      localStorage.removeItem(`selectedItems_${userId}`);
     },
+  },
+  extraReducers: (builder) => {
+    // Fetch cart
+    builder
+      .addCase(fetchCart.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchCart.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (action.payload) {
+          state.cartId = action.payload.cartId;
+          state.items = action.payload.items || [];
+          state.totalAmount = action.payload.totalAmount || 0;
+        }
+      })
+      .addCase(fetchCart.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
 
-    // Reload cart when user changes
-    reloadCart: (state) => {
-      state.items = loadCartFromStorage();
-      state.selectedItems = loadSelectedItemsFromStorage();
-      state.discountCode = null;
-      state.discountAmount = 0;
-      state.error = null;
-    },
+    // Add to cart
+    builder
+      .addCase(addToCartAPI.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(addToCartAPI.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (action.payload) {
+          state.cartId = action.payload.cartId;
+          state.items = action.payload.items || [];
+          state.totalAmount = action.payload.totalAmount || 0;
+          
+          // Tự động chọn item mới thêm vào
+          const newItems = action.payload.items || [];
+          if (newItems.length > 0) {
+            const latestItem = newItems[newItems.length - 1];
+            if (!state.selectedItems.includes(latestItem.id)) {
+              state.selectedItems.push(latestItem.id);
+            }
+          }
+        }
+      })
+      .addCase(addToCartAPI.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
+
+    // Update cart item
+    builder
+      .addCase(updateCartItemAPI.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateCartItemAPI.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (action.payload) {
+          state.cartId = action.payload.cartId;
+          state.items = action.payload.items || [];
+          state.totalAmount = action.payload.totalAmount || 0;
+        }
+      })
+      .addCase(updateCartItemAPI.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
+
+    // Remove from cart
+    builder
+      .addCase(removeFromCartAPI.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(removeFromCartAPI.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (action.payload) {
+          state.cartId = action.payload.cartId;
+          state.items = action.payload.items || [];
+          state.totalAmount = action.payload.totalAmount || 0;
+        }
+      })
+      .addCase(removeFromCartAPI.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
+
+    // Clear cart
+    builder
+      .addCase(clearCartAPI.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(clearCartAPI.fulfilled, (state) => {
+        state.isLoading = false;
+        state.cartId = null;
+        state.items = [];
+        state.totalAmount = 0;
+        state.selectedItems = [];
+        state.discountCode = null;
+        state.discountAmount = 0;
+      })
+      .addCase(clearCartAPI.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      });
   },
 });
 
-// Selectors with safe fallbacks
+// Selectors
 export const selectCartItems = (state) => {
-  const items = state.cart?.items;
-  return Array.isArray(items) ? items : [];
+  return state.cart?.items || [];
 };
 
 export const selectSelectedItems = (state) => {
@@ -367,8 +334,7 @@ export const selectSelectedItems = (state) => {
 export const selectCartItemsCount = (state) => {
   const items = selectCartItems(state);
   return items.reduce((total, item) => {
-    const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-    return total + quantity;
+    return total + (item.quantity || 0);
   }, 0);
 };
 
@@ -377,10 +343,8 @@ export const selectSelectedItemsCount = (state) => {
   const selectedItems = selectSelectedItems(state);
   
   return items.reduce((total, item) => {
-    const itemKey = `${item.productId}-${item.variantId}`;
-    if (selectedItems.includes(itemKey)) {
-      const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-      return total + quantity;
+    if (selectedItems.includes(item.id)) {
+      return total + (item.quantity || 0);
     }
     return total;
   }, 0);
@@ -391,11 +355,8 @@ export const selectCartSubtotal = (state) => {
   const selectedItems = selectSelectedItems(state);
   
   return items.reduce((total, item) => {
-    const itemKey = `${item.productId}-${item.variantId}`;
-    if (selectedItems.includes(itemKey)) {
-      const price = typeof item.price === 'number' ? item.price : 0;
-      const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
-      return total + (price * quantity);
+    if (selectedItems.includes(item.id)) {
+      return total + (item.itemTotalPrice || 0);
     }
     return total;
   }, 0);
@@ -409,20 +370,14 @@ export const selectCartTotal = (state) => {
 
 // Actions
 export const { 
-  addToCart, 
-  removeFromCart, 
-  updateQuantity, 
   toggleSelectItem,
   selectAllItems,
   deselectAllItems,
-  removeSelectedItems,
-  clearSelectedItems,
-  clearCart, 
   clearError,
   applyDiscount,
   removeDiscount,
+  clearSelectedItems,
   resetCart,
-  reloadCart,
 } = cartSlice.actions;
 
 // Reducer
