@@ -9,6 +9,7 @@ import adminProductsReducer from './features/admin/adminProductsSlice';
 import metadataReducer from './features/admin/metadataSlice';
 import wishlistReducer from './features/wishlist/wishlistSlice';
 import adminVouchersReducer from './features/admin/adminVouchersslice';
+import voucherReducer from './features/vouchers/voucherSlice';
 
 export const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ export const store = configureStore({
     // adminRevenue: adminRevenueReducer,
     metadata: metadataReducer,
     adminVouchers: adminVouchersReducer,
+    vouchers: voucherReducer,
   },
 });
 

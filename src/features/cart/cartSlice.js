@@ -148,8 +148,6 @@ const initialState = {
   selectedItems: [], // Danh sách ID của items được chọn để thanh toán
   isLoading: false,
   error: null,
-  discountCode: null,
-  discountAmount: 0,
 };
 
 // Cart slice
@@ -183,23 +181,9 @@ const cartSlice = createSlice({
       state.error = null;
     },
 
-    // Apply discount code
-    applyDiscount: (state, action) => {
-      state.discountCode = action.payload.code;
-      state.discountAmount = action.payload.amount;
-    },
-
-    // Remove discount code
-    removeDiscount: (state) => {
-      state.discountCode = null;
-      state.discountAmount = 0;
-    },
-
     // Clear selected items after checkout
     clearSelectedItems: (state) => {
       state.selectedItems = [];
-      state.discountCode = null;
-      state.discountAmount = 0;
     },
 
     // Reset cart state
@@ -210,8 +194,6 @@ const cartSlice = createSlice({
       state.selectedItems = [];
       state.isLoading = false;
       state.error = null;
-      state.discountCode = null;
-      state.discountAmount = 0;
     },
   },
   extraReducers: (builder) => {
@@ -312,8 +294,6 @@ const cartSlice = createSlice({
         state.items = [];
         state.totalAmount = 0;
         state.selectedItems = [];
-        state.discountCode = null;
-        state.discountAmount = 0;
       })
       .addCase(clearCartAPI.rejected, (state, action) => {
         state.isLoading = false;
@@ -364,8 +344,7 @@ export const selectCartSubtotal = (state) => {
 
 export const selectCartTotal = (state) => {
   const subtotal = selectCartSubtotal(state);
-  const discount = state.cart?.discountAmount || 0;
-  return Math.max(0, subtotal - discount);
+  return subtotal;
 };
 
 // Actions
@@ -374,8 +353,6 @@ export const {
   selectAllItems,
   deselectAllItems,
   clearError,
-  applyDiscount,
-  removeDiscount,
   clearSelectedItems,
   resetCart,
 } = cartSlice.actions;
