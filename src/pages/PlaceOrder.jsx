@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   MapPin,
-  Phone,
-  Mail,
   User,
   CreditCard,
   Truck,
@@ -13,34 +11,36 @@ import {
   AlertCircle,
   CheckCircle,
 } from 'lucide-react';
-import {
-  selectCartItems,
-  selectSelectedItems,
-  selectCartSubtotal,
-  selectCartTotal,
-  clearSelectedItems,
-} from '../features/cart/cartSlice';
+import { clearSelectedItems } from '../features/cart/cartSlice';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import qrCode from "../assets/qr.png"
 
-
 const PlaceOrder = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Redux state
-  const allCartItems = useSelector(selectCartItems);
-  const selectedItemKeys = useSelector(selectSelectedItems);
-  const subtotal = useSelector(selectCartSubtotal);
-  const total = useSelector(selectCartTotal);
-  const { discountCode, discountAmount } = useSelector((state) => state.cart);
+  // Get data from navigation state (passed from Cart)
+  const { 
+    selectedCartItems, 
+    appliedVoucher, 
+    discountAmount: passedDiscountAmount 
+  } = location.state || {};
+
+  // Use the passed items directly
+  const cartItems = selectedCartItems || [];
+  
+  // Redux state (only for user auth)
   const { user, isAuthenticated } = useSelector((state) => state.auth);
 
-  // Filter only selected items
-  const cartItems = allCartItems.filter(item => 
-    selectedItemKeys.includes(`${item.productId}-${item.variantId}`)
-  );
+  // Calculate values from passed data
+  const subtotal = cartItems.reduce((total, item) => {
+    return total + (item.itemTotalPrice || item.price * item.quantity || 0);
+  }, 0);
+  
+  const discountAmount = passedDiscountAmount || 0;
+  const discountCode = appliedVoucher?.code || '';
 
   // Form state
   const [formData, setFormData] = useState({
@@ -74,6 +74,14 @@ const PlaceOrder = () => {
     return 'guest';
   };
 
+  // Redirect if no items selected
+  useEffect(() => {
+    if (!cartItems || cartItems.length === 0) {
+      toast.info('Vui lòng chọn sản phẩm cần thanh toán!');
+      navigate('/cart');
+    }
+  }, [cartItems, navigate]);
+
   // Load provinces on component mount
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -106,7 +114,6 @@ const PlaceOrder = () => {
         setDistricts(response.data.districts || []);
         setWards([]);
         
-        // Reset district and ward when province changes
         setFormData(prev => ({
           ...prev,
           district: '',
@@ -140,7 +147,6 @@ const PlaceOrder = () => {
         );
         setWards(response.data.wards || []);
         
-        // Reset ward when district changes
         setFormData(prev => ({
           ...prev,
           ward: '',
@@ -169,22 +175,15 @@ const PlaceOrder = () => {
     }
   }, [isAuthenticated, user]);
 
-  // Redirect if no items selected
-  useEffect(() => {
-    if (cartItems.length === 0 || selectedItemKeys.length === 0) {
-      toast.info('Vui lòng chọn sản phẩm cần thanh toán!');
-      navigate('/cart');
-    }
-  }, [cartItems, selectedItemKeys, navigate]);
-
   // Format price
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN').format(price) + '₫';
   };
 
   // Shipping fee calculation
-  const shippingFee = subtotal >= 500000 ? 0 : 30000;
-  const finalTotal = total + shippingFee;
+  const isFreeship = appliedVoucher?.discountType === 'FREESHIP';
+  const shippingFee = isFreeship ? 0 : (subtotal >= 500000 ? 0 : 30000);
+  const finalTotal = subtotal - discountAmount + shippingFee;
 
   // Handle input change
   const handleChange = (e) => {
@@ -193,7 +192,6 @@ const PlaceOrder = () => {
       ...prev,
       [name]: value,
     }));
-    // Clear error when user types
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -308,7 +306,7 @@ const PlaceOrder = () => {
     setIsSubmitting(true);
 
     try {
-      // Prepare order data with only selected items
+      // Prepare order data with selected items
       const orderData = {
         customer: {
           fullName: formData.fullName,
@@ -360,7 +358,7 @@ const PlaceOrder = () => {
       } catch (apiError) {
         console.log('API not available, saving to localStorage:', apiError.message);
         
-        // Fallback: Save to localStorage for current user
+        // Fallback: Save to localStorage
         const userId = getUserId();
         const ordersKey = `orders_${userId}`;
         const existingOrders = JSON.parse(localStorage.getItem(ordersKey) || '[]');
@@ -397,7 +395,7 @@ const PlaceOrder = () => {
       }
 
       if (orderSaved) {
-        // Clear only selected items from cart
+        // Clear selected items from cart
         dispatch(clearSelectedItems());
 
         // Show success message
@@ -748,14 +746,14 @@ const PlaceOrder = () => {
               <div className="bg-white rounded-lg shadow-sm p-6 sticky top-20">
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
                   <Package className="w-5 h-5 mr-2 text-[#3A6FB5]" />
-                  Thông tin đơn hàng ({cartItems.length} sản phẩm đã chọn)
+                  Thông tin đơn hàng ({cartItems.length} sản phẩm)
                 </h2>
 
                 {/* Order Items */}
                 <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
-                  {cartItems.map((item) => (
+                  {cartItems.map((item, index) => (
                     <div
-                      key={`${item.productId}-${item.variantId}`}
+                      key={`${item.productId}-${item.variantId}-${index}`}
                       className="flex gap-3 pb-3 border-b border-gray-100 last:border-0"
                     >
                       <div className="w-16 h-16 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
@@ -794,7 +792,7 @@ const PlaceOrder = () => {
 
                   {discountAmount > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Giảm giá ({discountCode}):</span>
+                      <span>Giảm giá {discountCode && `(${discountCode})`}:</span>
                       <span className="font-medium">
                         -{formatPrice(discountAmount)}
                       </span>

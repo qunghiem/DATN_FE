@@ -86,7 +86,7 @@ const Cart = () => {
             
             if (response.data.code === 1000) {
               return {
-                variantId: item.variantId,
+                variantId: item.productVariantId,
                 productId: response.data.result.productId,
               };
             }
@@ -308,39 +308,45 @@ const Cart = () => {
   };
 
   // Handle checkout
-  const handleCheckout = () => {
-    console.log('=== CHECKOUT DEBUG ===');
-    console.log('Cart items:', cartItems);
-    console.log('Selected items (IDs):', selectedItems);
-    console.log('Selected items length:', selectedItems.length);
-    console.log('Variant details cache:', variantDetails);
-    
-    // Enrich cart items with productId
-    const enrichedItems = cartItems.map(item => ({
-      ...item,
-      productId: getProductId(item) || item.productId
-    }));
-    console.log('Enriched items with productId:', enrichedItems);
-    
-    if (cartItems.length === 0) {
-      toast.info("Giỏ hàng của bạn đang trống!");
-      return;
-    }
+// Handle checkout
+const handleCheckout = () => {
+  if (cartItems.length === 0) {
+    toast.info("Giỏ hàng của bạn đang trống!");
+    return;
+  }
 
-    if (selectedItems.length === 0) {
-      toast.warning("Vui lòng chọn sản phẩm cần thanh toán!");
-      return;
-    }
+  if (selectedItems.length === 0) {
+    toast.warning("Vui lòng chọn sản phẩm cần thanh toán!");
+    return;
+  }
 
-    // Navigate với state để pass thông tin voucher và enriched items
-    navigate("/place-order", {
-      state: {
-        appliedVoucher,
-        discountAmount,
-        enrichedItems, // Pass enriched items with productId
-      }
-    });
-  };
+  // Filter only selected items and enrich with productId
+  const selectedCartItems = cartItems.filter(item => 
+    selectedItems.includes(item.id)
+  ).map(item => ({
+    ...item,
+    productId: getProductId(item) || item.productId,
+    // Map to format expected by PlaceOrder
+    name: item.productName,
+    color: item.colorName,
+    size: item.sizeName,
+    image: item.imageUrl,
+    price: item.discountPrice,
+    quantity: item.quantity,
+    variantId: item.productVariantId,
+  }));
+
+  console.log('Selected cart items to checkout:', selectedCartItems);
+
+  // Navigate với state
+  navigate("/place-order", {
+    state: {
+      selectedCartItems, // Pass only selected items
+      appliedVoucher,
+      discountAmount,
+    }
+  });
+};
 
   // Get voucher type badge
   const getVoucherTypeBadge = (type) => {
