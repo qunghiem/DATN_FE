@@ -11,6 +11,7 @@ const Sidebar = () => {
     { name: "Thương hiệu", path: "/admin/brands" },
     { name: "Danh mục", path: "/admin/categories" },
     // { name: "Nhãn", path: "/admin/labels" },
+    { name: "Voucher", path: "/admin/vouchers" },
   ];
 
   return (

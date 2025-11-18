@@ -8,6 +8,7 @@ import adminProductsReducer from './features/admin/adminProductsSlice';
 // import adminRevenueReducer from './features/admin/adminRevenueSlice';
 import metadataReducer from './features/admin/metadataSlice';
 import wishlistReducer from './features/wishlist/wishlistSlice';
+import adminVouchersReducer from './features/admin/adminVouchersslice';
 
 export const store = configureStore({
   reducer: {
@@ -20,6 +21,7 @@ export const store = configureStore({
     // adminCustomers: adminCustomersReducer,
     // adminRevenue: adminRevenueReducer,
     metadata: metadataReducer,
+    adminVouchers: adminVouchersReducer,
   },
 });
 

@@ -17,14 +17,10 @@ import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
 import Profile from "./pages/Profile";
 import AdminLayout from "./layouts/AdminLayout";
-// import Dashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Products"
-// import AdminOrders  from "./pages/admin/Orders"
-// import AdminCustomers   from "./pages/admin/Customers"
-// import AdminRevenue   from "./pages/admin/Revenue"
 import AdminBrands from "./pages/admin/Brands";
 import AdminCategories from "./pages/admin/Categories";
-// import AdminLabels from "./pages/admin/Labels";
+import AdminVoucher from "./pages/admin/Vouchers";
 import Wishlist from "./pages/Wishlist";
 
 const App = () => {
@@ -51,14 +47,10 @@ const App = () => {
         
         {/* Admin routes */}
         <Route path="/admin" element={<AdminLayout />}>
-          {/* <Route index element={<Dashboard />} /> */}
           <Route path="products" element={<AdminProducts />} />
-          {/* <Route path="orders" element={<AdminOrders />} /> */}
-          {/* <Route path="customers" element={<AdminCustomers />} /> */}
-          {/* <Route path="revenue" element={<AdminRevenue />} /> */}
           <Route path="brands" element={<AdminBrands />} />
           <Route path="categories" element={<AdminCategories />} />
-          {/* <Route path="labels" element={<AdminLabels />} /> */}
+          <Route path="vouchers" element={<AdminVoucher />} />
         </Route>
       </Routes>
       {!hideLayout && <Footer />}
