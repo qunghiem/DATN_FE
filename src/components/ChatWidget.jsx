@@ -38,7 +38,7 @@ const ChatWidget = () => {
     if (!user || !roomId) return;
 
     const connectWebSocket = () => {
-      console.log('🔌 Connecting WebSocket...');
+      console.log('🔌 [ChatWidget] Connecting WebSocket...');
       const token = localStorage.getItem('access_token');
       const socket = new SockJS('http://localhost:8080/ws-chat');
       const client = Stomp.over(socket);
@@ -48,21 +48,30 @@ const ChatWidget = () => {
       client.connect(
         { 'Authorization': `Bearer ${token}` },
         (frame) => {
-          console.log('✅ WebSocket connected');
+          console.log('✅ [ChatWidget] WebSocket connected');
+          console.log('📋 [ChatWidget] Frame:', frame);
           setIsConnected(true);
           setStompClient(client);
 
           // Subscribe để nhận tin nhắn
           client.subscribe('/user/queue/messages', (message) => {
-            console.log('💬 NHẬN TIN NHẮN:', message.body);
-            const chatMessage = JSON.parse(message.body);
-            dispatch(addMessage(chatMessage));
+            console.log('💬 [ChatWidget] NHẬN TIN NHẮN RAW:', message);
+            console.log('💬 [ChatWidget] NHẬN TIN NHẮN BODY:', message.body);
+            try {
+              const chatMessage = JSON.parse(message.body);
+              console.log('💬 [ChatWidget] PARSED MESSAGE:', chatMessage);
+              console.log('💬 [ChatWidget] Current roomId:', roomId);
+              console.log('💬 [ChatWidget] Message roomId:', chatMessage.roomId);
+              dispatch(addMessage(chatMessage));
+            } catch (error) {
+              console.error('❌ [ChatWidget] Error parsing message:', error);
+            }
           });
 
-          console.log('✅ Subscribed');
+          console.log('✅ [ChatWidget] Subscribed to /user/queue/messages');
         },
         (error) => {
-          console.error('❌ WebSocket error:', error);
+          console.error('❌ [ChatWidget] WebSocket error:', error);
           setIsConnected(false);
           // Retry sau 3 giây
           reconnectTimeoutRef.current = setTimeout(() => {
@@ -80,6 +89,7 @@ const ChatWidget = () => {
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (stompClient && stompClient.connected) {
+        console.log('🔌 [ChatWidget] Disconnecting WebSocket...');
         stompClient.disconnect();
       }
     };
@@ -90,8 +100,18 @@ const ChatWidget = () => {
     e.preventDefault();
     const content = messageInput.trim();
 
+    console.log('📤 [ChatWidget] handleSendMessage called');
+    console.log('📤 [ChatWidget] Content:', content);
+    console.log('📤 [ChatWidget] stompClient:', stompClient);
+    console.log('📤 [ChatWidget] stompClient.connected:', stompClient?.connected);
+    console.log('📤 [ChatWidget] roomId:', roomId);
+
     if (!content || !stompClient || !stompClient.connected || !roomId) {
-      console.log('⚠️ Không thể gửi');
+      console.log('⚠️ [ChatWidget] Không thể gửi tin nhắn');
+      console.log('⚠️ [ChatWidget] content:', !!content);
+      console.log('⚠️ [ChatWidget] stompClient:', !!stompClient);
+      console.log('⚠️ [ChatWidget] connected:', stompClient?.connected);
+      console.log('⚠️ [ChatWidget] roomId:', roomId);
       return;
     }
 
@@ -100,14 +120,18 @@ const ChatWidget = () => {
       roomId: roomId
     };
 
+    console.log('📤 [ChatWidget] Sending message:', chatMessage);
+
     const token = localStorage.getItem('access_token');
     const headers = {
       'Authorization': `Bearer ${token}`
     };
 
+    console.log('📤 [ChatWidget] Headers:', headers);
+
     stompClient.send("/app/chat.send", headers, JSON.stringify(chatMessage));
     setMessageInput('');
-    console.log('✅ Đã gửi tin nhắn');
+    console.log('✅ [ChatWidget] Message sent successfully');
   };
 
   // Toggle chat window

@@ -66,17 +66,26 @@ const EmployeeChat = () => {
         { 'Authorization': `Bearer ${token}` },
         (frame) => {
           console.log('✅ WebSocket connected');
+          console.log('📋 Frame:', frame);
           setIsConnected(true);
           setStompClient(client);
 
           // Subscribe để nhận tin nhắn
           client.subscribe('/user/queue/messages', (message) => {
-            console.log('💬 NHẬN TIN NHẮN:', message.body);
-            const chatMessage = JSON.parse(message.body);
-            dispatch(addMessage(chatMessage));
+            console.log('💬 NHẬN TIN NHẮN RAW:', message);
+            console.log('💬 NHẬN TIN NHẮN BODY:', message.body);
+            try {
+              const chatMessage = JSON.parse(message.body);
+              console.log('💬 PARSED MESSAGE:', chatMessage);
+              console.log('💬 Current roomId:', roomId);
+              console.log('💬 Message roomId:', chatMessage.roomId);
+              dispatch(addMessage(chatMessage));
+            } catch (error) {
+              console.error('❌ Error parsing message:', error);
+            }
           });
 
-          console.log('✅ Subscribed');
+          console.log('✅ Subscribed to /user/queue/messages');
         },
         (error) => {
           console.error('❌ WebSocket error:', error);
@@ -95,6 +104,7 @@ const EmployeeChat = () => {
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (stompClient && stompClient.connected) {
+        console.log('🔌 Disconnecting WebSocket...');
         stompClient.disconnect();
       }
     };
@@ -102,9 +112,18 @@ const EmployeeChat = () => {
 
   // Chọn room để chat
   const handleSelectRoom = async (room) => {
+    console.log('🎯 handleSelectRoom called with room:', room);
+    console.log('🎯 Setting current room to:', room.roomId);
+    
     dispatch(setCurrentRoom(room.roomId));
+    
+    console.log('🎯 Fetching messages for room:', room.roomId);
     await dispatch(getRoomMessages(room.roomId));
+    
+    console.log('🎯 Marking room as read:', room.roomId);
     await dispatch(markAsRead(room.roomId));
+    
+    console.log('✅ Room selection complete');
   };
 
   // Gửi tin nhắn
@@ -112,8 +131,18 @@ const EmployeeChat = () => {
     e.preventDefault();
     const content = messageInput.trim();
 
+    console.log('📤 handleSendMessage called');
+    console.log('📤 Content:', content);
+    console.log('📤 stompClient:', stompClient);
+    console.log('📤 stompClient.connected:', stompClient?.connected);
+    console.log('📤 currentRoomId:', roomId);
+
     if (!content || !stompClient || !stompClient.connected || !roomId) {
-      console.log('⚠️ Không thể gửi');
+      console.log('⚠️ Không thể gửi tin nhắn');
+      console.log('⚠️ content:', !!content);
+      console.log('⚠️ stompClient:', !!stompClient);
+      console.log('⚠️ connected:', stompClient?.connected);
+      console.log('⚠️ roomId:', roomId);
       return;
     }
 
@@ -122,14 +151,18 @@ const EmployeeChat = () => {
       roomId: roomId
     };
 
+    console.log('📤 Sending message:', chatMessage);
+
     const token = localStorage.getItem('access_token');
     const headers = {
       'Authorization': `Bearer ${token}`
     };
 
+    console.log('📤 Headers:', headers);
+
     stompClient.send("/app/chat.send", headers, JSON.stringify(chatMessage));
     setMessageInput('');
-    console.log('✅ Đã gửi tin nhắn');
+    console.log('✅ Message sent successfully');
   };
 
   // Logout

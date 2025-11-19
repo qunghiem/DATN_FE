@@ -93,38 +93,60 @@ const chatSlice = createSlice({
     },
     addMessage: (state, action) => {
       const message = action.payload;
+      console.log('🎯 chatSlice - addMessage called');
+      console.log('🎯 Received message:', message);
+      console.log('🎯 Current state.userRole:', state.userRole);
+      console.log('🎯 Current state.roomId:', state.roomId);
       
       // Nếu là EMPLOYEE: thêm vào currentRoomMessages nếu đúng room
       if (state.userRole === 'EMPLOYEE') {
+        console.log('🎯 User is EMPLOYEE');
         if (state.roomId === message.roomId) {
+          console.log('🎯 Message roomId matches current roomId, adding to currentRoomMessages');
           // Kiểm tra xem message đã tồn tại chưa
           const exists = state.currentRoomMessages.some(m => m.id === message.id);
           if (!exists) {
             state.currentRoomMessages.push(message);
+            console.log('✅ Message added to currentRoomMessages');
+          } else {
+            console.log('⚠️ Message already exists in currentRoomMessages');
           }
+        } else {
+          console.log('⚠️ Message roomId does NOT match current roomId');
+          console.log('⚠️ Current roomId:', state.roomId);
+          console.log('⚠️ Message roomId:', message.roomId);
         }
         
         // Cập nhật chatRooms list
         const roomIndex = state.chatRooms.findIndex(r => r.roomId === message.roomId);
+        console.log('🎯 Room index in chatRooms:', roomIndex);
+        
         if (roomIndex !== -1) {
+          console.log('🎯 Updating room in chatRooms list');
           state.chatRooms[roomIndex].lastMessage = message.content;
           state.chatRooms[roomIndex].lastMessageTime = message.createdAt;
           
           // Tăng unreadCount nếu không phải room đang mở và không phải tin nhắn của mình
           if (state.roomId !== message.roomId && message.senderRole === 'CUSTOMER') {
             state.chatRooms[roomIndex].unreadCount = (state.chatRooms[roomIndex].unreadCount || 0) + 1;
+            console.log('📬 Increased unreadCount for room:', message.roomId);
           }
           
           // Đưa room lên đầu danh sách
           const room = state.chatRooms.splice(roomIndex, 1)[0];
           state.chatRooms.unshift(room);
+          console.log('✅ Room moved to top of list');
         }
       } 
       // Nếu là CUSTOMER: luôn thêm vào messages
       else {
+        console.log('🎯 User is CUSTOMER');
         const exists = state.messages.some(m => m.id === message.id);
         if (!exists) {
           state.messages.push(message);
+          console.log('✅ Message added to messages');
+        } else {
+          console.log('⚠️ Message already exists in messages');
         }
       }
     },
