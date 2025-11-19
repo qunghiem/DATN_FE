@@ -22,6 +22,7 @@ import AdminBrands from "./pages/admin/Brands";
 import AdminCategories from "./pages/admin/Categories";
 import AdminVoucher from "./pages/admin/Vouchers";
 import Wishlist from "./pages/Wishlist";
+import PaymentReturn from './pages/PaymentReturn';
 
 const App = () => {
   const location = useLocation();
@@ -45,6 +46,7 @@ const App = () => {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/product/:productId" element={<Product />} />
         
+        <Route path="/payment-return" element={<PaymentReturn />} />
         {/* Admin routes */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="products" element={<AdminProducts />} />

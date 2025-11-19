@@ -10,11 +10,13 @@ import {
   ChevronRight,
   AlertCircle,
   CheckCircle,
+  ExternalLink,
+  Loader,
+  Gift,
 } from 'lucide-react';
 import { clearSelectedItems } from '../features/cart/cartSlice';
 import { toast } from 'react-toastify';
 import axios from 'axios';
-import qrCode from "../assets/qr.png"
 
 const PlaceOrder = () => {
   const dispatch = useDispatch();
@@ -64,6 +66,12 @@ const PlaceOrder = () => {
   const [wards, setWards] = useState([]);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
+
+  // Payment state
+  const [paymentUrl, setPaymentUrl] = useState('');
+  const [loadingPayment, setLoadingPayment] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState(null);
+  const [orderResponse, setOrderResponse] = useState(null); // Store full order response
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -294,6 +302,58 @@ const PlaceOrder = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Create payment URL using VNPay
+  const createPaymentUrl = async (orderId) => {
+    setLoadingPayment(true);
+    try {
+      console.log('Creating payment URL with orderId:', orderId);
+      
+      const paymentData = {
+        orderId: orderId,
+        bankCode: 'NCB'
+      };
+      
+      console.log('Payment request data:', paymentData);
+      
+      const response = await axios.post(
+        'http://localhost:8080/api/v1/payments/create',
+        paymentData,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      console.log('Payment API response:', response.data);
+
+      if (response.data && response.data.paymentUrl) {
+        setPaymentUrl(response.data.paymentUrl);
+        toast.success('Đã tạo link thanh toán! Vui lòng click vào nút để thanh toán');
+        return response.data.paymentUrl;
+      } else {
+        throw new Error('Không nhận được URL thanh toán');
+      }
+    } catch (error) {
+      console.error('Error creating payment URL:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        orderId: orderId
+      });
+      
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error(error.message || 'Không thể tạo link thanh toán');
+      }
+      return null;
+    } finally {
+      setLoadingPayment(false);
+    }
+  };
+
   // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -306,44 +366,60 @@ const PlaceOrder = () => {
     setIsSubmitting(true);
 
     try {
-      // Prepare order data with selected items
+      // Build full address string
+      const fullAddress = `${formData.address}, ${formData.ward}, ${formData.district}, ${formData.city}`;
+      
+      // Validate address
+      if (fullAddress.length > 500) {
+        toast.error('Địa chỉ quá dài! Vui lòng rút gọn địa chỉ.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Prepare order data according to API format
       const orderData = {
-        customer: {
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-        },
-        shippingAddress: {
-          address: formData.address,
-          ward: formData.ward,
-          district: formData.district,
-          city: formData.city,
-        },
-        items: cartItems.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId,
-          name: item.name,
-          color: item.color,
-          size: item.size,
-          quantity: item.quantity,
-          price: item.price,
-          image: item.image,
-        })),
-        payment: {
-          method: formData.paymentMethod,
-          subtotal: subtotal,
-          shippingFee: shippingFee,
-          discount: discountAmount,
-          total: finalTotal,
-        },
-        note: formData.note,
-        discountCode: discountCode,
+        paymentMethod: formData.paymentMethod,
+        address: fullAddress,
+        fullName: formData.fullName.trim(),
+        phone: formData.phone.trim(),
+        rewardPointsToUse: 0, // Default to 0, can be enhanced later
+        cartItemIds: cartItems.map(item => {
+          // Ensure IDs are numbers
+          const id = Number(item.id);
+          if (isNaN(id)) {
+            console.error('Invalid cart item ID:', item.id, item);
+            return null;
+          }
+          return id;
+        }).filter(id => id !== null), // Remove any null values
+        voucherCodes: discountCode ? [discountCode] : [], // Add voucher code if applied
       };
 
+      // Add note if provided
+      if (formData.note && formData.note.trim()) {
+        orderData.note = formData.note.trim();
+      }
+
+      // Validate cartItemIds
+      if (!orderData.cartItemIds || orderData.cartItemIds.length === 0) {
+        toast.error('Không tìm thấy sản phẩm trong giỏ hàng!');
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log('=== ORDER SUBMISSION DEBUG ===');
       console.log('Order Data:', orderData);
+      console.log('Cart Items:', cartItems);
+      console.log('Cart Item IDs:', orderData.cartItemIds);
+      console.log('Full Address:', fullAddress);
+      console.log('Token:', localStorage.getItem('access_token') ? 'Present' : 'Missing');
+      console.log('=============================');
 
       // Try to call API first
       let orderSaved = false;
+      let orderId = null;
+      let orderResponse = null;
+
       try {
         const response = await axios.post('http://localhost:8080/api/orders', orderData, {
           headers: {
@@ -352,68 +428,107 @@ const PlaceOrder = () => {
           }
         });
 
-        console.log('Order created via API:', response.data);
-        orderSaved = true;
+        console.log('Full API Response:', response);
+        console.log('Response data:', response.data);
+        
+        if (response.data.code === 1000) {
+          orderResponse = response.data.result;
+          orderId = orderResponse.id;
+          setOrderResponse(orderResponse); // Store the full response
+          orderSaved = true;
+          
+          console.log('✅ Order created successfully with ID:', orderId);
+        } else {
+          throw new Error(response.data.message || 'Không thể tạo đơn hàng');
+        }
 
       } catch (apiError) {
-        console.log('API not available, saving to localStorage:', apiError.message);
+        console.error('❌ API ERROR DETAILS:', {
+          message: apiError.message,
+          response: apiError.response?.data,
+          status: apiError.response?.status,
+          requestData: orderData
+        });
         
-        // Fallback: Save to localStorage
-        const userId = getUserId();
-        const ordersKey = `orders_${userId}`;
-        const existingOrders = JSON.parse(localStorage.getItem(ordersKey) || '[]');
+        // Show specific error message from backend
+        if (apiError.response?.data?.message) {
+          toast.error(apiError.response.data.message);
+        } else if (apiError.response?.status === 400) {
+          toast.error('Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin!');
+        } else if (apiError.response?.status === 401) {
+          toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
+          setTimeout(() => navigate('/login'), 2000);
+        } else {
+          toast.error('Không thể tạo đơn hàng. Vui lòng thử lại!');
+        }
         
-        const newOrder = {
-          id: `ORD-${Date.now()}`,
-          orderDate: new Date().toISOString(),
-          status: 'PENDING',
-          items: orderData.items,
-          shipping: {
-            fullName: orderData.customer.fullName,
-            phone: orderData.customer.phone,
-            email: orderData.customer.email,
-            address: orderData.shippingAddress.address,
-            ward: orderData.shippingAddress.ward,
-            district: orderData.shippingAddress.district,
-            city: orderData.shippingAddress.city,
-          },
-          payment: orderData.payment,
-          tracking: [
-            {
-              status: 'PENDING',
-              time: new Date().toISOString(),
-              description: 'Đơn hàng đã được đặt'
-            }
-          ],
-          estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          note: orderData.note || '',
-        };
-
-        existingOrders.unshift(newOrder);
-        localStorage.setItem(ordersKey, JSON.stringify(existingOrders));
-        orderSaved = true;
+        setIsSubmitting(false);
+        return; // Stop here, don't proceed
       }
 
-      if (orderSaved) {
-        // Clear selected items from cart
-        dispatch(clearSelectedItems());
-
-        // Show success message
-        toast.success('Đặt hàng thành công!');
-
-        // Redirect to orders page
-        setTimeout(() => {
-          navigate('/orders');
-        }, 1000);
+      if (orderSaved && orderId) {
+        // If payment method is BANK_TRANSFER, create payment URL
+        if (formData.paymentMethod === 'BANK_TRANSFER') {
+          console.log('Creating payment URL for order:', orderId);
+          
+          const paymentUrlResult = await createPaymentUrl(orderId);
+          
+          if (!paymentUrlResult) {
+            toast.error('Đơn hàng đã được tạo nhưng không thể tạo link thanh toán. Vui lòng liên hệ hỗ trợ!');
+            setIsSubmitting(false);
+            
+            // Still navigate to orders since order was created
+            setTimeout(() => {
+              dispatch(clearSelectedItems());
+              navigate('/orders');
+            }, 2000);
+            return;
+          }
+          
+          // Don't navigate away yet - let user click the payment link
+          toast.success('Đơn hàng đã được tạo! Vui lòng thanh toán qua link bên dưới');
+          
+          // Show reward points info if available
+          if (orderResponse && orderResponse.rewardPointsEarned) {
+            toast.info(`Bạn sẽ nhận được ${orderResponse.rewardPointsEarned.toLocaleString()} điểm thưởng sau khi thanh toán!`);
+          }
+        } else {
+          // COD - just clear and navigate
+          dispatch(clearSelectedItems());
+          toast.success('Đặt hàng thành công!');
+          
+          // Show reward points info if available
+          if (orderResponse && orderResponse.rewardPointsEarned) {
+            toast.info(`Bạn sẽ nhận được ${orderResponse.rewardPointsEarned.toLocaleString()} điểm thưởng!`);
+          }
+          
+          setTimeout(() => {
+            navigate('/orders');
+          }, 1500);
+        }
       }
 
     } catch (error) {
-      console.error('Error placing order:', error);
+      console.error('❌ UNEXPECTED ERROR:', error);
       toast.error(
-        error.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại!'
+        error.message || 'Có lỗi xảy ra. Vui lòng thử lại!'
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle opening payment URL
+  const handleOpenPaymentUrl = () => {
+    if (paymentUrl) {
+      // Inform user about the flow
+      toast.info('Sau khi thanh toán xong, VNPay sẽ tự động chuyển bạn về trang kết quả');
+      
+      // Open VNPay in same tab (so it can redirect back)
+      window.location.href = paymentUrl;
+      
+      // Note: VNPay will redirect back to /payment-return with payment result
+      // No need for polling as VNPay callback will handle everything
     }
   };
 
@@ -711,31 +826,46 @@ const PlaceOrder = () => {
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
-                        Chuyển khoản qua ngân hàng hoặc ví điện tử
+                        Chuyển khoản qua VNPay (NCB Bank)
                       </p>
                     </div>
                   </label>
                 </div>
 
-                {formData.paymentMethod === 'BANK_TRANSFER' && (
-                  <div className="mt-4 p-4 border border-blue-300 rounded-lg bg-blue-50 text-center">
-                    <h3 className="font-semibold text-gray-800 mb-2">
-                      Quét mã QR để thanh toán
-                    </h3>
-                    <img
-                      src={qrCode}
-                      alt="QR chuyển khoản"
-                      className="w-56 h-56 mx-auto mb-3 rounded-lg border"
-                    />
-                    <p className="text-sm text-gray-700">
-                      💳 <span className="font-medium">Ngân hàng:</span> MB Bank
-                      <br />
-                      👤 <span className="font-medium">Chủ tài khoản:</span> NGHIEM XUAN QUAN
-                      <br />
-                      💰 <span className="font-medium">Số tiền:</span> {formatPrice(finalTotal)}  
-                      <br />
-                      📝 <span className="font-medium">Nội dung:</span> {formData.fullName || 'Tên khách hàng'}
-                    </p>
+                {/* Payment URL Display */}
+                {paymentUrl && formData.paymentMethod === 'BANK_TRANSFER' && (
+                  <div className="mt-4 p-4 border-2 border-green-300 rounded-lg bg-green-50">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-2">
+                          Link thanh toán đã sẵn sàng!
+                        </h3>
+                        <p className="text-sm text-gray-700 mb-3">
+                          Click vào nút bên dưới để chuyển đến trang thanh toán VNPay
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleOpenPaymentUrl}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+                        >
+                          <ExternalLink className="w-5 h-5" />
+                          Thanh toán ngay
+                        </button>
+                        <p className="text-xs text-gray-600 mt-3">
+                          💡 Sau khi thanh toán, bạn sẽ được tự động chuyển về trang kết quả
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {loadingPayment && (
+                  <div className="mt-4 p-4 border border-blue-300 rounded-lg bg-blue-50 flex items-center gap-3">
+                    <Loader className="w-5 h-5 text-blue-600 animate-spin" />
+                    <span className="text-sm text-blue-800">
+                      Đang tạo link thanh toán...
+                    </span>
                   </div>
                 )}
               </div>
@@ -821,42 +951,66 @@ const PlaceOrder = () => {
                 </div>
 
                 {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full mt-6 px-6 py-4 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg
-                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-5 h-5 mr-2" />
-                      Đặt hàng
-                    </>
-                  )}
-                </button>
+                {!paymentUrl && (
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full mt-6 px-6 py-4 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        Đặt hàng
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* Reward Points Info (after order created) */}
+                {orderResponse && orderResponse.rewardPointsEarned > 0 && (
+                  <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <Gift className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-yellow-900">
+                          Điểm thưởng
+                        </p>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          Bạn sẽ nhận được <span className="font-bold">{orderResponse.rewardPointsEarned.toLocaleString()}</span> điểm sau khi hoàn thành đơn hàng
+                        </p>
+                        {orderResponse.userRemainingRewardPoints !== undefined && (
+                          <p className="text-xs text-yellow-600 mt-1">
+                            Điểm hiện tại: {orderResponse.userRemainingRewardPoints.toLocaleString()} điểm
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Security Notice */}
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">

@@ -78,53 +78,174 @@ const Orders = () => {
     return user?.id || user?.email || 'guest';
   };
 
-  // Fetch orders
-  useEffect(() => {
-    const fetchOrders = async () => {
-      if (!isAuthenticated || !user) {
-        navigate("/login");
-        return;
-      }
+
+// Helper function to enrich order items with productId and images
+const enrichOrderItems = async (orders) => {
+  console.log('🔄 Enriching order items with productId and images...');
+  
+  const enrichedOrders = await Promise.all(
+    orders.map(async (order) => {
+      const enrichedItems = await Promise.all(
+        order.items.map(async (item) => {
+          // Skip if already has productId and image
+          if (item.productId && item.image && !item.image.includes('placeholder')) {
+            return item;
+          }
+          
+          try {
+            // Fetch variant details to get productId and image
+            const response = await axios.get(
+              `http://localhost:8080/api/product-variants/${item.variantId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem('access_token')}`
+                }
+              }
+            );
+            
+            if (response.data.code === 1000) {
+              const variant = response.data.result;
+              return {
+                ...item,
+                productId: variant.productId,
+                image: variant.imageUrl || variant.image || item.image,
+              };
+            }
+          } catch (error) {
+            console.warn(`⚠️ Could not fetch variant ${item.variantId}:`, error.message);
+          }
+          
+          return item; // Return as-is if fetch fails
+        })
+      );
+      
+      return {
+        ...order,
+        items: enrichedItems,
+      };
+    })
+  );
+  
+  console.log('✅ Order items enriched');
+  return enrichedOrders;
+};
+
+// ====================================================================
+// Then update the fetchOrders useEffect to use this helper
+// ====================================================================
+
+// Fetch orders
+useEffect(() => {
+  const fetchOrders = async () => {
+    if (!isAuthenticated || !user) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const userId = getUserId();
 
       try {
-        setIsLoading(true);
-        const userId = getUserId();
-
-        // Try to fetch from API first
-        try {
-          const response = await axios.get('http://localhost:8080/api/orders', {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('access_token')}`
-            }
-          });
-          
-          if (response.data && response.data.data) {
-            setOrders(response.data.data);
-            setFilteredOrders(response.data.data);
-            // Save to localStorage for this user
-            saveUserOrders(userId, response.data.data);
-            return;
+        const response = await axios.get('http://localhost:8080/api/orders/me', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`
           }
-        } catch (apiError) {
-          console.log('API not available, using localStorage for user:', userId);
-        }
-
-        // Fallback to localStorage for this specific user
-        const localOrders = getUserOrders(userId);
+        });
         
-        setOrders(localOrders);
-        setFilteredOrders(localOrders);
-
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        toast.error("Không thể tải danh sách đơn hàng");
-      } finally {
-        setIsLoading(false);
+        if (response.data.code === 1000 && response.data.result) {
+          const ordersData = response.data.result;
+          
+          console.log('✅ Orders loaded from API:', ordersData.length, 'orders');
+          
+          // Transform backend format to frontend format
+          const transformedOrders = ordersData.map(order => ({
+            id: order.id,
+            orderDate: order.createdAt,
+            status: order.status,
+            items: order.items.map(item => ({
+              id: item.id,
+              productId: null, // Will be enriched
+              variantId: item.productVariantId,
+              name: item.productName,
+              color: item.color,
+              size: item.size,
+              quantity: item.quantity,
+              price: item.unitPrice,
+              image: '/placeholder.png', // Will be enriched
+            })),
+            shipping: {
+              fullName: order.fullName,
+              phone: order.phone,
+              email: user.email,
+              address: order.address,
+            },
+            payment: {
+              method: order.paymentMethod,
+              subtotal: order.subtotal,
+              shippingFee: order.shippingFee,
+              discount: order.discountAmount,
+              total: order.totalAmount,
+              status: order.payment?.status || (order.paymentMethod === 'COD' ? 'UNPAID' : 'PENDING'),
+            },
+            note: order.note || '',
+            tracking: [
+              {
+                status: order.status,
+                time: order.createdAt,
+                description: getStatusDescription(order.status),
+              }
+            ],
+          }));
+          
+          // ✅ ENRICH with productId and images (OPTIONAL - comment out if slow)
+          const enrichedOrders = await enrichOrderItems(transformedOrders);
+          
+          setOrders(enrichedOrders);
+          setFilteredOrders(enrichedOrders);
+          saveUserOrders(userId, enrichedOrders);
+          
+          if (enrichedOrders.length > 0) {
+            toast.success(`Đã tải ${enrichedOrders.length} đơn hàng`);
+          }
+          return;
+        }
+      } catch (apiError) {
+        console.error('❌ API error:', apiError.response?.status, apiError.message);
+        
+        if (apiError.response?.status === 401) {
+          toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
+          navigate('/login');
+          return;
+        }
       }
-    };
 
-    fetchOrders();
-  }, [isAuthenticated, user, navigate]);
+      // Fallback to localStorage
+      const localOrders = getUserOrders(userId);
+      setOrders(localOrders);
+      setFilteredOrders(localOrders);
+
+    } catch (error) {
+      console.error("❌ Error fetching orders:", error);
+      toast.error("Không thể tải danh sách đơn hàng");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getStatusDescription = (status) => {
+    const descriptions = {
+      'PENDING': 'Đơn hàng đang chờ xác nhận',
+      'CONFIRMED': 'Đơn hàng đã được xác nhận',
+      'SHIPPING': 'Đơn hàng đang được giao',
+      'DELIVERED': 'Đơn hàng đã được giao thành công',
+      'CANCELLED': 'Đơn hàng đã bị hủy',
+    };
+    return descriptions[status] || 'Đơn hàng đã được đặt';
+  };
+
+  fetchOrders();
+}, [isAuthenticated, user, navigate]);
 
   // Filter orders
   useEffect(() => {
