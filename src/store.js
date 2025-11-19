@@ -10,6 +10,7 @@ import metadataReducer from './features/admin/metadataSlice';
 import wishlistReducer from './features/wishlist/wishlistSlice';
 import adminVouchersReducer from './features/admin/adminVouchersslice';
 import voucherReducer from './features/vouchers/voucherSlice';
+import chatReducer from './features/chat/chatSlice';
 
 export const store = configureStore({
   reducer: {
@@ -24,6 +25,7 @@ export const store = configureStore({
     metadata: metadataReducer,
     adminVouchers: adminVouchersReducer,
     vouchers: voucherReducer,
+    chat: chatReducer,
   },
 });
 

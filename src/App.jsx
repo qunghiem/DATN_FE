@@ -23,10 +23,20 @@ import AdminCategories from "./pages/admin/Categories";
 import AdminVoucher from "./pages/admin/Vouchers";
 import Wishlist from "./pages/Wishlist";
 import PaymentReturn from './pages/PaymentReturn';
+import EmployeeChat from './pages/EmployeeChat';
+import ChatWidget from './components/ChatWidget';
+import { useSelector } from 'react-redux';
 
 const App = () => {
   const location = useLocation();
-  const hideLayout = location.pathname.startsWith("/admin");
+  const hideLayout = location.pathname.startsWith("/admin") || location.pathname === "/employee/chat";
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  
+  // Show ChatWidget only for authenticated CUSTOMER users on customer pages
+  const showChatWidget = isAuthenticated && 
+                        user?.role === 'CUSTOMER' && 
+                        !hideLayout;
+
   return (
     <div className="">
       {!hideLayout && <Navbar />}
@@ -45,8 +55,11 @@ const App = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/product/:productId" element={<Product />} />
-        
         <Route path="/payment-return" element={<PaymentReturn />} />
+        
+        {/* Employee Chat Route */}
+        <Route path="/employee/chat" element={<EmployeeChat />} />
+        
         {/* Admin routes */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="products" element={<AdminProducts />} />
@@ -56,6 +69,9 @@ const App = () => {
         </Route>
       </Routes>
       {!hideLayout && <Footer />}
+
+      {/* Chat Widget for CUSTOMER */}
+      {showChatWidget && <ChatWidget />}
 
       {/* Toast notifications */}
       <ToastContainer

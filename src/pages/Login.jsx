@@ -68,9 +68,11 @@ const Login = () => {
       const user = JSON.parse(localStorage.getItem("user"));
       console.log(user?.role);
       if (user?.role === "ADMIN") {
-        navigate("/admin"); // Admin → dashboard admin
+        navigate("/admin/products"); // Admin → dashboard admin
+      } else if (user?.role === "EMPLOYEE") {
+        navigate("/employee/chat"); // Employee → giao diện chat
       } else {
-        navigate("/"); // User thường → trang chủ
+        navigate("/"); // Customer → trang chủ
       }
     }
   }, [isAuthenticated, navigate, view]);
@@ -100,7 +102,9 @@ const Login = () => {
     if (login.fulfilled.match(result)) {
       const user = result.payload.user;
       if (user?.role === "ADMIN") {
-        navigate("/admin");
+        navigate("/admin/products");
+      } else if (user?.role === "EMPLOYEE") {
+        navigate("/employee/chat");
       } else {
         navigate("/");
       }
@@ -114,7 +118,9 @@ const Login = () => {
       if (loginWithGoogle.fulfilled.match(result)) {
         const user = result.payload.user;
         if (user?.role === "ADMIN") {
-          navigate("/admin");
+          navigate("/admin/products");
+        } else if (user?.role === "EMPLOYEE") {
+          navigate("/employee/chat");
         } else {
           navigate("/");
         }
@@ -277,7 +283,7 @@ const Login = () => {
                   <ReCAPTCHA
                     sitekey="6Lc1lwAsAAAAAKLMPjj46NxekGoIwzEvePUjVKRO"
                     onChange={(value) => {
-                      console.log("Captcha token nhận được:", value); // ← log ra DevTools
+                      console.log("Captcha token nhận được:", value);
                       setFormData({ ...formData, captcha_response: value });
                     }}
                   />
