@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchAllOrders,
   updateOrderStatus,
   clearMessages,
   setFilterStatus,
+  setSearchKeyword,
 } from "../../features/admin/adminOrdersSlice";
 import {
   Search,
@@ -18,13 +19,25 @@ import {
   Clock,
   Filter,
   X,
-  User,
-  Phone,
-  MapPin,
-  Box,
-  CreditCard,
 } from "lucide-react";
 import { toast } from "react-toastify";
+
+// Debounce hook
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const AdminOrders = () => {
   const dispatch = useDispatch();
@@ -32,7 +45,10 @@ const AdminOrders = () => {
     orders = [],
     currentPage = 0,
     pageSize = 10,
+    totalPages = 0,
+    totalElements = 0,
     filterStatus,
+    searchKeyword,
     isLoading,
     error,
     success,
@@ -42,6 +58,9 @@ const AdminOrders = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
+
+  // Debounce search term
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   // Order statuses
   const orderStatuses = [
@@ -62,16 +81,19 @@ const AdminOrders = () => {
     CANCELLED: [],
   };
 
+  // Fetch orders khi component mount hoặc khi filter/search thay đổi
   useEffect(() => {
     dispatch(
       fetchAllOrders({
         page: currentPage,
         size: pageSize,
-        status: statusFilter,
+        status: statusFilter || null,
+        keyword: debouncedSearchTerm,
       })
     );
-  }, [dispatch, currentPage, pageSize, statusFilter]);
+  }, [dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm]);
 
+  // Handle messages
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -85,11 +107,12 @@ const AdminOrders = () => {
         fetchAllOrders({
           page: currentPage,
           size: pageSize,
-          status: statusFilter,
+          status: statusFilter || null,
+          keyword: debouncedSearchTerm,
         })
       );
     }
-  }, [error, success, dispatch, currentPage, pageSize, statusFilter]);
+  }, [error, success, dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm]);
 
   const handleStatusChange = (orderId, newStatus) => {
     if (
@@ -105,7 +128,12 @@ const AdminOrders = () => {
 
   const handlePageChange = (newPage) => {
     dispatch(
-      fetchAllOrders({ page: newPage, size: pageSize, status: statusFilter })
+      fetchAllOrders({ 
+        page: newPage, 
+        size: pageSize, 
+        status: statusFilter || null,
+        keyword: debouncedSearchTerm,
+      })
     );
   };
 
@@ -113,8 +141,19 @@ const AdminOrders = () => {
     setStatusFilter(status);
     dispatch(setFilterStatus(status));
     dispatch(
-      fetchAllOrders({ page: 0, size: pageSize, status: status || null })
+      fetchAllOrders({ 
+        page: 0, 
+        size: pageSize, 
+        status: status || null,
+        keyword: debouncedSearchTerm,
+      })
     );
+  };
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    dispatch(setSearchKeyword(value));
   };
 
   const getStatusColor = (status) => {
@@ -148,14 +187,6 @@ const AdminOrders = () => {
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
-  const filteredOrders = orders.filter((order) => {
-    const matchSearch =
-      order.id?.toString().includes(searchTerm) ||
-      order.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.phone?.includes(searchTerm);
-    return matchSearch;
-  });
-
   // Calculate stats
   const stats = {
     total: orders.length,
@@ -178,7 +209,7 @@ const AdminOrders = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 text-sm">Tổng đơn</p>
-              <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
+              <p className="text-2xl font-bold text-gray-800">{totalElements}</p>
             </div>
             <Package className="w-8 h-8 text-gray-400" />
           </div>
@@ -248,10 +279,21 @@ const AdminOrders = () => {
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               placeholder="Tìm kiếm theo mã đơn, tên hoặc SĐT khách hàng..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"
             />
+            {searchTerm && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  dispatch(setSearchKeyword(""));
+                }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-400" />
@@ -268,6 +310,11 @@ const AdminOrders = () => {
             </select>
           </div>
         </div>
+        {searchTerm && (
+          <div className="mt-2 text-sm text-gray-600">
+            Đang tìm kiếm: <span className="font-medium">"{searchTerm}"</span>
+          </div>
+        )}
       </div>
 
       {/* Orders Table */}
@@ -306,17 +353,17 @@ const AdminOrders = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.length === 0 ? (
+                  {orders.length === 0 ? (
                     <tr>
                       <td
                         colSpan="7"
                         className="text-center py-12 text-gray-500"
                       >
-                        Không tìm thấy đơn hàng nào
+                        {searchTerm ? `Không tìm thấy đơn hàng nào với từ khóa "${searchTerm}"` : "Không có đơn hàng nào"}
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map((order) => (
+                    orders.map((order) => (
                       <tr key={order.id} className="border-b hover:bg-gray-50">
                         <td className="py-3 px-4 font-medium">#{order.id}</td>
                         <td className="py-3 px-4">
@@ -344,7 +391,7 @@ const AdminOrders = () => {
                             {order.paymentMethod === "COD" ? "COD" : "Đã thanh toán"}
                           </span>
                         </td>
-                           <td className="py-3 px-4">
+                        <td className="py-3 px-4">
                           {validTransitions[order.status]?.length === 0 ? (
                             <span
                               className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
@@ -360,7 +407,7 @@ const AdminOrders = () => {
                                 onChange={(e) => {
                                   if (e.target.value) {
                                     handleStatusChange(order.id, e.target.value);
-                                    e.target.value = ""; // Reset về trạng thái ban đầu
+                                    e.target.value = "";
                                   }
                                 }}
                                 className={`px-3 py-1 rounded-full text-xs font-medium border outline-none cursor-pointer appearance-none ${getStatusColor(
@@ -402,8 +449,7 @@ const AdminOrders = () => {
             {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 border-t">
               <div className="text-sm text-gray-600">
-                Trang {currentPage + 1} - Hiển thị {filteredOrders.length} đơn
-                hàng
+                Trang {currentPage + 1} / {totalPages} - Hiển thị {orders.length} / {totalElements} đơn hàng
               </div>
               <div className="flex gap-2">
                 <button
@@ -415,7 +461,7 @@ const AdminOrders = () => {
                 </button>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={filteredOrders.length < pageSize}
+                  disabled={currentPage >= totalPages - 1}
                   className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="w-5 h-5" />

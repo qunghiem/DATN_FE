@@ -8,28 +8,48 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// Fetch all orders with pagination
+// Fetch all orders with pagination and search
 export const fetchAllOrders = createAsyncThunk(
   "adminOrders/fetchAll",
-  async ({ page = 0, size = 10, status = null, keyword = "" }, { rejectWithValue }) => {
+  async (
+    { page = 0, size = 10, status = null, keyword = "" },
+    { rejectWithValue }
+  ) => {
     try {
       let url = `${API_URL}/orders`;
+      const params = new URLSearchParams();
 
-      if (keyword) {
-        url = `${API_URL}/orders/search?keyword=${keyword}&page=${page}&size=${size}`;
+      // Nếu có keyword thì dùng API search
+      if (keyword && keyword.trim() !== "") {
+        url = `${API_URL}/orders/search`;
+        params.append("keyword", keyword.trim());
+        params.append("page", page);
+        params.append("size", size);
+        // ✅ Không gửi status khi search
       } else {
-        url += `?page=${page}&size=${size}`;
+        // Không có keyword thì dùng API thông thường
+        params.append("page", page);
+        params.append("size", size);
+        if (status) {
+          params.append("status", status);
+        }
       }
 
-      if (status) {
-        url += `&status=${status}`;
-      }
+      const response = await axios.get(`${url}?${params.toString()}`, {
+        headers: getAuthHeader(),
+      });
 
-      const response = await axios.get(url, { headers: getAuthHeader() });
+      console.log("API URL:", `${url}?${params.toString()}`);
+      console.log("Keyword:", keyword);
+      console.log("API Response:", response.data);
 
+      // Trường hợp 1: Response có code và result (API thông thường)
       if (response.data.code === 1000) {
         const result = response.data.result;
 
+        console.log("Result:", result);
+
+        // Result có cấu trúc pagination
         if (result && result.data) {
           return {
             orders: result.data,
@@ -38,7 +58,9 @@ export const fetchAllOrders = createAsyncThunk(
             currentPage: result.page || page,
             pageSize: result.size || size,
           };
-        } else if (Array.isArray(result)) {
+        }
+        // Result là array trực tiếp
+        else if (Array.isArray(result)) {
           return {
             orders: result,
             totalPages: 1,
@@ -46,7 +68,9 @@ export const fetchAllOrders = createAsyncThunk(
             currentPage: page,
             pageSize: size,
           };
-        } else {
+        }
+        // Result là object đơn
+        else {
           return {
             orders: [result],
             totalPages: 1,
@@ -57,6 +81,24 @@ export const fetchAllOrders = createAsyncThunk(
         }
       }
 
+      // Trường hợp 2: Response trả về trực tiếp (API search không có code wrapper)
+      if (
+        response.data &&
+        response.data.data &&
+        Array.isArray(response.data.data)
+      ) {
+        console.log("Direct response with data array");
+        return {
+          orders: response.data.data,
+          totalPages: response.data.totalPages || 1,
+          totalElements:
+            response.data.totalElements || response.data.data.length,
+          currentPage: response.data.page || page,
+          pageSize: response.data.size || size,
+        };
+      }
+
+      console.error("Unexpected response format:", response.data);
       return rejectWithValue(response.data.message || "Có lỗi xảy ra");
     } catch (error) {
       return rejectWithValue(
@@ -100,9 +142,12 @@ const initialState = {
   totalPages: 0,
   totalElements: 0,
   filterStatus: null,
+  searchKeyword: "",
   isLoading: false,
   error: null,
   success: null,
+
+  
 };
 
 const adminOrdersSlice = createSlice({
@@ -115,6 +160,9 @@ const adminOrdersSlice = createSlice({
     },
     setFilterStatus: (state, action) => {
       state.filterStatus = action.payload;
+    },
+    setSearchKeyword: (state, action) => {
+      state.searchKeyword = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -157,6 +205,7 @@ const adminOrdersSlice = createSlice({
   },
 });
 
-export const { clearMessages, setFilterStatus } = adminOrdersSlice.actions;
+export const { clearMessages, setFilterStatus, setSearchKeyword } =
+  adminOrdersSlice.actions;
 
 export default adminOrdersSlice.reducer;
