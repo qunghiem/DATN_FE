@@ -5,12 +5,9 @@ const Sidebar = () => {
   const menu = [
     { name: "Dashboard", path: "/admin" },
     { name: "Sản phẩm", path: "/admin/products" },
-    // { name: "Đơn hàng", path: "/admin/orders" },
-    // { name: "Khách hàng", path: "/admin/customers" },
-    // { name: "Doanh thu", path: "/admin/revenue" },
+    { name: "Đơn hàng", path: "/admin/orders" },
     { name: "Thương hiệu", path: "/admin/brands" },
     { name: "Danh mục", path: "/admin/categories" },
-    // { name: "Nhãn", path: "/admin/labels" },
     { name: "Voucher", path: "/admin/vouchers" },
   ];
 

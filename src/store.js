@@ -11,6 +11,7 @@ import wishlistReducer from './features/wishlist/wishlistSlice';
 import adminVouchersReducer from './features/admin/adminVouchersslice';
 import voucherReducer from './features/vouchers/voucherSlice';
 import chatReducer from './features/chat/chatSlice';
+import adminOrdersReducer from './features/admin/adminOrdersSlice';
 
 export const store = configureStore({
   reducer: {
@@ -19,7 +20,7 @@ export const store = configureStore({
     cart: cartReducer,
     wishlist: wishlistReducer,
     adminProducts: adminProductsReducer,
-    // adminOrders: adminOrdersReducer,
+    adminOrders: adminOrdersReducer,
     // adminCustomers: adminCustomersReducer,
     // adminRevenue: adminRevenueReducer,
     metadata: metadataReducer,

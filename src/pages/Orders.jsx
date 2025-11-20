@@ -33,7 +33,7 @@ const getUserOrders = (userId) => {
     const savedOrders = localStorage.getItem(ordersKey);
     return savedOrders ? JSON.parse(savedOrders) : [];
   } catch (error) {
-    console.error('Error loading user orders:', error);
+    console.error("Error loading user orders:", error);
     return [];
   }
 };
@@ -44,7 +44,7 @@ const saveUserOrders = (userId, orders) => {
     const ordersKey = `orders_${userId}`;
     localStorage.setItem(ordersKey, JSON.stringify(orders));
   } catch (error) {
-    console.error('Error saving user orders:', error);
+    console.error("Error saving user orders:", error);
   }
 };
 
@@ -65,188 +65,245 @@ const Orders = () => {
 
   // Order statuses
   const orderStatuses = [
-    { id: "ALL", name: "Tất cả", icon: Package, color: "gray" },
-    { id: "PENDING", name: "Chờ xác nhận", icon: Clock, color: "yellow" },
-    { id: "CONFIRMED", name: "Đã xác nhận", icon: CheckCircle, color: "blue" },
-    { id: "SHIPPING", name: "Đang giao", icon: Truck, color: "purple" },
-    { id: "DELIVERED", name: "Đã giao", icon: CheckCircle, color: "green" },
-    { id: "CANCELLED", name: "Đã hủy", icon: XCircle, color: "red" },
-  ];
+  { id: "ALL", name: "Tất cả", icon: Package, color: "gray" },
+  { id: "PENDING", name: "Chờ xác nhận", icon: Clock, color: "yellow" },
+  { id: "CONFIRMED", name: "Đã xác nhận", icon: CheckCircle, color: "blue" },
+  { id: "SHIPPED", name: "Đang giao", icon: Truck, color: "purple" },  // ĐỔI TỪ SHIPPING
+  { id: "DELIVERED", name: "Đã giao", icon: CheckCircle, color: "green" },
+  { id: "CANCELLED", name: "Đã hủy", icon: XCircle, color: "red" },
+];
 
   // Get user ID
   const getUserId = () => {
-    return user?.id || user?.email || 'guest';
+    return user?.id || user?.email || "guest";
   };
 
+  // Helper function to enrich order items with productId and images
+  const enrichOrderItems = async (orders) => {
+    console.log("🔄 Enriching order items with productId and images...");
 
-// Helper function to enrich order items with productId and images
-const enrichOrderItems = async (orders) => {
-  console.log('🔄 Enriching order items with productId and images...');
-  
-  const enrichedOrders = await Promise.all(
-    orders.map(async (order) => {
-      const enrichedItems = await Promise.all(
-        order.items.map(async (item) => {
-          // Skip if already has productId and image
-          if (item.productId && item.image && !item.image.includes('placeholder')) {
-            return item;
-          }
-          
-          try {
-            // Fetch variant details to get productId and image
-            const response = await axios.get(
-              `http://localhost:8080/api/product-variants/${item.variantId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem('access_token')}`
-                }
-              }
-            );
-            
-            if (response.data.code === 1000) {
-              const variant = response.data.result;
-              return {
-                ...item,
-                productId: variant.productId,
-                image: variant.imageUrl || variant.image || item.image,
-              };
+    const enrichedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const enrichedItems = await Promise.all(
+          order.items.map(async (item) => {
+            // Skip if already has productId and image
+            if (
+              item.productId &&
+              item.image &&
+              !item.image.includes("placeholder")
+            ) {
+              return item;
             }
-          } catch (error) {
-            console.warn(`⚠️ Could not fetch variant ${item.variantId}:`, error.message);
-          }
-          
-          return item; // Return as-is if fetch fails
-        })
-      );
-      
-      return {
-        ...order,
-        items: enrichedItems,
-      };
-    })
-  );
-  
-  console.log('✅ Order items enriched');
-  return enrichedOrders;
-};
 
-// ====================================================================
-// Then update the fetchOrders useEffect to use this helper
-// ====================================================================
+            try {
+              // Fetch variant details to get productId and image
+              const response = await axios.get(
+                `http://localhost:8080/api/product-variants/${item.variantId}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem(
+                      "access_token"
+                    )}`,
+                  },
+                }
+              );
 
-// Fetch orders
-useEffect(() => {
-  const fetchOrders = async () => {
-    if (!isAuthenticated || !user) {
-      navigate("/login");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const userId = getUserId();
-
-      try {
-        const response = await axios.get('http://localhost:8080/api/orders/me', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`
-          }
-        });
-        
-        if (response.data.code === 1000 && response.data.result) {
-          const ordersData = response.data.result;
-          
-          console.log('✅ Orders loaded from API:', ordersData.length, 'orders');
-          
-          // Transform backend format to frontend format
-          const transformedOrders = ordersData.map(order => ({
-            id: order.id,
-            orderDate: order.createdAt,
-            status: order.status,
-            items: order.items.map(item => ({
-              id: item.id,
-              productId: null, // Will be enriched
-              variantId: item.productVariantId,
-              name: item.productName,
-              color: item.color,
-              size: item.size,
-              quantity: item.quantity,
-              price: item.unitPrice,
-              image: '/placeholder.png', // Will be enriched
-            })),
-            shipping: {
-              fullName: order.fullName,
-              phone: order.phone,
-              email: user.email,
-              address: order.address,
-            },
-            payment: {
-              method: order.paymentMethod,
-              subtotal: order.subtotal,
-              shippingFee: order.shippingFee,
-              discount: order.discountAmount,
-              total: order.totalAmount,
-              status: order.payment?.status || (order.paymentMethod === 'COD' ? 'UNPAID' : 'PENDING'),
-            },
-            note: order.note || '',
-            tracking: [
-              {
-                status: order.status,
-                time: order.createdAt,
-                description: getStatusDescription(order.status),
+              if (response.data.code === 1000) {
+                const variant = response.data.result;
+                return {
+                  ...item,
+                  productId: variant.productId,
+                  image: variant.imageUrl || variant.image || item.image,
+                };
               }
-            ],
-          }));
-          
-          // ✅ ENRICH with productId and images (OPTIONAL - comment out if slow)
-          const enrichedOrders = await enrichOrderItems(transformedOrders);
-          
-          setOrders(enrichedOrders);
-          setFilteredOrders(enrichedOrders);
-          saveUserOrders(userId, enrichedOrders);
-          
-          if (enrichedOrders.length > 0) {
-            toast.success(`Đã tải ${enrichedOrders.length} đơn hàng`);
-          }
-          return;
-        }
-      } catch (apiError) {
-        console.error('❌ API error:', apiError.response?.status, apiError.message);
-        
-        if (apiError.response?.status === 401) {
-          toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
-          navigate('/login');
-          return;
-        }
+            } catch (error) {
+              console.warn(
+                `⚠️ Could not fetch variant ${item.variantId}:`,
+                error.message
+              );
+            }
+
+            return item; // Return as-is if fetch fails
+          })
+        );
+
+        return {
+          ...order,
+          items: enrichedItems,
+        };
+      })
+    );
+
+    console.log("✅ Order items enriched");
+    return enrichedOrders;
+  };
+  // Fetch orders
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!isAuthenticated || !user) {
+        navigate("/login");
+        return;
       }
 
-      // Fallback to localStorage
-      const localOrders = getUserOrders(userId);
-      setOrders(localOrders);
-      setFilteredOrders(localOrders);
+      try {
+        setIsLoading(true);
+        const userId = getUserId();
 
-    } catch (error) {
-      console.error("❌ Error fetching orders:", error);
-      toast.error("Không thể tải danh sách đơn hàng");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        try {
+          const response = await axios.get(
+            "http://localhost:8080/api/orders/me",
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+              },
+            }
+          );
 
-  const getStatusDescription = (status) => {
-    const descriptions = {
-      'PENDING': 'Đơn hàng đang chờ xác nhận',
-      'CONFIRMED': 'Đơn hàng đã được xác nhận',
-      'SHIPPING': 'Đơn hàng đang được giao',
-      'DELIVERED': 'Đơn hàng đã được giao thành công',
-      'CANCELLED': 'Đơn hàng đã bị hủy',
+          if (response.data.code === 1000 && response.data.result) {
+            const ordersData = response.data.result;
+
+            console.log(
+              "✅ Orders loaded from API:",
+              ordersData.length,
+              "orders"
+            );
+
+            // Transform backend format to frontend format
+            const transformedOrders = ordersData.map((order) => ({
+              id: order.id,
+              orderDate: order.createdAt,
+              status: order.status,
+              items: order.items.map((item) => ({
+                id: item.id,
+                productId: null, // Will be enriched
+                variantId: item.productVariantId,
+                name: item.productName,
+                color: item.color,
+                size: item.size,
+                quantity: item.quantity,
+                price: item.unitPrice,
+                image: "/placeholder.png", // Will be enriched
+              })),
+              shipping: {
+                fullName: order.fullName,
+                phone: order.phone,
+                email: user.email,
+                address: order.address,
+              },
+              payment: {
+                method: order.paymentMethod,
+                subtotal: order.subtotal,
+                shippingFee: order.shippingFee,
+                discount: order.discountAmount,
+                total: order.totalAmount,
+                status:
+                  order.payment?.status ||
+                  (order.paymentMethod === "COD" ? "UNPAID" : "PENDING"),
+              },
+              note: order.note || "",
+              tracking: order.tracking || [], // Giữ tracking từ backend nếu có
+              cancelReason: order.cancelReason || "",
+            }));
+
+            // ✅ ENRICH with productId and images (OPTIONAL - comment out if slow)
+            const enrichedOrders = await enrichOrderItems(transformedOrders);
+
+            setOrders(enrichedOrders);
+            setFilteredOrders(enrichedOrders);
+            saveUserOrders(userId, enrichedOrders);
+
+            if (enrichedOrders.length > 0) {
+              toast.success(`Đã tải ${enrichedOrders.length} đơn hàng`);
+            }
+            return;
+          }
+        } catch (apiError) {
+          console.error(
+            "❌ API error:",
+            apiError.response?.status,
+            apiError.message
+          );
+
+          if (apiError.response?.status === 401) {
+            toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
+            navigate("/login");
+            return;
+          }
+        }
+
+        // Fallback to localStorage
+        const localOrders = getUserOrders(userId);
+        setOrders(localOrders);
+        setFilteredOrders(localOrders);
+      } catch (error) {
+        console.error("❌ Error fetching orders:", error);
+        toast.error("Không thể tải danh sách đơn hàng");
+      } finally {
+        setIsLoading(false);
+      }
     };
-    return descriptions[status] || 'Đơn hàng đã được đặt';
+
+    const getStatusDescription = (status) => {
+      const descriptions = {
+        PENDING: "Đơn hàng đang chờ xác nhận",
+        CONFIRMED: "Đơn hàng đã được xác nhận",
+        SHIPPING: "Đơn hàng đang được giao",
+        DELIVERED: "Đơn hàng đã được giao thành công",
+        CANCELLED: "Đơn hàng đã bị hủy",
+      };
+      return descriptions[status] || "Đơn hàng đã được đặt";
+    };
+
+    fetchOrders();
+  }, [isAuthenticated, user, navigate]);
+  const getTrackingTimeline = (order) => {
+    const timeline = [];
+    const statuses = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"];
+
+    // Nếu đơn hàng bị hủy
+    if (order.status === "CANCELLED") {
+      return [
+        {
+          status: "PENDING",
+          time: order.orderDate || order.createdAt,
+          description: "Đơn hàng đã được đặt",
+          completed: true,
+        },
+        {
+          status: "CANCELLED",
+          time: order.updatedAt || order.orderDate || order.createdAt,
+          description: order.cancelReason
+            ? `Đơn hàng đã bị hủy. Lý do: ${order.cancelReason}`
+            : "Đơn hàng đã bị hủy",
+          completed: true,
+        },
+      ];
+    }
+
+    // Đơn hàng bình thường - tạo timeline dựa trên status hiện tại
+    const currentStatusIndex = statuses.indexOf(order.status);
+
+    statuses.forEach((status, index) => {
+      const statusLabels = {
+        PENDING: "Đơn hàng đã được đặt",
+        CONFIRMED: "Đơn hàng đã được xác nhận",
+        SHIPPED: "Đơn hàng đang được giao",
+        DELIVERED: "Đơn hàng đã được giao thành công",
+      };
+
+      timeline.push({
+        status: status,
+        time:
+          index <= currentStatusIndex
+            ? order.orderDate || order.createdAt
+            : null,
+        description: statusLabels[status],
+        completed: index <= currentStatusIndex,
+      });
+    });
+
+    return timeline;
   };
-
-  fetchOrders();
-}, [isAuthenticated, user, navigate]);
-
   // Filter orders
   useEffect(() => {
     let filtered = [...orders];
@@ -262,9 +319,11 @@ useEffect(() => {
       filtered = filtered.filter(
         (order) =>
           order.id?.toLowerCase().includes(query) ||
-          (order.items && order.items.length > 0 && order.items.some((item) =>
-            item.name?.toLowerCase().includes(query)
-          ))
+          (order.items &&
+            order.items.length > 0 &&
+            order.items.some((item) =>
+              item.name?.toLowerCase().includes(query)
+            ))
       );
     }
 
@@ -278,16 +337,16 @@ useEffect(() => {
 
   // Format date - Fix timezone issue
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
-    
+
     // Get local date components
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
@@ -332,7 +391,7 @@ useEffect(() => {
     try {
       const userId = getUserId();
       const cancelTime = new Date().toISOString();
-      
+
       // Update local state with tracking
       const updatedOrders = orders.map((order) => {
         if (order.id === selectedOrder.id) {
@@ -342,18 +401,18 @@ useEffect(() => {
             tracking: [
               ...(order.tracking || []),
               {
-                status: 'CANCELLED',
+                status: "CANCELLED",
                 time: cancelTime,
-                description: `Đơn hàng đã bị hủy. Lý do: ${cancelReason}`
-              }
-            ]
+                description: `Đơn hàng đã bị hủy. Lý do: ${cancelReason}`,
+              },
+            ],
           };
         }
         return order;
       });
-      
+
       setOrders(updatedOrders);
-      
+
       // Save to localStorage for this user
       saveUserOrders(userId, updatedOrders);
 
@@ -397,9 +456,7 @@ useEffect(() => {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Đơn hàng của tôi
           </h1>
-          <p className="text-gray-600">
-            Quản lý và theo dõi đơn hàng của bạn
-          </p>
+          <p className="text-gray-600">Quản lý và theo dõi đơn hàng của bạn</p>
         </div>
 
         {/* Search and Filter */}
@@ -546,43 +603,53 @@ useEffect(() => {
                   {/* Order Items */}
                   <div className="p-4">
                     <div className="space-y-3">
-                      {order.items && order.items.length > 0 ? order.items.map((item, index) => (
-                        <div
-                          key={`${order.id}-${item.productId}-${item.variantId || index}`}
-                          className="flex gap-4 pb-3 border-b border-gray-100 last:border-0"
-                        >
+                      {order.items && order.items.length > 0 ? (
+                        order.items.map((item, index) => (
                           <div
-                            className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden cursor-pointer"
-                            onClick={() => navigate(`/product/${item.productId}`)}
+                            key={`${order.id}-${item.productId}-${
+                              item.variantId || index
+                            }`}
+                            className="flex gap-4 pb-3 border-b border-gray-100 last:border-0"
                           >
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <h4
-                              className="font-medium text-gray-900 mb-1 hover:text-[#3A6FB5] cursor-pointer"
-                              onClick={() => navigate(`/product/${item.productId}`)}
+                            <div
+                              className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden cursor-pointer"
+                              onClick={() =>
+                                navigate(`/product/${item.productId}`)
+                              }
                             >
-                              {item.name}
-                            </h4>
-                            <p className="text-sm text-gray-600">
-                              {item.color} / {item.size}
-                            </p>
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-sm text-gray-600">
-                                x{item.quantity}
-                              </span>
-                              <span className="font-bold text-gray-900">
-                                {formatPrice(item.price * item.quantity)}
-                              </span>
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <h4
+                                className="font-medium text-gray-900 mb-1 hover:text-[#3A6FB5] cursor-pointer"
+                                onClick={() =>
+                                  navigate(`/product/${item.productId}`)
+                                }
+                              >
+                                {item.name}
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                {item.color} / {item.size}
+                              </p>
+                              <div className="flex items-center justify-between mt-2">
+                                <span className="text-sm text-gray-600">
+                                  x{item.quantity}
+                                </span>
+                                <span className="font-bold text-gray-900">
+                                  {formatPrice(item.price * item.quantity)}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )) : (
-                        <p className="text-center text-gray-500 py-4">Không có sản phẩm</p>
+                        ))
+                      ) : (
+                        <p className="text-center text-gray-500 py-4">
+                          Không có sản phẩm
+                        </p>
                       )}
                     </div>
 
@@ -621,7 +688,9 @@ useEffect(() => {
                         <span className="text-sm text-blue-800">
                           Dự kiến giao hàng:{" "}
                           <span className="font-medium">
-                            {new Date(order.estimatedDelivery).toLocaleDateString("vi-VN")}
+                            {new Date(
+                              order.estimatedDelivery
+                            ).toLocaleDateString("vi-VN")}
                           </span>
                         </span>
                       </div>
@@ -667,7 +736,11 @@ useEffect(() => {
                       const StatusIcon = statusInfo.icon;
                       return (
                         <>
-                          <div className={`p-3 rounded-full ${getStatusColorClass(selectedOrder.status)}`}>
+                          <div
+                            className={`p-3 rounded-full ${getStatusColorClass(
+                              selectedOrder.status
+                            )}`}
+                          >
                             <StatusIcon className="w-6 h-6" />
                           </div>
                           <div>
@@ -684,25 +757,59 @@ useEffect(() => {
                   </div>
 
                   {/* Tracking Timeline */}
-                  {selectedOrder.tracking && selectedOrder.tracking.length > 0 && (
-                    <div className="mt-4 pl-4 border-l-2 border-gray-200 space-y-4">
-                      {[...selectedOrder.tracking].reverse().map((track, index) => (
-                        <div key={index} className="relative pl-6">
-                          <div className={`absolute left-0 top-1 -translate-x-1/2 w-3 h-3 rounded-full ${
-                            index === 0 ? 'bg-[#3A6FB5]' : 'bg-gray-300'
-                          }`}></div>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {track.description}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {formatDate(track.time)}
-                            </p>
-                          </div>
+                  {(() => {
+                    const timeline = getTrackingTimeline(selectedOrder);
+                    return (
+                      timeline.length > 0 && (
+                        <div className="mt-4 space-y-4">
+                          {timeline.map((track, index) => (
+                            <div key={index} className="flex gap-4">
+                              <div className="flex flex-col items-center">
+                                <div
+                                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                    track.completed
+                                      ? "bg-green-100 text-green-600"
+                                      : "bg-gray-100 text-gray-400"
+                                  }`}
+                                >
+                                  {track.completed ? (
+                                    <CheckCircle className="w-5 h-5" />
+                                  ) : (
+                                    <Clock className="w-5 h-5" />
+                                  )}
+                                </div>
+                                {index < timeline.length - 1 && (
+                                  <div
+                                    className={`w-0.5 h-12 ${
+                                      track.completed
+                                        ? "bg-green-200"
+                                        : "bg-gray-200"
+                                    }`}
+                                  ></div>
+                                )}
+                              </div>
+                              <div className="flex-1 pb-4">
+                                <p
+                                  className={`font-medium ${
+                                    track.completed
+                                      ? "text-gray-900"
+                                      : "text-gray-400"
+                                  }`}
+                                >
+                                  {track.description}
+                                </p>
+                                {track.time && (
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    {formatDate(track.time)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      )
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -745,8 +852,10 @@ useEffect(() => {
                     <div>
                       <p className="text-sm text-gray-600">Địa chỉ</p>
                       <p className="font-medium text-gray-900">
-                        {selectedOrder.shipping?.address}, {selectedOrder.shipping?.ward},{" "}
-                        {selectedOrder.shipping?.district}, {selectedOrder.shipping?.city}
+                        {selectedOrder.shipping?.address},{" "}
+                        {selectedOrder.shipping?.ward},{" "}
+                        {selectedOrder.shipping?.district},{" "}
+                        {selectedOrder.shipping?.city}
                       </p>
                     </div>
                   </div>
@@ -771,37 +880,41 @@ useEffect(() => {
                   Sản phẩm ({selectedOrder.items?.length || 0})
                 </h3>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  {selectedOrder.items && selectedOrder.items.length > 0 ? selectedOrder.items.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex gap-4 pb-3 border-b border-gray-200 last:border-0"
-                    >
-                      <div className="w-20 h-20 flex-shrink-0 bg-white rounded overflow-hidden">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">
-                          {item.name}
-                        </h4>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {item.color} / {item.size}
-                        </p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-sm text-gray-600">
-                            x{item.quantity}
-                          </span>
-                          <span className="font-bold text-gray-900">
-                            {formatPrice(item.price * item.quantity)}
-                          </span>
+                  {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                    selectedOrder.items.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex gap-4 pb-3 border-b border-gray-200 last:border-0"
+                      >
+                        <div className="w-20 h-20 flex-shrink-0 bg-white rounded overflow-hidden">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">
+                            {item.name}
+                          </h4>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {item.color} / {item.size}
+                          </p>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-sm text-gray-600">
+                              x{item.quantity}
+                            </span>
+                            <span className="font-bold text-gray-900">
+                              {formatPrice(item.price * item.quantity)}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )) : (
-                    <p className="text-center text-gray-500 py-4">Không có sản phẩm</p>
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-500 py-4">
+                      Không có sản phẩm
+                    </p>
                   )}
                 </div>
               </div>
@@ -846,11 +959,13 @@ useEffect(() => {
                     </span>
                   </div>
                   <div className="pt-2">
-                    <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                      selectedOrder.payment?.method === "COD"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                    }`}>
+                    <span
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                        selectedOrder.payment?.method === "COD"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
                       {selectedOrder.payment?.method === "COD"
                         ? "Thanh toán khi nhận hàng"
                         : "Chuyển khoản ngân hàng"}
@@ -897,7 +1012,9 @@ useEffect(() => {
                   <h3 className="text-lg font-bold text-gray-900">
                     Hủy đơn hàng
                   </h3>
-                  <p className="text-sm text-gray-600">Mã đơn: {selectedOrder.id}</p>
+                  <p className="text-sm text-gray-600">
+                    Mã đơn: {selectedOrder.id}
+                  </p>
                 </div>
               </div>
 

@@ -26,6 +26,7 @@ import PaymentReturn from './pages/PaymentReturn';
 import EmployeeChat from './pages/EmployeeChat';
 import ChatWidget from './components/ChatWidget';
 import { useSelector } from 'react-redux';
+import AdminOrders from './pages/admin/Orders';
 
 const App = () => {
   const location = useLocation();
@@ -66,6 +67,7 @@ const App = () => {
           <Route path="brands" element={<AdminBrands />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="vouchers" element={<AdminVoucher />} />
+          <Route path="orders" element={<AdminOrders />} />
         </Route>
       </Routes>
       {!hideLayout && <Footer />}
