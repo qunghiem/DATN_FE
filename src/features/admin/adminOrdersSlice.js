@@ -12,27 +12,30 @@ const getAuthHeader = () => {
 export const fetchAllOrders = createAsyncThunk(
   "adminOrders/fetchAll",
   async (
-    { page = 0, size = 10, status = null, keyword = "" },
+    { page = 0, size = 10, status = null, keyword = "", fromDate = null, toDate = null },
     { rejectWithValue }
   ) => {
     try {
-      let url = `${API_URL}/orders`;
+      const url = `${API_URL}/orders/search`;
       const params = new URLSearchParams();
 
-      // Nếu có keyword thì dùng API search
+      params.append("page", page);
+      params.append("size", size);
+
       if (keyword && keyword.trim() !== "") {
-        url = `${API_URL}/orders/search`;
         params.append("keyword", keyword.trim());
-        params.append("page", page);
-        params.append("size", size);
-        // ✅ Không gửi status khi search
-      } else {
-        // Không có keyword thì dùng API thông thường
-        params.append("page", page);
-        params.append("size", size);
-        if (status) {
-          params.append("status", status);
-        }
+      }
+
+      if (status && status !== "") {
+        params.append("status", status);
+      }
+
+      if (fromDate) {
+        params.append("fromDate", fromDate);
+      }
+
+      if (toDate) {
+        params.append("toDate", toDate);
       }
 
       const response = await axios.get(`${url}?${params.toString()}`, {
@@ -40,65 +43,20 @@ export const fetchAllOrders = createAsyncThunk(
       });
 
       console.log("API URL:", `${url}?${params.toString()}`);
-      console.log("Keyword:", keyword);
       console.log("API Response:", response.data);
 
-      // Trường hợp 1: Response có code và result (API thông thường)
-      if (response.data.code === 1000) {
+      if (response.data.code === 1000 && response.data.result) {
         const result = response.data.result;
-
-        console.log("Result:", result);
-
-        // Result có cấu trúc pagination
-        if (result && result.data) {
-          return {
-            orders: result.data,
-            totalPages: result.totalPages || 1,
-            totalElements: result.totalElements || result.data.length,
-            currentPage: result.page || page,
-            pageSize: result.size || size,
-          };
-        }
-        // Result là array trực tiếp
-        else if (Array.isArray(result)) {
-          return {
-            orders: result,
-            totalPages: 1,
-            totalElements: result.length,
-            currentPage: page,
-            pageSize: size,
-          };
-        }
-        // Result là object đơn
-        else {
-          return {
-            orders: [result],
-            totalPages: 1,
-            totalElements: 1,
-            currentPage: page,
-            pageSize: size,
-          };
-        }
-      }
-
-      // Trường hợp 2: Response trả về trực tiếp (API search không có code wrapper)
-      if (
-        response.data &&
-        response.data.data &&
-        Array.isArray(response.data.data)
-      ) {
-        console.log("Direct response with data array");
+        
         return {
-          orders: response.data.data,
-          totalPages: response.data.totalPages || 1,
-          totalElements:
-            response.data.totalElements || response.data.data.length,
-          currentPage: response.data.page || page,
-          pageSize: response.data.size || size,
+          orders: result.data || [],
+          totalPages: result.totalPages || 1,
+          totalElements: result.totalElements || 0,
+          currentPage: result.page || page,
+          pageSize: result.size || size,
         };
       }
 
-      console.error("Unexpected response format:", response.data);
       return rejectWithValue(response.data.message || "Có lỗi xảy ra");
     } catch (error) {
       return rejectWithValue(

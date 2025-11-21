@@ -473,6 +473,7 @@ const handleEdit = async (product) => {
                     const costPrice =
                       product.costPrice || product.price?.costPrice || 0;
                     const profit = price - costPrice;
+                    
                     const profitPercent =
                       costPrice > 0
                         ? ((profit / costPrice) * 100).toFixed(1)
