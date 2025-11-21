@@ -8,20 +8,18 @@ import {
   XCircle,
   Clock,
   Search,
-  Filter,
-  ChevronDown,
   Eye,
   RotateCcw,
   MessageCircle,
   MapPin,
   Phone,
   Mail,
-  Calendar,
-  CreditCard,
-  Box,
-  AlertCircle,
   User,
   X,
+  CreditCard,
+  Box,
+  Gift,
+  Tag,
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -77,7 +75,7 @@ const Orders = () => {
     { id: "CANCELLED", name: "Đã hủy", icon: XCircle, color: "red" },
   ];
 
-  // Helper functions (TRƯỚC useEffect)
+  // Helper functions
   const getUserId = () => {
     return user?.id || user?.email || "guest";
   };
@@ -127,7 +125,9 @@ const Orders = () => {
       })
     );
     console.log("✅ Order items enriched");
+
     return enrichedOrders;
+
   };
 
   const getTrackingTimeline = (order) => {
@@ -258,7 +258,6 @@ const Orders = () => {
     navigate("/cart");
   };
 
-  // ✅ DI CHUYỂN XUỐNG ĐÂY - TRƯỚC useEffect
   const checkReviewedItems = async () => {
     try {
       const reviewed = localStorage.getItem("reviewed_items");
@@ -288,8 +287,6 @@ const Orders = () => {
     const key = `${orderId}_${variantId}`;
     return reviewedItems.has(key);
   };
-
-  // ✅ TẤT CẢ useEffect PHẢI Ở ĐÂY - SAU khi định nghĩa tất cả hàm
 
   // useEffect #1: Load reviewed items khi component mount
   useEffect(() => {
@@ -357,6 +354,7 @@ const Orders = () => {
                   order.payment?.status ||
                   (order.paymentMethod === "COD" ? "UNPAID" : "PENDING"),
               },
+              vouchers: order.vouchers || [],
               note: order.note || "",
               tracking: order.tracking || [],
               cancelReason: order.cancelReason || "",
@@ -419,6 +417,7 @@ const Orders = () => {
     }
     setFilteredOrders(filtered);
   }, [orders, selectedStatus, searchQuery]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -445,7 +444,6 @@ const Orders = () => {
         {/* Search and Filter */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -627,7 +625,6 @@ const Orders = () => {
                                 </span>
                               </div>
 
-                              {/* Nút Review - chỉ hiện với đơn DELIVERED */}
                               {order.status === "DELIVERED" && (
                                 <div className="mt-2">
                                   {isItemReviewed(order.id, item.variantId) ? (
@@ -658,6 +655,45 @@ const Orders = () => {
                       )}
                     </div>
 
+                    {/* Vouchers Display - CHỖ NÀY THÊM MỚI */}
+                    {order.vouchers && order.vouchers.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Gift className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-semibold text-gray-900">
+                            Mã giảm giá đã áp dụng
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {order.vouchers.map((voucher, idx) => (
+                            <div
+                              key={idx}
+                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
+                                voucher.voucherType === "PRODUCT"
+                                  ? "bg-green-50 border-green-200"
+                                  : "bg-purple-50 border-purple-200"
+                              }`}
+                            >
+                              {voucher.voucherType === "PRODUCT" ? (
+                                <Tag className="w-3 h-3 text-green-600" />
+                              ) : (
+                                <Truck className="w-3 h-3 text-purple-600" />
+                              )}
+                              <span
+                                className={`text-xs font-medium ${
+                                  voucher.voucherType === "PRODUCT"
+                                    ? "text-green-800"
+                                    : "text-purple-800"
+                                }`}
+                              >
+                                {voucher.code}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Order Summary */}
                     <div className="mt-4 pt-4 border-t border-gray-200">
                       <div className="flex items-center justify-between">
@@ -686,7 +722,6 @@ const Orders = () => {
                       </div>
                     </div>
 
-                    {/* Estimated Delivery */}
                     {order.status === "SHIPPING" && order.estimatedDelivery && (
                       <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
                         <Truck className="w-5 h-5 text-blue-600" />
@@ -712,7 +747,6 @@ const Orders = () => {
       {showDetailModal && selectedOrder && (
         <div className="fixed inset-0 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
@@ -857,10 +891,7 @@ const Orders = () => {
                     <div>
                       <p className="text-sm text-gray-600">Địa chỉ</p>
                       <p className="font-medium text-gray-900">
-                        {selectedOrder.shipping?.address},{" "}
-                        {selectedOrder.shipping?.ward},{" "}
-                        {selectedOrder.shipping?.district},{" "}
-                        {selectedOrder.shipping?.city}
+                        {selectedOrder.shipping?.address}
                       </p>
                     </div>
                   </div>
@@ -923,6 +954,60 @@ const Orders = () => {
                   )}
                 </div>
               </div>
+
+              {/* Applied Vouchers - THÊM MỚI CHO MODAL */}
+              {selectedOrder.vouchers && selectedOrder.vouchers.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
+                    <Gift className="w-5 h-5 mr-2 text-[#3A6FB5]" />
+                    Mã giảm giá đã áp dụng
+                  </h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="space-y-2">
+                      {selectedOrder.vouchers.map((voucher, idx) => (
+                        <div
+                          key={idx}
+                          className={`flex items-center justify-between p-3 rounded-lg border ${
+                            voucher.voucherType === "PRODUCT"
+                              ? "bg-green-50 border-green-200"
+                              : "bg-purple-50 border-purple-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {voucher.voucherType === "PRODUCT" ? (
+                              <Tag className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Truck className="w-4 h-4 text-purple-600" />
+                            )}
+                            <div>
+                              <p
+                                className={`font-medium text-sm ${
+                                  voucher.voucherType === "PRODUCT"
+                                    ? "text-green-800"
+                                    : "text-purple-800"
+                                }`}
+                              >
+                                {voucher.code}
+                              </p>
+                              <p
+                                className={`text-xs ${
+                                  voucher.voucherType === "PRODUCT"
+                                    ? "text-green-600"
+                                    : "text-purple-600"
+                                }`}
+                              >
+                                {voucher.voucherType === "PRODUCT"
+                                  ? "Giảm tiền hàng"
+                                  : "Giảm phí ship"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Payment Summary */}
               <div>

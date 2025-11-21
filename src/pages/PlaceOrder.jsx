@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Loader,
   Gift,
+  Tag,
 } from 'lucide-react';
 import { clearSelectedItems } from '../features/cart/cartSlice';
 import { toast } from 'react-toastify';
@@ -26,8 +27,10 @@ const PlaceOrder = () => {
   // Get data from navigation state (passed from Cart)
   const { 
     selectedCartItems, 
-    appliedVoucher, 
-    discountAmount: passedDiscountAmount 
+    productVoucher,
+    shippingVoucher,
+    productDiscount,
+    shippingDiscount
   } = location.state || {};
 
   // Use the passed items directly
@@ -40,9 +43,6 @@ const PlaceOrder = () => {
   const subtotal = cartItems.reduce((total, item) => {
     return total + (item.itemTotalPrice || item.price * item.quantity || 0);
   }, 0);
-  
-  const discountAmount = passedDiscountAmount || 0;
-  const discountCode = appliedVoucher?.code || '';
 
   // Form state
   const [formData, setFormData] = useState({
@@ -71,16 +71,10 @@ const PlaceOrder = () => {
   const [paymentUrl, setPaymentUrl] = useState('');
   const [loadingPayment, setLoadingPayment] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState(null);
-  const [orderResponse, setOrderResponse] = useState(null); // Store full order response
+  const [orderResponse, setOrderResponse] = useState(null);
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const getUserId = () => {
-    if (user?.id) return user.id;
-    if (user?.email) return user.email;
-    return 'guest';
-  };
 
   // Redirect if no items selected
   useEffect(() => {
@@ -188,10 +182,15 @@ const PlaceOrder = () => {
     return new Intl.NumberFormat('vi-VN').format(price) + '₫';
   };
 
-  // Shipping fee calculation
-  const isFreeship = appliedVoucher?.discountType === 'FREESHIP';
-  const shippingFee = isFreeship ? 0 : (subtotal >= 500000 ? 0 : 30000);
-  const finalTotal = subtotal - discountAmount + shippingFee;
+  // Calculate shipping with discount
+  const baseShippingFee = 30000;
+  const finalShippingFee = Math.max(0, baseShippingFee - (shippingDiscount || 0));
+  
+  // Calculate final total
+  const finalTotal = subtotal - (productDiscount || 0) + finalShippingFee;
+
+  // Total savings
+  const totalSavings = (productDiscount || 0) + (shippingDiscount || 0);
 
   // Handle input change
   const handleChange = (e) => {
@@ -376,23 +375,31 @@ const PlaceOrder = () => {
         return;
       }
 
+      // Collect voucher codes - only add non-null vouchers
+      const voucherCodes = [];
+      if (productVoucher?.code) {
+        voucherCodes.push(productVoucher.code);
+      }
+      if (shippingVoucher?.code) {
+        voucherCodes.push(shippingVoucher.code);
+      }
+
       // Prepare order data according to API format
       const orderData = {
         paymentMethod: formData.paymentMethod,
         address: fullAddress,
         fullName: formData.fullName.trim(),
         phone: formData.phone.trim(),
-        rewardPointsToUse: 0, // Default to 0, can be enhanced later
+        rewardPointsToUse: 0,
         cartItemIds: cartItems.map(item => {
-          // Ensure IDs are numbers
           const id = Number(item.id);
           if (isNaN(id)) {
             console.error('Invalid cart item ID:', item.id, item);
             return null;
           }
           return id;
-        }).filter(id => id !== null), // Remove any null values
-        voucherCodes: discountCode ? [discountCode] : [], // Add voucher code if applied
+        }).filter(id => id !== null),
+        voucherCodes: voucherCodes,
       };
 
       // Add note if provided
@@ -409,13 +416,14 @@ const PlaceOrder = () => {
 
       console.log('=== ORDER SUBMISSION DEBUG ===');
       console.log('Order Data:', orderData);
-      console.log('Cart Items:', cartItems);
-      console.log('Cart Item IDs:', orderData.cartItemIds);
-      console.log('Full Address:', fullAddress);
-      console.log('Token:', localStorage.getItem('access_token') ? 'Present' : 'Missing');
+      console.log('Product Voucher:', productVoucher);
+      console.log('Shipping Voucher:', shippingVoucher);
+      console.log('Voucher Codes:', voucherCodes);
+      console.log('Product Discount:', productDiscount);
+      console.log('Shipping Discount:', shippingDiscount);
       console.log('=============================');
 
-      // Try to call API first
+      // Call API to create order
       let orderSaved = false;
       let orderId = null;
       let orderResponse = null;
@@ -434,7 +442,7 @@ const PlaceOrder = () => {
         if (response.data.code === 1000) {
           orderResponse = response.data.result;
           orderId = orderResponse.id;
-          setOrderResponse(orderResponse); // Store the full response
+          setOrderResponse(orderResponse);
           orderSaved = true;
           
           console.log('✅ Order created successfully with ID:', orderId);
@@ -450,7 +458,6 @@ const PlaceOrder = () => {
           requestData: orderData
         });
         
-        // Show specific error message from backend
         if (apiError.response?.data?.message) {
           toast.error(apiError.response.data.message);
         } else if (apiError.response?.status === 400) {
@@ -463,7 +470,7 @@ const PlaceOrder = () => {
         }
         
         setIsSubmitting(false);
-        return; // Stop here, don't proceed
+        return;
       }
 
       if (orderSaved && orderId) {
@@ -477,7 +484,6 @@ const PlaceOrder = () => {
             toast.error('Đơn hàng đã được tạo nhưng không thể tạo link thanh toán. Vui lòng liên hệ hỗ trợ!');
             setIsSubmitting(false);
             
-            // Still navigate to orders since order was created
             setTimeout(() => {
               dispatch(clearSelectedItems());
               navigate('/orders');
@@ -485,10 +491,8 @@ const PlaceOrder = () => {
             return;
           }
           
-          // Don't navigate away yet - let user click the payment link
           toast.success('Đơn hàng đã được tạo! Vui lòng thanh toán qua link bên dưới');
           
-          // Show reward points info if available
           if (orderResponse && orderResponse.rewardPointsEarned) {
             toast.info(`Bạn sẽ nhận được ${orderResponse.rewardPointsEarned.toLocaleString()} điểm thưởng sau khi thanh toán!`);
           }
@@ -497,7 +501,6 @@ const PlaceOrder = () => {
           dispatch(clearSelectedItems());
           toast.success('Đặt hàng thành công!');
           
-          // Show reward points info if available
           if (orderResponse && orderResponse.rewardPointsEarned) {
             toast.info(`Bạn sẽ nhận được ${orderResponse.rewardPointsEarned.toLocaleString()} điểm thưởng!`);
           }
@@ -521,14 +524,28 @@ const PlaceOrder = () => {
   // Handle opening payment URL
   const handleOpenPaymentUrl = () => {
     if (paymentUrl) {
-      // Inform user about the flow
       toast.info('Sau khi thanh toán xong, VNPay sẽ tự động chuyển bạn về trang kết quả');
-      
-      // Open VNPay in same tab (so it can redirect back)
       window.location.href = paymentUrl;
-      
-      // Note: VNPay will redirect back to /payment-return with payment result
-      // No need for polling as VNPay callback will handle everything
+    }
+  };
+
+  // Helper to get voucher description
+  const getVoucherDescription = (voucher) => {
+    if (!voucher) return "";
+
+    switch (voucher.discountType) {
+      case "PERCENTAGE":
+        return `Giảm ${voucher.discountValue}%${
+          voucher.maxDiscountValue
+            ? ` tối đa ${formatPrice(voucher.maxDiscountValue)}`
+            : ""
+        }`;
+      case "FIXED_AMOUNT":
+        return `Giảm ${formatPrice(voucher.discountValue)}`;
+      case "FREESHIP":
+        return `Miễn phí vận chuyển tối đa ${formatPrice(voucher.discountValue)}`;
+      default:
+        return "";
     }
   };
 
@@ -562,7 +579,6 @@ const PlaceOrder = () => {
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Full Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Họ và tên <span className="text-red-500">*</span>
@@ -585,7 +601,6 @@ const PlaceOrder = () => {
                     )}
                   </div>
 
-                  {/* Phone */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Số điện thoại <span className="text-red-500">*</span>
@@ -608,7 +623,6 @@ const PlaceOrder = () => {
                     )}
                   </div>
 
-                  {/* Email */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email <span className="text-red-500">*</span>
@@ -642,7 +656,6 @@ const PlaceOrder = () => {
 
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* City/Province */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Tỉnh/Thành phố <span className="text-red-500">*</span>
@@ -670,7 +683,6 @@ const PlaceOrder = () => {
                       )}
                     </div>
 
-                    {/* District */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Quận/Huyện <span className="text-red-500">*</span>
@@ -701,7 +713,6 @@ const PlaceOrder = () => {
                       )}
                     </div>
 
-                    {/* Ward */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Phường/Xã <span className="text-red-500">*</span>
@@ -733,7 +744,6 @@ const PlaceOrder = () => {
                     </div>
                   </div>
 
-                  {/* Address */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Địa chỉ cụ thể <span className="text-red-500">*</span>
@@ -756,7 +766,6 @@ const PlaceOrder = () => {
                     )}
                   </div>
 
-                  {/* Note */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Ghi chú (không bắt buộc)
@@ -781,7 +790,6 @@ const PlaceOrder = () => {
                 </h2>
 
                 <div className="space-y-3">
-                  {/* COD */}
                   <label className={`flex items-start space-x-3 cursor-pointer p-4 border-2 rounded-lg transition hover:border-[#3A6FB5] ${
                     formData.paymentMethod === 'COD' ? 'border-[#3A6FB5] bg-blue-50' : 'border-gray-200'
                   }`}>
@@ -806,7 +814,6 @@ const PlaceOrder = () => {
                     </div>
                   </label>
 
-                  {/* Bank Transfer */}
                   <label className={`flex items-start space-x-3 cursor-pointer p-4 border-2 rounded-lg transition hover:border-[#3A6FB5] ${
                     formData.paymentMethod === 'BANK_TRANSFER' ? 'border-[#3A6FB5] bg-blue-50' : 'border-gray-200'
                   }`}>
@@ -913,6 +920,48 @@ const PlaceOrder = () => {
                   ))}
                 </div>
 
+                {/* Applied Vouchers Display */}
+                {(productVoucher || shippingVoucher) && (
+                  <div className="mb-4 pb-4 border-b border-gray-200 space-y-2">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                      <Gift className="w-4 h-4 mr-2 text-green-600" />
+                      Mã giảm giá đã áp dụng
+                    </h3>
+                    
+                    {productVoucher && (
+                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Tag className="w-4 h-4 text-green-600" />
+                          <div>
+                            <p className="font-medium text-green-800 text-xs">
+                              {productVoucher.code}
+                            </p>
+                            <p className="text-xs text-green-600">
+                              Giảm tiền hàng
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {shippingVoucher && (
+                      <div className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-4 h-4 text-purple-600" />
+                          <div>
+                            <p className="font-medium text-purple-800 text-xs">
+                              {shippingVoucher.code}
+                            </p>
+                            <p className="text-xs text-purple-600">
+                              Giảm phí ship
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Price Summary */}
                 <div className="border-t border-gray-200 pt-4 space-y-3">
                   <div className="flex justify-between text-gray-600">
@@ -920,25 +969,49 @@ const PlaceOrder = () => {
                     <span className="font-medium">{formatPrice(subtotal)}</span>
                   </div>
 
-                  {discountAmount > 0 && (
+                  {productDiscount > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Giảm giá {discountCode && `(${discountCode})`}:</span>
+                      <span>
+                        Giảm giá sản phẩm
+                        {productVoucher && ` (${productVoucher.code})`}:
+                      </span>
                       <span className="font-medium">
-                        -{formatPrice(discountAmount)}
+                        -{formatPrice(productDiscount)}
                       </span>
                     </div>
                   )}
 
                   <div className="flex justify-between text-gray-600">
                     <span>Phí vận chuyển:</span>
-                    <span className="font-medium">
-                      {shippingFee === 0 ? (
-                        <span className="text-green-600">Miễn phí</span>
+                    <div className="text-right">
+                      {shippingDiscount > 0 ? (
+                        <>
+                          <div className="text-gray-400 line-through text-sm">
+                            {formatPrice(baseShippingFee)}
+                          </div>
+                          <div className="font-medium">
+                            {formatPrice(finalShippingFee)}
+                          </div>
+                        </>
                       ) : (
-                        formatPrice(shippingFee)
+                        <span className="font-medium">
+                          {formatPrice(baseShippingFee)}
+                        </span>
                       )}
-                    </span>
+                    </div>
                   </div>
+
+                  {shippingDiscount > 0 && (
+                    <div className="flex justify-between text-purple-600">
+                      <span>
+                        Giảm phí ship
+                        {shippingVoucher && ` (${shippingVoucher.code})`}:
+                      </span>
+                      <span className="font-medium">
+                        -{formatPrice(shippingDiscount)}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-900">
@@ -948,6 +1021,12 @@ const PlaceOrder = () => {
                       {formatPrice(finalTotal)}
                     </span>
                   </div>
+
+                  {totalSavings > 0 && (
+                    <div className="text-sm text-green-600 text-center font-medium">
+                      🎉 Bạn đã tiết kiệm được {formatPrice(totalSavings)}!
+                    </div>
+                  )}
                 </div>
 
                 {/* Submit Button */}
@@ -990,7 +1069,7 @@ const PlaceOrder = () => {
                   </button>
                 )}
 
-                {/* Reward Points Info (after order created) */}
+                {/* Reward Points Info */}
                 {orderResponse && orderResponse.rewardPointsEarned > 0 && (
                   <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div className="flex items-start gap-2">
