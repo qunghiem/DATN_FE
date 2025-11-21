@@ -11,22 +11,33 @@ const getAuthHeader = () => {
 // Fetch all reviews with pagination and filters
 export const fetchAllReviews = createAsyncThunk(
   'adminReviews/fetchAll',
-  async ({ page = 0, size = 10, rating = null }, { rejectWithValue }) => {
+  async ({ page = 0, size = 10, rating = null, productId = null }, { rejectWithValue }) => {
     try {
       let url;
       const params = new URLSearchParams({ page, size });
       
-      // Nếu có rating filter, sử dụng endpoint /admin/filter
-      // Ngược lại, sử dụng endpoint /admin để lấy tất cả reviews
-      if (rating) {
+      // Xác định endpoint dựa trên điều kiện lọc
+      if (productId && rating) {
+        // Có cả productId và rating: sử dụng /product/{productId}?rating=X
+        params.append('rating', rating);
+        url = `${API_URL}/product/${productId}`;
+      } else if (productId) {
+        // Chỉ có productId: sử dụng /product/{productId}
+        url = `${API_URL}/product/${productId}`;
+      } else if (rating) {
+        // Chỉ có rating: sử dụng /admin/filter?rating=X
         params.append('rating', rating);
         url = `${API_URL}/admin/filter`;
       } else {
+        // Không có filter: lấy tất cả reviews từ /admin
         url = `${API_URL}/admin`;
       }
       
+      // Chỉ thêm Authorization header nếu không phải endpoint public
+      const headers = (productId && !rating) || (productId && rating) ? {} : getAuthHeader();
+      
       const response = await axios.get(`${url}?${params.toString()}`, {
-        headers: getAuthHeader(),
+        headers,
       });
       
       if (response.data.code === 1000) {
@@ -36,7 +47,6 @@ export const fetchAllReviews = createAsyncThunk(
           totalPages: result.totalPages || 0,
           totalElements: result.totalElements || 0,
           currentPage: result.page || 0,
-          // Khi filter theo rating, extra có thể là null
           averageRating: result.extra?.averageRating || 0,
         };
       }
