@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = '/api';
+const API_URL = 'http://localhost:8080/api';
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('access_token');
@@ -27,7 +27,10 @@ export const fetchProductVariants = createAsyncThunk(
   async (productId, { rejectWithValue }) => {
     try {
       const response = await axios.get(`${API_URL}/product-variants/product/${productId}`);
-      return response.data.result || [];
+      if (response.data.code === 1000) {
+        return response.data.result || [];
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -55,7 +58,10 @@ export const createProductVariant = createAsyncThunk(
       const response = await axios.post(`${API_URL}/product-variants`, variantData, {
         headers: getAuthHeader(),
       });
-      return response.data.result;
+      if (response.data.code === 1000) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -65,14 +71,24 @@ export const createProductVariant = createAsyncThunk(
 // Cập nhật variant
 export const updateProductVariant = createAsyncThunk(
   'adminProducts/updateVariant',
-  async ({ variantId, ...variantData }, { rejectWithValue }) => {
+  async ({ variantId, colorId, sizeId, stock, images }, { rejectWithValue }) => {
     try {
+      const payload = {};
+      if (colorId !== undefined) payload.colorId = colorId;
+      if (sizeId !== undefined) payload.sizeId = sizeId;
+      if (stock !== undefined) payload.stock = stock;
+      if (images !== undefined) payload.images = images;
+
       const response = await axios.put(
         `${API_URL}/product-variants/${variantId}`,
-        variantData,
+        payload,
         { headers: getAuthHeader() }
       );
-      return response.data.result;
+      
+      if (response.data.code === 1000) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -84,10 +100,14 @@ export const deleteProductVariant = createAsyncThunk(
   'adminProducts/deleteVariant',
   async (variantId, { rejectWithValue }) => {
     try {
-      await axios.delete(`${API_URL}/product-variants/${variantId}`, {
+      const response = await axios.delete(`${API_URL}/product-variants/${variantId}`, {
         headers: getAuthHeader(),
       });
-      return variantId;
+      
+      if (response.data.code === 1000) {
+        return variantId;
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
@@ -125,7 +145,7 @@ export const deleteProduct = createAsyncThunk(
 const initialState = {
   products: [],
   currentProduct: null,
-  productVariants: [], // Danh sách variants của product hiện tại
+  productVariants: [],
   isLoading: false,
   error: null,
   success: null,

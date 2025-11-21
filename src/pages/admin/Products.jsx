@@ -45,7 +45,7 @@ const Products = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalStep, setModalStep] = useState(1); // 1: Product Info, 2: Variants, 3: Edit Variants
   const [isEditMode, setIsEditMode] = useState(false);
-
+  const [editingVariantData, setEditingVariantData] = useState({});
   // Product Form Data
   const [productForm, setProductForm] = useState({
     name: "",
@@ -107,6 +107,29 @@ const Products = () => {
     }
   }, [error, success, dispatch, currentProduct]);
 
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      dispatch(clearMessages());
+    }
+    if (success) {
+      toast.success(success);
+      dispatch(clearMessages());
+
+      if (success.includes("Tạo sản phẩm thành công") && currentProduct) {
+        setModalStep(2);
+      }
+
+      if (success.includes("Thêm biến thể thành công")) {
+        setVariants([{ colorId: "", sizeId: "", stock: "", images: [""] }]);
+      }
+
+      // ✅ Thêm case này nếu chưa có
+      if (success.includes("Cập nhật biến thể thành công") && currentProduct) {
+        dispatch(fetchProductVariants(currentProduct.id));
+      }
+    }
+  }, [error, success, dispatch, currentProduct]);
   const resetForm = () => {
     setProductForm({
       name: "",
@@ -224,11 +247,13 @@ const Products = () => {
     if (!currentProduct || !isEditMode) {
       dispatch(createProduct(payload));
     } else {
-      dispatch(updateProduct({ id: currentProduct.id, ...payload })).then(() => {
-        setShowModal(false);
-        resetForm();
-        dispatch(fetchAllProducts());
-      });
+      dispatch(updateProduct({ id: currentProduct.id, ...payload })).then(
+        () => {
+          setShowModal(false);
+          resetForm();
+          dispatch(fetchAllProducts());
+        }
+      );
     }
   };
 
@@ -296,18 +321,33 @@ const Products = () => {
     }));
   };
 
-  const handleUpdateVariantStock = (variantId) => {
-    const importNewStock = editingVariants[variantId];
-
-    if (!importNewStock || Number(importNewStock) <= 0) {
-      toast.error("Vui lòng nhập số lượng tồn kho cần thêm (> 0)");
+  const handleUpdateVariant = (variantId, formData) => {
+    // Validation
+    if (!formData.colorId || !formData.sizeId || !formData.stock) {
+      toast.error("Vui lòng điền đầy đủ thông tin biến thể");
       return;
     }
 
-    dispatch(updateProductVariant({ 
-      variantId, 
-      importNewStock: Number(importNewStock) 
-    }));
+    if (Number(formData.stock) < 0) {
+      toast.error("Số lượng tồn kho không thể âm");
+      return;
+    }
+
+    const payload = {
+      variantId,
+      colorId: Number(formData.colorId),
+      sizeId: Number(formData.sizeId),
+      stock: Number(formData.stock),
+      images: formData.images.filter((img) => img.trim() !== ""),
+    };
+
+    dispatch(updateProductVariant(payload)).then((result) => {
+      if (result.type === "adminProducts/updateVariant/fulfilled") {
+        if (currentProduct) {
+          dispatch(fetchProductVariants(currentProduct.id));
+        }
+      }
+    });
   };
 
   const handleDeleteVariant = (variantId) => {
@@ -490,9 +530,9 @@ const Products = () => {
         <EditVariantsModal
           currentProduct={currentProduct}
           productVariants={productVariants}
-          editingVariants={editingVariants}
-          handleImportStockChange={handleImportStockChange}
-          handleUpdateVariantStock={handleUpdateVariantStock}
+          colors={colors}
+          sizes={sizes}
+          handleUpdateVariant={handleUpdateVariant}
           handleDeleteVariant={handleDeleteVariant}
           isLoading={isLoading}
           onClose={() => {
@@ -716,7 +756,11 @@ const ProductFormModal = ({
             disabled={isLoading}
             className="px-6 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition disabled:opacity-50"
           >
-            {isLoading ? "Đang xử lý..." : isEditMode ? "Cập nhật" : "Tiếp theo: Thêm biến thể"}
+            {isLoading
+              ? "Đang xử lý..."
+              : isEditMode
+              ? "Cập nhật"
+              : "Tiếp theo: Thêm biến thể"}
           </button>
         </div>
       </form>
@@ -923,21 +967,71 @@ const VariantFormModal = ({
 const EditVariantsModal = ({
   currentProduct,
   productVariants,
-  editingVariants,
-  handleImportStockChange,
-  handleUpdateVariantStock,
+  colors,
+  sizes,
+  handleUpdateVariant,
   handleDeleteVariant,
   isLoading,
   onClose,
 }) => {
+  const [editingVariant, setEditingVariant] = useState(null);
+  const [editForm, setEditForm] = useState({
+    colorId: "",
+    sizeId: "",
+    stock: "",
+    images: [],
+  });
+
+  const startEdit = (variant) => {
+    setEditingVariant(variant.id);
+    setEditForm({
+      colorId: variant.color?.id || "",
+      sizeId: variant.size?.id || "",
+      stock: variant.stock || "",
+      images: variant.images || [],
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingVariant(null);
+    setEditForm({
+      colorId: "",
+      sizeId: "",
+      stock: "",
+      images: [],
+    });
+  };
+
+  const saveEdit = (variantId) => {
+    handleUpdateVariant(variantId, editForm);
+
+    cancelEdit();
+  };
+
+  const handleImageChange = (index, value) => {
+    const newImages = [...editForm.images];
+    newImages[index] = value;
+    setEditForm({ ...editForm, images: newImages });
+  };
+
+  const addImage = () => {
+    setEditForm({ ...editForm, images: [...editForm.images, ""] });
+  };
+
+  const removeImage = (index) => {
+    const newImages = editForm.images.filter((_, i) => i !== index);
+    setEditForm({ ...editForm, images: newImages });
+  };
+
   return (
-    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
           <div>
             <h2 className="text-2xl font-bold">Quản lý biến thể sản phẩm</h2>
             <p className="text-sm text-gray-600 mt-1">
-              Sản phẩm: <span className="font-medium">{currentProduct.name}</span>
+              Sản phẩm:{" "}
+              <span className="font-medium">{currentProduct.name}</span>
             </p>
           </div>
           <button
@@ -955,107 +1049,232 @@ const EditVariantsModal = ({
             </div>
           ) : (
             productVariants.map((variant) => {
+              const isEditing = editingVariant === variant.id;
+
               return (
                 <div
                   key={variant.id}
-                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                  className="border border-gray-200 rounded-lg p-5 bg-gray-50"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="font-semibold text-lg">
-                        {variant.color?.name || "N/A"} - {variant.size?.name || "N/A"}
+                        {variant.color?.name || "N/A"} -{" "}
+                        {variant.size?.name || "N/A"}
                       </h3>
                       <p className="text-sm text-gray-600 mt-1">
-                        Mã biến thể: #{variant.id} | Tồn kho hiện tại: <span className="font-semibold text-blue-600">{variant.stock}</span>
+                        Mã: #{variant.id} | Tồn kho:{" "}
+                        <span className="font-semibold text-blue-600">
+                          {variant.stock}
+                        </span>
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteVariant(variant.id)}
-                      className="text-red-600 hover:bg-red-50 p-2 rounded"
-                      title="Xóa biến thể"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <div className="flex gap-2">
+                      {!isEditing && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(variant)}
+                            className="text-blue-600 hover:bg-blue-50 p-2 rounded"
+                            title="Sửa biến thể"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteVariant(variant.id)}
+                            className="text-red-600 hover:bg-red-50 p-2 rounded"
+                            title="Xóa biến thể"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 mb-4">
-                    {/* Hiển thị thông tin (read-only) */}
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-white rounded-lg">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Màu sắc
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-6 h-6 rounded border border-gray-300"
-                            style={{ backgroundColor: variant.color?.hexCode || '#ccc' }}
+                  {isEditing ? (
+                    // Edit Mode
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Màu sắc *
+                          </label>
+                          <select
+                            value={editForm.colorId}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                colorId: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
+                          >
+                            <option value="">Chọn màu</option>
+                            {colors.map((color) => (
+                              <option key={color.id} value={color.id}>
+                                {color.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Kích thước *
+                          </label>
+                          <select
+                            value={editForm.sizeId}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                sizeId: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
+                          >
+                            <option value="">Chọn size</option>
+                            {sizes.map((size) => (
+                              <option key={size.id} value={size.id}>
+                                {size.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Tồn kho *
+                          </label>
+                          <input
+                            type="number"
+                            value={editForm.stock}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                stock: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
+                            min="0"
                           />
-                          <span className="text-gray-800 font-medium">{variant.color?.name || "N/A"}</span>
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Kích thước
-                        </label>
-                        <span className="text-gray-800 font-medium">{variant.size?.name || "N/A"}</span>
-                      </div>
-                    </div>
-
-                    {/* Hiển thị hình ảnh nếu có */}
-                    {/* {variant.images && variant.images.length > 0 && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Hình ảnh biến thể
                         </label>
-                        <div className="flex flex-wrap gap-2">
-                          {variant.images.map((image, idx) => (
-                            <div key={idx} className="relative w-20 h-20 border rounded overflow-hidden">
-                              <img 
-                                src={`http://localhost:8080/${image}`}
-                                alt={`Variant ${idx + 1}`}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.target.src = 'https://via.placeholder.com/80?text=No+Image';
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )} */}
-
-                    {/* Form nhập thêm tồn kho */}
-                    <div className="border-t pt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nhập thêm tồn kho
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          value={editingVariants[variant.id] || ""}
-                          onChange={(e) =>
-                            handleImportStockChange(variant.id, e.target.value)
-                          }
-                          placeholder="Nhập số lượng cần thêm"
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
-                          min="1"
-                        />
+                        {editForm.images.map((image, imageIndex) => (
+                          <div key={imageIndex} className="flex gap-2 mb-2">
+                            <input
+                              type="text"
+                              placeholder="URL hình ảnh"
+                              value={image}
+                              onChange={(e) =>
+                                handleImageChange(imageIndex, e.target.value)
+                              }
+                              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
+                            />
+                            {editForm.images.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => removeImage(imageIndex)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded"
+                              >
+                                <Trash className="w-5 h-5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
                         <button
                           type="button"
-                          onClick={() => handleUpdateVariantStock(variant.id)}
-                          disabled={isLoading}
-                          className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition disabled:opacity-50 whitespace-nowrap"
+                          onClick={addImage}
+                          className="flex items-center text-sky-600 hover:text-sky-700 text-sm mt-2"
                         >
-                          {isLoading ? "Đang cập nhật..." : "Thêm tồn kho"}
+                          <ImagePlus className="w-4 h-4 mr-1" />
+                          Thêm hình ảnh
                         </button>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        * Nhập số lượng cần thêm vào kho. Tồn kho mới sẽ là: {variant.stock} + {editingVariants[variant.id] || 0} = {variant.stock + Number(editingVariants[variant.id] || 0)}
-                      </p>
+
+                      <div className="flex gap-2 justify-end pt-4 border-t">
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => saveEdit(variant.id)}
+                          disabled={isLoading}
+                          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50"
+                        >
+                          {isLoading ? "Đang lưu..." : "Lưu thay đổi"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    // View Mode
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 p-4 bg-white rounded-lg">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">
+                            Màu sắc
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-6 h-6 rounded border border-gray-300"
+                              style={{
+                                backgroundColor:
+                                  variant.color?.hexCode || "#ccc",
+                              }}
+                            />
+                            <span className="text-gray-800 font-medium">
+                              {variant.color?.name || "N/A"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">
+                            Kích thước
+                          </label>
+                          <span className="text-gray-800 font-medium">
+                            {variant.size?.name || "N/A"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {variant.images && variant.images.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Hình ảnh biến thể
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {variant.images.map((image, idx) => (
+                              <div
+                                key={idx}
+                                className="relative w-24 h-24 border rounded overflow-hidden bg-gray-100"
+                              >
+                                <img
+                                  src={`http://localhost:8080/${image}`}
+                                  alt={`Variant ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.target.src =
+                                      "https://via.placeholder.com/96?text=No+Image";
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })
