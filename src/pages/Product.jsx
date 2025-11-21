@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector  } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Heart,
   Minus,
@@ -20,6 +20,7 @@ import {
   selectIsInWishlist,
 } from "../features/wishlist/wishlistSlice";
 import { addToCartAPI, fetchCart } from "../features/cart/cartSlice";
+import ProductReviews from "../components/ProductReviews";
 
 const Product = () => {
   const { productId } = useParams();
@@ -38,7 +39,8 @@ const Product = () => {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
- const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
+const [activeTab, setActiveTab] = useState('description');
 
   // wishlist
   const { isAuthenticated } = useSelector((state) => state.auth);
@@ -211,76 +213,71 @@ const Product = () => {
   };
 
   const handleAddToCart = async () => {
-  if (!selectedVariant || !selectedSize) {
-    toast.warning("Vui lòng chọn kích thước!");
-    return;
-  }
+    if (!selectedVariant || !selectedSize) {
+      toast.warning("Vui lòng chọn kích thước!");
+      return;
+    }
 
-  if (selectedVariant.stock === 0) {
-    toast.error("Sản phẩm đã hết hàng!");
-    return;
-  }
+    if (selectedVariant.stock === 0) {
+      toast.error("Sản phẩm đã hết hàng!");
+      return;
+    }
 
-  if (!isAuthenticated) {
-    toast.warning("Vui lòng đăng nhập để thêm vào giỏ hàng");
-    navigate("/login");
-    return;
-  }
+    if (!isAuthenticated) {
+      toast.warning("Vui lòng đăng nhập để thêm vào giỏ hàng");
+      navigate("/login");
+      return;
+    }
 
-  try {
-    // Gọi API để thêm vào giỏ hàng
-    await dispatch(
-      addToCartAPI({
-        productId: product.id,
-        productVariantId: selectedVariant.id,
-        quantity: quantity,
-      })
-    ).unwrap();
+    try {
+      // Gọi API để thêm vào giỏ hàng
+      await dispatch(
+        addToCartAPI({
+          productId: product.id,
+          productVariantId: selectedVariant.id,
+          quantity: quantity,
+        })
+      ).unwrap();
 
-    toast.success("Đã thêm vào giỏ hàng!");
-  } catch (error) {
-    toast.error(error || "Không thể thêm vào giỏ hàng");
-  }
-};
+      toast.success("Đã thêm vào giỏ hàng!");
+    } catch (error) {
+      toast.error(error || "Không thể thêm vào giỏ hàng");
+    }
+  };
 
-const handleBuyNow = async () => {
-  if (!selectedVariant || !selectedSize) {
-    toast.warning("Vui lòng chọn kích thước!");
-    return;
-  }
+  const handleBuyNow = async () => {
+    if (!selectedVariant || !selectedSize) {
+      toast.warning("Vui lòng chọn kích thước!");
+      return;
+    }
 
-  if (selectedVariant.stock === 0) {
-    toast.error("Sản phẩm đã hết hàng!");
-    return;
-  }
+    if (selectedVariant.stock === 0) {
+      toast.error("Sản phẩm đã hết hàng!");
+      return;
+    }
 
-  if (!isAuthenticated) {
-    toast.warning("Vui lòng đăng nhập để mua hàng");
-    navigate("/login");
-    return;
-  }
+    if (!isAuthenticated) {
+      toast.warning("Vui lòng đăng nhập để mua hàng");
+      navigate("/login");
+      return;
+    }
 
-  try {
-    // Gọi API để thêm vào giỏ hàng
-    await dispatch(
-      addToCartAPI({
-        productId: product.id,
-        productVariantId: selectedVariant.id,
-        quantity: quantity,
-      })
-    ).unwrap();
+    try {
+      // Gọi API để thêm vào giỏ hàng
+      await dispatch(
+        addToCartAPI({
+          productId: product.id,
+          productVariantId: selectedVariant.id,
+          quantity: quantity,
+        })
+      ).unwrap();
 
-    // Chuyển đến trang đặt hàng
-    navigate("/place-order");
-  } catch (error) {
-    toast.error(error || "Không thể thêm vào giỏ hàng");
-  }
-};
-
-
-
-
-
+      // Chuyển đến trang đặt hàng
+      navigate("/place-order");
+    } catch (error) {
+      toast.error(error || "Không thể thêm vào giỏ hàng");
+    }
+  };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN").format(price) + "đ";
@@ -696,24 +693,83 @@ const handleBuyNow = async () => {
         {/* Product Description Tabs */}
         <div className="mt-12 border-t">
           <div className="flex gap-8 border-b">
-            <button className="py-4 border-b-2 border-black font-medium">
+            <button
+              onClick={() => setActiveTab("description")}
+              className={`py-4 border-b-2 font-medium transition ${
+                activeTab === "description"
+                  ? "border-black text-gray-900"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
               Mô tả sản phẩm
             </button>
-            <button className="py-4 text-gray-600 hover:text-gray-900">
+            <button
+              onClick={() => setActiveTab("reviews")}
+              className={`py-4 border-b-2 font-medium transition ${
+                activeTab === "reviews"
+                  ? "border-black text-gray-900"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Đánh giá
+            </button>
+            <button
+              onClick={() => setActiveTab("shipping")}
+              className={`py-4 border-b-2 font-medium transition ${
+                activeTab === "shipping"
+                  ? "border-black text-gray-900"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
               Chính sách giao hàng
             </button>
-            <button className="py-4 text-gray-600 hover:text-gray-900">
+            <button
+              onClick={() => setActiveTab("return")}
+              className={`py-4 border-b-2 font-medium transition ${
+                activeTab === "return"
+                  ? "border-black text-gray-900"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+              }`}
+            >
               Chính sách đổi trả
             </button>
           </div>
 
-          {product.description && (
-            <div className="py-6">
+          <div className="py-6">
+            {activeTab === "description" && product.description && (
               <div className="prose max-w-none">
                 <p className="text-gray-700">{product.description}</p>
               </div>
-            </div>
-          )}
+            )}
+
+            {activeTab === "reviews" && (
+              <ProductReviews productId={productId} />
+            )}
+
+            {activeTab === "shipping" && (
+              <div className="prose max-w-none">
+                <h3 className="text-lg font-bold mb-4">Chính sách giao hàng</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li>• Giao hàng toàn quốc, nhận hàng trong 2-5 ngày</li>
+                  <li>• Miễn phí giao hàng cho đơn từ 500.000đ</li>
+                  <li>• Kiểm tra hàng trước khi thanh toán</li>
+                  <li>• Hỗ trợ đổi size trong 7 ngày</li>
+                </ul>
+              </div>
+            )}
+
+            {activeTab === "return" && (
+              <div className="prose max-w-none">
+                <h3 className="text-lg font-bold mb-4">Chính sách đổi trả</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li>• Đổi hàng trong vòng 7 ngày nếu lỗi nhà sản xuất</li>
+                  <li>• Sản phẩm chưa qua sử dụng, còn nguyên tem mác</li>
+                  <li>• Hoàn tiền 100% nếu sản phẩm lỗi</li>
+                  <li>• Liên hệ hotline 1800.0000 để được hỗ trợ</li>
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Related Products */}

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import ReviewModal from "../components/ReviewModal";
 
 // Helper function to get orders for current user
 const getUserOrders = (userId) => {
@@ -52,7 +53,7 @@ const Orders = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
 
-  // State
+  // State declarations
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,31 +63,31 @@ const Orders = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedReviewItem, setSelectedReviewItem] = useState(null);
+  const [reviewedItems, setReviewedItems] = useState(new Set());
 
   // Order statuses
   const orderStatuses = [
-  { id: "ALL", name: "Tất cả", icon: Package, color: "gray" },
-  { id: "PENDING", name: "Chờ xác nhận", icon: Clock, color: "yellow" },
-  { id: "CONFIRMED", name: "Đã xác nhận", icon: CheckCircle, color: "blue" },
-  { id: "SHIPPED", name: "Đang giao", icon: Truck, color: "purple" },  // ĐỔI TỪ SHIPPING
-  { id: "DELIVERED", name: "Đã giao", icon: CheckCircle, color: "green" },
-  { id: "CANCELLED", name: "Đã hủy", icon: XCircle, color: "red" },
-];
+    { id: "ALL", name: "Tất cả", icon: Package, color: "gray" },
+    { id: "PENDING", name: "Chờ xác nhận", icon: Clock, color: "yellow" },
+    { id: "CONFIRMED", name: "Đã xác nhận", icon: CheckCircle, color: "blue" },
+    { id: "SHIPPED", name: "Đang giao", icon: Truck, color: "purple" },
+    { id: "DELIVERED", name: "Đã giao", icon: CheckCircle, color: "green" },
+    { id: "CANCELLED", name: "Đã hủy", icon: XCircle, color: "red" },
+  ];
 
-  // Get user ID
+  // Helper functions (TRƯỚC useEffect)
   const getUserId = () => {
     return user?.id || user?.email || "guest";
   };
 
-  // Helper function to enrich order items with productId and images
   const enrichOrderItems = async (orders) => {
     console.log("🔄 Enriching order items with productId and images...");
-
     const enrichedOrders = await Promise.all(
       orders.map(async (order) => {
         const enrichedItems = await Promise.all(
           order.items.map(async (item) => {
-            // Skip if already has productId and image
             if (
               item.productId &&
               item.image &&
@@ -94,9 +95,7 @@ const Orders = () => {
             ) {
               return item;
             }
-
             try {
-              // Fetch variant details to get productId and image
               const response = await axios.get(
                 `http://localhost:8080/api/product-variants/${item.variantId}`,
                 {
@@ -107,7 +106,6 @@ const Orders = () => {
                   },
                 }
               );
-
               if (response.data.code === 1000) {
                 const variant = response.data.result;
                 return {
@@ -122,22 +120,183 @@ const Orders = () => {
                 error.message
               );
             }
-
-            return item; // Return as-is if fetch fails
+            return item;
           })
         );
-
-        return {
-          ...order,
-          items: enrichedItems,
-        };
+        return { ...order, items: enrichedItems };
       })
     );
-
     console.log("✅ Order items enriched");
     return enrichedOrders;
   };
-  // Fetch orders
+
+  const getTrackingTimeline = (order) => {
+    const timeline = [];
+    const statuses = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"];
+
+    if (order.status === "CANCELLED") {
+      return [
+        {
+          status: "PENDING",
+          time: order.orderDate || order.createdAt,
+          description: "Đơn hàng đã được đặt",
+          completed: true,
+        },
+        {
+          status: "CANCELLED",
+          time: order.updatedAt || order.orderDate || order.createdAt,
+          description: order.cancelReason
+            ? `Đơn hàng đã bị hủy. Lý do: ${order.cancelReason}`
+            : "Đơn hàng đã bị hủy",
+          completed: true,
+        },
+      ];
+    }
+
+    const currentStatusIndex = statuses.indexOf(order.status);
+    statuses.forEach((status, index) => {
+      const statusLabels = {
+        PENDING: "Đơn hàng đã được đặt",
+        CONFIRMED: "Đơn hàng đã được xác nhận",
+        SHIPPED: "Đơn hàng đang được giao",
+        DELIVERED: "Đơn hàng đã được giao thành công",
+      };
+      timeline.push({
+        status: status,
+        time:
+          index <= currentStatusIndex
+            ? order.orderDate || order.createdAt
+            : null,
+        description: statusLabels[status],
+        completed: index <= currentStatusIndex,
+      });
+    });
+    return timeline;
+  };
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat("vi-VN").format(price) + "₫";
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  };
+
+  const getStatusInfo = (status) => {
+    return orderStatuses.find((s) => s.id === status) || orderStatuses[0];
+  };
+
+  const getStatusColorClass = (status) => {
+    const colors = {
+      yellow: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      blue: "bg-blue-100 text-blue-800 border-blue-200",
+      purple: "bg-purple-100 text-purple-800 border-purple-200",
+      green: "bg-green-100 text-green-800 border-green-200",
+      red: "bg-red-100 text-red-800 border-red-200",
+      gray: "bg-gray-100 text-gray-800 border-gray-200",
+    };
+    const statusInfo = getStatusInfo(status);
+    return colors[statusInfo.color] || colors.gray;
+  };
+
+  const handleViewDetail = (order) => {
+    setSelectedOrder(order);
+    setShowDetailModal(true);
+  };
+
+  const handleCancelOrder = (order) => {
+    setSelectedOrder(order);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelOrder = async () => {
+    if (!cancelReason.trim()) {
+      toast.error("Vui lòng nhập lý do hủy đơn!");
+      return;
+    }
+    try {
+      const userId = getUserId();
+      const cancelTime = new Date().toISOString();
+      const updatedOrders = orders.map((order) => {
+        if (order.id === selectedOrder.id) {
+          return {
+            ...order,
+            status: "CANCELLED",
+            tracking: [
+              ...(order.tracking || []),
+              {
+                status: "CANCELLED",
+                time: cancelTime,
+                description: `Đơn hàng đã bị hủy. Lý do: ${cancelReason}`,
+              },
+            ],
+          };
+        }
+        return order;
+      });
+      setOrders(updatedOrders);
+      saveUserOrders(userId, updatedOrders);
+      toast.success("Đã hủy đơn hàng thành công!");
+      setShowCancelModal(false);
+      setCancelReason("");
+      setSelectedOrder(null);
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      toast.error("Không thể hủy đơn hàng. Vui lòng thử lại!");
+    }
+  };
+
+  const handleReorder = (order) => {
+    toast.success("Đã thêm sản phẩm vào giỏ hàng!");
+    navigate("/cart");
+  };
+
+  // ✅ DI CHUYỂN XUỐNG ĐÂY - TRƯỚC useEffect
+  const checkReviewedItems = async () => {
+    try {
+      const reviewed = localStorage.getItem("reviewed_items");
+      if (reviewed) {
+        setReviewedItems(new Set(JSON.parse(reviewed)));
+      }
+    } catch (error) {
+      console.error("Error loading reviewed items:", error);
+    }
+  };
+
+  const handleOpenReview = (order, item) => {
+    setSelectedOrder(order);
+    setSelectedReviewItem(item);
+    setShowReviewModal(true);
+  };
+
+  const handleReviewSuccess = () => {
+    const key = `${selectedOrder.id}_${selectedReviewItem.variantId}`;
+    const newReviewed = new Set(reviewedItems);
+    newReviewed.add(key);
+    setReviewedItems(newReviewed);
+    localStorage.setItem("reviewed_items", JSON.stringify([...newReviewed]));
+  };
+
+  const isItemReviewed = (orderId, variantId) => {
+    const key = `${orderId}_${variantId}`;
+    return reviewedItems.has(key);
+  };
+
+  // ✅ TẤT CẢ useEffect PHẢI Ở ĐÂY - SAU khi định nghĩa tất cả hàm
+
+  // useEffect #1: Load reviewed items khi component mount
+  useEffect(() => {
+    checkReviewedItems();
+  }, []);
+
+  // useEffect #2: Fetch orders
   useEffect(() => {
     const fetchOrders = async () => {
       if (!isAuthenticated || !user) {
@@ -161,28 +320,26 @@ const Orders = () => {
 
           if (response.data.code === 1000 && response.data.result) {
             const ordersData = response.data.result;
-
             console.log(
               "✅ Orders loaded from API:",
               ordersData.length,
               "orders"
             );
 
-            // Transform backend format to frontend format
             const transformedOrders = ordersData.map((order) => ({
               id: order.id,
               orderDate: order.createdAt,
               status: order.status,
               items: order.items.map((item) => ({
                 id: item.id,
-                productId: null, // Will be enriched
+                productId: null,
                 variantId: item.productVariantId,
                 name: item.productName,
                 color: item.color,
                 size: item.size,
                 quantity: item.quantity,
                 price: item.unitPrice,
-                image: "/placeholder.png", // Will be enriched
+                image: "/placeholder.png",
               })),
               shipping: {
                 fullName: order.fullName,
@@ -201,13 +358,11 @@ const Orders = () => {
                   (order.paymentMethod === "COD" ? "UNPAID" : "PENDING"),
               },
               note: order.note || "",
-              tracking: order.tracking || [], // Giữ tracking từ backend nếu có
+              tracking: order.tracking || [],
               cancelReason: order.cancelReason || "",
             }));
 
-            // ✅ ENRICH with productId and images (OPTIONAL - comment out if slow)
             const enrichedOrders = await enrichOrderItems(transformedOrders);
-
             setOrders(enrichedOrders);
             setFilteredOrders(enrichedOrders);
             saveUserOrders(userId, enrichedOrders);
@@ -223,7 +378,6 @@ const Orders = () => {
             apiError.response?.status,
             apiError.message
           );
-
           if (apiError.response?.status === 401) {
             toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
             navigate("/login");
@@ -231,7 +385,6 @@ const Orders = () => {
           }
         }
 
-        // Fallback to localStorage
         const localOrders = getUserOrders(userId);
         setOrders(localOrders);
         setFilteredOrders(localOrders);
@@ -243,77 +396,15 @@ const Orders = () => {
       }
     };
 
-    const getStatusDescription = (status) => {
-      const descriptions = {
-        PENDING: "Đơn hàng đang chờ xác nhận",
-        CONFIRMED: "Đơn hàng đã được xác nhận",
-        SHIPPING: "Đơn hàng đang được giao",
-        DELIVERED: "Đơn hàng đã được giao thành công",
-        CANCELLED: "Đơn hàng đã bị hủy",
-      };
-      return descriptions[status] || "Đơn hàng đã được đặt";
-    };
-
     fetchOrders();
   }, [isAuthenticated, user, navigate]);
-  const getTrackingTimeline = (order) => {
-    const timeline = [];
-    const statuses = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"];
 
-    // Nếu đơn hàng bị hủy
-    if (order.status === "CANCELLED") {
-      return [
-        {
-          status: "PENDING",
-          time: order.orderDate || order.createdAt,
-          description: "Đơn hàng đã được đặt",
-          completed: true,
-        },
-        {
-          status: "CANCELLED",
-          time: order.updatedAt || order.orderDate || order.createdAt,
-          description: order.cancelReason
-            ? `Đơn hàng đã bị hủy. Lý do: ${order.cancelReason}`
-            : "Đơn hàng đã bị hủy",
-          completed: true,
-        },
-      ];
-    }
-
-    // Đơn hàng bình thường - tạo timeline dựa trên status hiện tại
-    const currentStatusIndex = statuses.indexOf(order.status);
-
-    statuses.forEach((status, index) => {
-      const statusLabels = {
-        PENDING: "Đơn hàng đã được đặt",
-        CONFIRMED: "Đơn hàng đã được xác nhận",
-        SHIPPED: "Đơn hàng đang được giao",
-        DELIVERED: "Đơn hàng đã được giao thành công",
-      };
-
-      timeline.push({
-        status: status,
-        time:
-          index <= currentStatusIndex
-            ? order.orderDate || order.createdAt
-            : null,
-        description: statusLabels[status],
-        completed: index <= currentStatusIndex,
-      });
-    });
-
-    return timeline;
-  };
-  // Filter orders
+  // useEffect #3: Filter orders
   useEffect(() => {
     let filtered = [...orders];
-
-    // Filter by status
     if (selectedStatus !== "ALL") {
       filtered = filtered.filter((order) => order.status === selectedStatus);
     }
-
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -326,116 +417,8 @@ const Orders = () => {
             ))
       );
     }
-
     setFilteredOrders(filtered);
   }, [orders, selectedStatus, searchQuery]);
-
-  // Format price
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("vi-VN").format(price) + "₫";
-  };
-
-  // Format date - Fix timezone issue
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-
-    // Get local date components
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, "0");
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
-  };
-
-  // Get status info
-  const getStatusInfo = (status) => {
-    return orderStatuses.find((s) => s.id === status) || orderStatuses[0];
-  };
-
-  // Get status color classes
-  const getStatusColorClass = (status) => {
-    const colors = {
-      yellow: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      blue: "bg-blue-100 text-blue-800 border-blue-200",
-      purple: "bg-purple-100 text-purple-800 border-purple-200",
-      green: "bg-green-100 text-green-800 border-green-200",
-      red: "bg-red-100 text-red-800 border-red-200",
-      gray: "bg-gray-100 text-gray-800 border-gray-200",
-    };
-    const statusInfo = getStatusInfo(status);
-    return colors[statusInfo.color] || colors.gray;
-  };
-
-  // Handle view detail
-  const handleViewDetail = (order) => {
-    setSelectedOrder(order);
-    setShowDetailModal(true);
-  };
-
-  // Handle cancel order
-  const handleCancelOrder = (order) => {
-    setSelectedOrder(order);
-    setShowCancelModal(true);
-  };
-
-  // Confirm cancel order
-  const confirmCancelOrder = async () => {
-    if (!cancelReason.trim()) {
-      toast.error("Vui lòng nhập lý do hủy đơn!");
-      return;
-    }
-
-    try {
-      const userId = getUserId();
-      const cancelTime = new Date().toISOString();
-
-      // Update local state with tracking
-      const updatedOrders = orders.map((order) => {
-        if (order.id === selectedOrder.id) {
-          return {
-            ...order,
-            status: "CANCELLED",
-            tracking: [
-              ...(order.tracking || []),
-              {
-                status: "CANCELLED",
-                time: cancelTime,
-                description: `Đơn hàng đã bị hủy. Lý do: ${cancelReason}`,
-              },
-            ],
-          };
-        }
-        return order;
-      });
-
-      setOrders(updatedOrders);
-
-      // Save to localStorage for this user
-      saveUserOrders(userId, updatedOrders);
-
-      toast.success("Đã hủy đơn hàng thành công!");
-      setShowCancelModal(false);
-      setCancelReason("");
-      setSelectedOrder(null);
-    } catch (error) {
-      console.error("Error cancelling order:", error);
-      toast.error("Không thể hủy đơn hàng. Vui lòng thử lại!");
-    }
-  };
-
-  // Handle reorder
-  const handleReorder = (order) => {
-    // Add items to cart and navigate to cart
-    order.items.forEach((item) => {
-      // dispatch(addToCart({ ...item }));
-    });
-    toast.success("Đã thêm sản phẩm vào giỏ hàng!");
-    navigate("/cart");
-  };
-
   // Loading state
   if (isLoading) {
     return (
@@ -643,6 +626,28 @@ const Orders = () => {
                                   {formatPrice(item.price * item.quantity)}
                                 </span>
                               </div>
+
+                              {/* Nút Review - chỉ hiện với đơn DELIVERED */}
+                              {order.status === "DELIVERED" && (
+                                <div className="mt-2">
+                                  {isItemReviewed(order.id, item.variantId) ? (
+                                    <span className="text-xs text-green-600 flex items-center gap-1">
+                                      <CheckCircle className="w-3 h-3" />
+                                      Đã đánh giá
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() =>
+                                        handleOpenReview(order, item)
+                                      }
+                                      className="text-xs text-[#3A6FB5] hover:text-[#2E5C99] font-medium flex items-center gap-1"
+                                    >
+                                      <MessageCircle className="w-3 h-3" />
+                                      Đánh giá sản phẩm
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))
@@ -1051,6 +1056,19 @@ const Orders = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && selectedOrder && selectedReviewItem && (
+        <ReviewModal
+          order={selectedOrder}
+          item={selectedReviewItem}
+          onClose={() => {
+            setShowReviewModal(false);
+            setSelectedReviewItem(null);
+          }}
+          onSuccess={handleReviewSuccess}
+        />
       )}
     </div>
   );
