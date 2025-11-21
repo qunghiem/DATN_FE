@@ -107,29 +107,6 @@ const Products = () => {
     }
   }, [error, success, dispatch, currentProduct]);
 
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      dispatch(clearMessages());
-    }
-    if (success) {
-      toast.success(success);
-      dispatch(clearMessages());
-
-      if (success.includes("Tạo sản phẩm thành công") && currentProduct) {
-        setModalStep(2);
-      }
-
-      if (success.includes("Thêm biến thể thành công")) {
-        setVariants([{ colorId: "", sizeId: "", stock: "", images: [""] }]);
-      }
-
-      // ✅ Thêm case này nếu chưa có
-      if (success.includes("Cập nhật biến thể thành công") && currentProduct) {
-        dispatch(fetchProductVariants(currentProduct.id));
-      }
-    }
-  }, [error, success, dispatch, currentProduct]);
   const resetForm = () => {
     setProductForm({
       name: "",

@@ -335,8 +335,7 @@ const Orders = () => {
                 color: item.color,
                 size: item.size,
                 quantity: item.quantity,
-                price: item.unitPrice,
-                image: "/placeholder.png",
+                image: item.imageUrl, 
               })),
               shipping: {
                 fullName: order.fullName,
