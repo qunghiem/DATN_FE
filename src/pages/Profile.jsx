@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   User,
   Mail,
@@ -13,32 +13,34 @@ import {
   AlertCircle,
   CheckCircle,
   ArrowLeft,
-} from 'lucide-react';
-import axios from 'axios';
-import { toast } from 'react-toastify';
-import { logout } from '../features/auth/authSlice';
+} from "lucide-react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { logout } from "../features/auth/authSlice";
 
 const Profile = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user, isAuthenticated, access_token } = useSelector((state) => state.auth);
+  const { user, isAuthenticated, access_token } = useSelector(
+    (state) => state.auth
+  );
 
   // State for active tab
-  const [activeTab, setActiveTab] = useState('info'); // 'info' or 'password'
+  const [activeTab, setActiveTab] = useState("info"); // 'info' or 'password'
 
   // State for personal info change
   const [infoData, setInfoData] = useState({
-    fullName: user?.fullName || '',
-    phone: user?.phone || '',
+    fullName: user?.fullName || "",
+    phone: user?.phone || "",
   });
 
   const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
 
   // State for password change
   const [passwordData, setPasswordData] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   const [showPasswords, setShowPasswords] = useState({
@@ -51,14 +53,14 @@ const Profile = () => {
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
-    navigate('/login');
+    navigate("/login");
     return null;
   }
 
   // Get initials from full name (same logic as Navbar)
   const getInitials = (fullName) => {
-    if (!fullName) return '';
-    const parts = fullName.trim().split(' ');
+    if (!fullName) return "";
+    const parts = fullName.trim().split(" ");
     // Lấy chữ cái đầu của từ đầu tiên và từ cuối cùng
     if (parts.length === 1) {
       return parts[0].charAt(0).toUpperCase();
@@ -82,19 +84,19 @@ const Profile = () => {
   // Validate info form
   const validateInfoForm = () => {
     if (!infoData.fullName.trim()) {
-      toast.error('Vui lòng nhập họ tên!');
+      toast.error("Vui lòng nhập họ tên!");
       return false;
     }
 
     if (!infoData.phone.trim()) {
-      toast.error('Vui lòng nhập số điện thoại!');
+      toast.error("Vui lòng nhập số điện thoại!");
       return false;
     }
 
     // Validate phone number (Vietnamese format)
     const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
     if (!phoneRegex.test(infoData.phone)) {
-      toast.error('Số điện thoại không hợp lệ!');
+      toast.error("Số điện thoại không hợp lệ!");
       return false;
     }
 
@@ -113,7 +115,7 @@ const Profile = () => {
 
     try {
       const response = await axios.put(
-        '/api/users/update-profile',
+        "/api/users/update-profile",
         {
           fullName: infoData.fullName,
           phone: infoData.phone,
@@ -121,37 +123,37 @@ const Profile = () => {
         {
           headers: {
             Authorization: `Bearer ${access_token}`,
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         }
       );
 
       if (response.data.code === 1000) {
-        toast.success('Cập nhật thông tin thành công!');
+        toast.success("Cập nhật thông tin thành công!");
         // Update user in localStorage
         const updatedUser = {
           ...user,
           fullName: infoData.fullName,
           phone: infoData.phone,
         };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+
         // Optionally: dispatch action to update Redux store
         // dispatch(updateUserInfo(updatedUser));
       } else {
-        toast.error(response.data.message || 'Cập nhật thông tin thất bại!');
+        toast.error(response.data.message || "Cập nhật thông tin thất bại!");
       }
     } catch (error) {
-      console.error('Error updating info:', error);
-      
+      console.error("Error updating info:", error);
+
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else if (error.response?.status === 401) {
-        toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
+        toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
         dispatch(logout());
-        navigate('/login');
+        navigate("/login");
       } else {
-        toast.error('Có lỗi xảy ra. Vui lòng thử lại sau!');
+        toast.error("Có lỗi xảy ra. Vui lòng thử lại sau!");
       }
     } finally {
       setIsSubmittingInfo(false);
@@ -178,27 +180,27 @@ const Profile = () => {
   // Validate password form
   const validatePasswordForm = () => {
     if (!passwordData.oldPassword.trim()) {
-      toast.error('Vui lòng nhập mật khẩu cũ!');
+      toast.error("Vui lòng nhập mật khẩu cũ!");
       return false;
     }
 
     if (!passwordData.newPassword.trim()) {
-      toast.error('Vui lòng nhập mật khẩu mới!');
+      toast.error("Vui lòng nhập mật khẩu mới!");
       return false;
     }
 
     if (passwordData.newPassword.length < 6) {
-      toast.error('Mật khẩu mới phải có ít nhất 6 ký tự!');
+      toast.error("Mật khẩu mới phải có ít nhất 6 ký tự!");
       return false;
     }
 
     if (passwordData.newPassword === passwordData.oldPassword) {
-      toast.error('Mật khẩu mới phải khác mật khẩu cũ!');
+      toast.error("Mật khẩu mới phải khác mật khẩu cũ!");
       return false;
     }
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('Mật khẩu xác nhận không khớp!');
+      toast.error("Mật khẩu xác nhận không khớp!");
       return false;
     }
 
@@ -217,7 +219,7 @@ const Profile = () => {
 
     try {
       const response = await axios.post(
-        '/api/users/change-password',
+        "/api/users/change-password",
         {
           oldPassword: passwordData.oldPassword,
           newPassword: passwordData.newPassword,
@@ -226,40 +228,40 @@ const Profile = () => {
         {
           headers: {
             Authorization: `Bearer ${access_token}`,
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         }
       );
 
       if (response.data.code === 1000) {
-        toast.success('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.');
-        
+        toast.success("Đổi mật khẩu thành công! Vui lòng đăng nhập lại.");
+
         // Clear form
         setPasswordData({
-          oldPassword: '',
-          newPassword: '',
-          confirmPassword: '',
+          oldPassword: "",
+          newPassword: "",
+          confirmPassword: "",
         });
 
         // Logout and redirect to login after 2 seconds
         setTimeout(() => {
           dispatch(logout());
-          navigate('/login');
+          navigate("/login");
         }, 2000);
       } else {
-        toast.error(response.data.message || 'Đổi mật khẩu thất bại!');
+        toast.error(response.data.message || "Đổi mật khẩu thất bại!");
       }
     } catch (error) {
-      console.error('Error changing password:', error);
-      
+      console.error("Error changing password:", error);
+
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else if (error.response?.status === 401) {
-        toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
+        toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
         dispatch(logout());
-        navigate('/login');
+        navigate("/login");
       } else {
-        toast.error('Có lỗi xảy ra. Vui lòng thử lại sau!');
+        toast.error("Có lỗi xảy ra. Vui lòng thử lại sau!");
       }
     } finally {
       setIsSubmitting(false);
@@ -278,8 +280,12 @@ const Profile = () => {
             <ArrowLeft className="w-5 h-5 mr-2" />
             Quay lại
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Thông tin tài khoản</h1>
-          <p className="text-gray-600 mt-1">Quản lý thông tin cá nhân và bảo mật</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Thông tin tài khoản
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Quản lý thông tin cá nhân và bảo mật
+          </p>
         </div>
 
         {/* Tabs */}
@@ -287,22 +293,22 @@ const Profile = () => {
           <div className="border-b border-gray-200">
             <nav className="flex">
               <button
-                onClick={() => setActiveTab('info')}
+                onClick={() => setActiveTab("info")}
                 className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium transition ${
-                  activeTab === 'info'
-                    ? 'border-[#3A6FB5] text-[#3A6FB5]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                  activeTab === "info"
+                    ? "border-[#3A6FB5] text-[#3A6FB5]"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
                 <User className="w-5 h-5" />
                 Thông tin cá nhân
               </button>
               <button
-                onClick={() => setActiveTab('password')}
+                onClick={() => setActiveTab("password")}
                 className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium transition ${
-                  activeTab === 'password'
-                    ? 'border-[#3A6FB5] text-[#3A6FB5]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                  activeTab === "password"
+                    ? "border-[#3A6FB5] text-[#3A6FB5]"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
                 <Shield className="w-5 h-5" />
@@ -314,48 +320,47 @@ const Profile = () => {
           {/* Content */}
           <div className="p-6">
             {/* Personal Information Tab */}
-            {activeTab === 'info' && (
+            {activeTab === "info" && (
               <div className="space-y-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                    {initials || 'U'}
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">{user?.fullName}</h2>
-                    <p className="text-gray-600">{user?.email}</p>
-                  </div>
-                </div>
-
                 {/* Membership Level */}
                 <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-lg p-4 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-2xl">💎</span>
+                  {/* Flex 2 bên */}
+                  <div className="flex justify-between items-center">
+                    {/* Avatar + Info */}
+                    <div className="flex items-center gap-4">
+                      <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                        {initials || "U"}
                       </div>
+
                       <div>
-                        <p className="text-sm text-gray-600">Hạng thành viên</p>
-                        <p className="text-lg font-bold text-yellow-700">
-                          {user?.membershipLevel || 'Khách hàng Bạc'}
-                        </p>
+                        <h2 className="text-xl font-bold text-gray-900">
+                          {user?.fullName}
+                        </h2>
+                        <p className="text-gray-600">{user?.email}</p>
                       </div>
                     </div>
+
+                    {/* Reward Points */}
                     <div className="text-right">
                       <p className="text-sm text-gray-600">Điểm tích lũy</p>
                       <p className="text-2xl font-bold text-[#3A6FB5]">
-                        {user?.loyaltyPoints || 0}
+                        {user?.rewardPoints}
                       </p>
                     </div>
                   </div>
+
+                  {/* Progress bar */}
                   <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-yellow-400 to-yellow-600 transition-all duration-500"
-                      style={{ width: `${Math.min(((user?.loyaltyPoints || 0) / 1000) * 100, 100)}%` }}
+                      style={{
+                        width: `${Math.min(
+                          ((user?.loyaltyPoints || 0) / 1000) * 100,
+                          100
+                        )}%`,
+                      }}
                     ></div>
                   </div>
-                  <p className="text-xs text-gray-600 mt-2 text-center">
-                    Còn {Math.max(1000 - (user?.loyaltyPoints || 0), 0)} điểm nữa để lên hạng tiếp theo
-                  </p>
                 </div>
 
                 <form onSubmit={handleInfoSubmit} className="space-y-6">
@@ -381,7 +386,8 @@ const Profile = () => {
                     <div>
                       <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                         <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                        Số điện thoại <span className="text-red-500 ml-1">*</span>
+                        Số điện thoại{" "}
+                        <span className="text-red-500 ml-1">*</span>
                       </label>
                       <input
                         type="tel"
@@ -405,7 +411,7 @@ const Profile = () => {
                       </label>
                       <input
                         type="email"
-                        value={user?.email || ''}
+                        value={user?.email || ""}
                         disabled
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
                       />
@@ -421,8 +427,8 @@ const Profile = () => {
                       type="button"
                       onClick={() => {
                         setInfoData({
-                          fullName: user?.fullName || '',
-                          phone: user?.phone || '',
+                          fullName: user?.fullName || "",
+                          phone: user?.phone || "",
                         });
                       }}
                       className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
@@ -471,12 +477,15 @@ const Profile = () => {
             )}
 
             {/* Change Password Tab */}
-            {activeTab === 'password' && (
+            {activeTab === "password" && (
               <form onSubmit={handlePasswordSubmit} className="space-y-6">
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">Đổi mật khẩu</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    Đổi mật khẩu
+                  </h3>
                   <p className="text-gray-600 text-sm">
-                    Để bảo mật tài khoản, vui lòng không chia sẻ mật khẩu cho người khác
+                    Để bảo mật tài khoản, vui lòng không chia sẻ mật khẩu cho
+                    người khác
                   </p>
                 </div>
 
@@ -488,7 +497,7 @@ const Profile = () => {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
-                      type={showPasswords.old ? 'text' : 'password'}
+                      type={showPasswords.old ? "text" : "password"}
                       name="oldPassword"
                       value={passwordData.oldPassword}
                       onChange={handlePasswordChange}
@@ -498,7 +507,7 @@ const Profile = () => {
                     />
                     <button
                       type="button"
-                      onClick={() => togglePasswordVisibility('old')}
+                      onClick={() => togglePasswordVisibility("old")}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       {showPasswords.old ? (
@@ -518,7 +527,7 @@ const Profile = () => {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
-                      type={showPasswords.new ? 'text' : 'password'}
+                      type={showPasswords.new ? "text" : "password"}
                       name="newPassword"
                       value={passwordData.newPassword}
                       onChange={handlePasswordChange}
@@ -529,7 +538,7 @@ const Profile = () => {
                     />
                     <button
                       type="button"
-                      onClick={() => togglePasswordVisibility('new')}
+                      onClick={() => togglePasswordVisibility("new")}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       {showPasswords.new ? (
@@ -547,12 +556,13 @@ const Profile = () => {
                 {/* Confirm Password */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Xác nhận mật khẩu mới <span className="text-red-500">*</span>
+                    Xác nhận mật khẩu mới{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
-                      type={showPasswords.confirm ? 'text' : 'password'}
+                      type={showPasswords.confirm ? "text" : "password"}
                       name="confirmPassword"
                       value={passwordData.confirmPassword}
                       onChange={handlePasswordChange}
@@ -563,7 +573,7 @@ const Profile = () => {
                     />
                     <button
                       type="button"
-                      onClick={() => togglePasswordVisibility('confirm')}
+                      onClick={() => togglePasswordVisibility("confirm")}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       {showPasswords.confirm ? (
@@ -596,9 +606,9 @@ const Profile = () => {
                     type="button"
                     onClick={() => {
                       setPasswordData({
-                        oldPassword: '',
-                        newPassword: '',
-                        confirmPassword: '',
+                        oldPassword: "",
+                        newPassword: "",
+                        confirmPassword: "",
                       });
                     }}
                     className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
