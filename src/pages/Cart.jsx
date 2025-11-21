@@ -58,7 +58,8 @@ const Cart = () => {
   const [itemToRemove, setItemToRemove] = useState(null);
   const [voucherCode, setVoucherCode] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [showRemoveSelectedConfirm, setShowRemoveSelectedConfirm] = useState(false);
+  const [showRemoveSelectedConfirm, setShowRemoveSelectedConfirm] =
+    useState(false);
   const [showVoucherList, setShowVoucherList] = useState(false);
 
   // State để lưu thông tin variant đã fetch
@@ -68,7 +69,7 @@ const Cart = () => {
   useEffect(() => {
     const fetchMissingProductIds = async () => {
       const itemsNeedingFetch = cartItems.filter(
-        item => !item.productId && item.variantId
+        (item) => !item.productId && item.variantId
       );
 
       if (itemsNeedingFetch.length === 0) return;
@@ -83,7 +84,7 @@ const Cart = () => {
             const response = await axios.get(
               `http://localhost:8080/api/product-variants/${item.variantId}`
             );
-            
+
             if (response.data.code === 1000) {
               return {
                 variantId: item.productVariantId,
@@ -98,7 +99,7 @@ const Cart = () => {
 
         const results = await Promise.all(fetchPromises);
         const newVariantDetails = {};
-        
+
         results.forEach((result) => {
           if (result) {
             newVariantDetails[result.variantId] = result.productId;
@@ -106,7 +107,7 @@ const Cart = () => {
         });
 
         if (Object.keys(newVariantDetails).length > 0) {
-          setVariantDetails(prev => ({ ...prev, ...newVariantDetails }));
+          setVariantDetails((prev) => ({ ...prev, ...newVariantDetails }));
         }
       } catch (error) {
         console.error("Error fetching variant details:", error);
@@ -122,12 +123,12 @@ const Cart = () => {
   const getProductId = (item) => {
     // Try item.productId first
     if (item.productId) return item.productId;
-    
+
     // Try variantDetails cache
     if (item.variantId && variantDetails[item.variantId]) {
       return variantDetails[item.variantId];
     }
-    
+
     // Fallback
     return null;
   };
@@ -192,8 +193,18 @@ const Cart = () => {
       return;
     }
 
+    // Find the item to check stock
+    const item = cartItems.find((item) => item.id === cartItemId);
+
+    if (item && newQuantity > item.stock) {
+      toast.warning(`Chỉ còn ${item.stock} sản phẩm trong kho!`);
+      return;
+    }
+
     try {
-      await dispatch(updateCartItemAPI({ cartItemId, quantity: newQuantity })).unwrap();
+      await dispatch(
+        updateCartItemAPI({ cartItemId, quantity: newQuantity })
+      ).unwrap();
       toast.success("Đã cập nhật số lượng!");
     } catch (error) {
       toast.error(error || "Không thể cập nhật số lượng");
@@ -308,45 +319,45 @@ const Cart = () => {
   };
 
   // Handle checkout
-// Handle checkout
-const handleCheckout = () => {
-  if (cartItems.length === 0) {
-    toast.info("Giỏ hàng của bạn đang trống!");
-    return;
-  }
-
-  if (selectedItems.length === 0) {
-    toast.warning("Vui lòng chọn sản phẩm cần thanh toán!");
-    return;
-  }
-
-  // Filter only selected items and enrich with productId
-  const selectedCartItems = cartItems.filter(item => 
-    selectedItems.includes(item.id)
-  ).map(item => ({
-    ...item,
-    productId: getProductId(item) || item.productId,
-    // Map to format expected by PlaceOrder
-    name: item.productName,
-    color: item.colorName,
-    size: item.sizeName,
-    image: item.imageUrl,
-    price: item.discountPrice,
-    quantity: item.quantity,
-    variantId: item.productVariantId,
-  }));
-
-  console.log('Selected cart items to checkout:', selectedCartItems);
-
-  // Navigate với state
-  navigate("/place-order", {
-    state: {
-      selectedCartItems, // Pass only selected items
-      appliedVoucher,
-      discountAmount,
+  // Handle checkout
+  const handleCheckout = () => {
+    if (cartItems.length === 0) {
+      toast.info("Giỏ hàng của bạn đang trống!");
+      return;
     }
-  });
-};
+
+    if (selectedItems.length === 0) {
+      toast.warning("Vui lòng chọn sản phẩm cần thanh toán!");
+      return;
+    }
+
+    // Filter only selected items and enrich with productId
+    const selectedCartItems = cartItems
+      .filter((item) => selectedItems.includes(item.id))
+      .map((item) => ({
+        ...item,
+        productId: getProductId(item) || item.productId,
+        // Map to format expected by PlaceOrder
+        name: item.productName,
+        color: item.colorName,
+        size: item.sizeName,
+        image: item.imageUrl,
+        price: item.discountPrice,
+        quantity: item.quantity,
+        variantId: item.productVariantId,
+      }));
+
+    console.log("Selected cart items to checkout:", selectedCartItems);
+
+    // Navigate với state
+    navigate("/place-order", {
+      state: {
+        selectedCartItems, // Pass only selected items
+        appliedVoucher,
+        discountAmount,
+      },
+    });
+  };
 
   // Get voucher type badge
   const getVoucherTypeBadge = (type) => {
@@ -388,7 +399,9 @@ const handleCheckout = () => {
       case "FIXED_AMOUNT":
         return `Giảm ${formatPrice(voucher.discountValue)}`;
       case "FREESHIP":
-        return `Miễn phí vận chuyển tối đa ${formatPrice(voucher.discountValue)}`;
+        return `Miễn phí vận chuyển tối đa ${formatPrice(
+          voucher.discountValue
+        )}`;
       default:
         return "";
     }
@@ -518,7 +531,7 @@ const handleCheckout = () => {
             {/* Items list */}
             {cartItems.map((item) => {
               const productId = getProductId(item);
-              
+
               return (
                 <div
                   key={item.id}
@@ -540,7 +553,9 @@ const handleCheckout = () => {
                     {/* Image */}
                     <div
                       className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
-                      onClick={() => productId && navigate(`/product/${productId}`)}
+                      onClick={() =>
+                        productId && navigate(`/product/${productId}`)
+                      }
                     >
                       <img
                         src={item.imageUrl}
@@ -553,7 +568,9 @@ const handleCheckout = () => {
                     <div className="flex-1">
                       <h3
                         className="font-medium text-gray-900 mb-1 hover:text-[#3A6FB5] cursor-pointer line-clamp-2"
-                        onClick={() => productId && navigate(`/product/${productId}`)}
+                        onClick={() =>
+                          productId && navigate(`/product/${productId}`)
+                        }
                       >
                         {item.productName}
                       </h3>
@@ -654,7 +671,9 @@ const handleCheckout = () => {
                       />
                       <button
                         onClick={handleApplyVoucher}
-                        disabled={!voucherCode.trim() || selectedItems.length === 0}
+                        disabled={
+                          !voucherCode.trim() || selectedItems.length === 0
+                        }
                         className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
                       >
                         Áp dụng
@@ -716,10 +735,12 @@ const handleCheckout = () => {
                                 getVoucherDescription(voucher)}
                             </p>
                             <p className="text-xs text-gray-500">
-                              Đơn tối thiểu: {formatPrice(voucher.minOrderValue)}
+                              Đơn tối thiểu:{" "}
+                              {formatPrice(voucher.minOrderValue)}
                             </p>
                             <p className="text-xs text-gray-500">
-                              Còn lại: {voucher.remainingUses}/{voucher.usageLimit}
+                              Còn lại: {voucher.remainingUses}/
+                              {voucher.usageLimit}
                             </p>
                           </div>
                         </div>
@@ -822,7 +843,8 @@ const handleCheckout = () => {
               Xóa sản phẩm đã chọn?
             </h3>
             <p className="text-gray-600 mb-6">
-              Bạn có chắc muốn xóa {selectedItems.length} sản phẩm đã chọn không?
+              Bạn có chắc muốn xóa {selectedItems.length} sản phẩm đã chọn
+              không?
             </p>
             <div className="flex gap-3">
               <button

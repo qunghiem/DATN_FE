@@ -13,13 +13,12 @@ import {
   X,
 } from "lucide-react";
 import axios from "axios";
-// import { addToCart } from "../features/cart/cartSlice";
 import { toast } from "react-toastify";
 import {
   toggleWishlist,
   selectIsInWishlist,
 } from "../features/wishlist/wishlistSlice";
-import { addToCartAPI, fetchCart } from "../features/cart/cartSlice";
+import { addToCartAPI, selectCartItems } from "../features/cart/cartSlice";
 import ProductReviews from "../components/ProductReviews";
 
 const Product = () => {
@@ -40,8 +39,9 @@ const Product = () => {
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
-const [activeTab, setActiveTab] = useState('description');
+  const [activeTab, setActiveTab] = useState("description");
 
+  const cartItems = useSelector(selectCartItems);
   // wishlist
   const { isAuthenticated } = useSelector((state) => state.auth);
   const isInWishlist = useSelector(selectIsInWishlist(Number(productId)));
@@ -202,10 +202,25 @@ const [activeTab, setActiveTab] = useState('description');
 
   const handleQuantityChange = (type) => {
     if (type === "increase") {
-      if (selectedVariant?.stock && quantity >= selectedVariant.stock) {
-        toast.error(`Chỉ còn ${selectedVariant.stock} sản phẩm trong kho!`);
+      if (!selectedVariant) return;
+
+      // Kiểm tra số lượng đã có trong giỏ
+      const existingCartItem = cartItems.find(
+        (item) => item.productVariantId === selectedVariant.id
+      );
+      const currentQuantityInCart = existingCartItem
+        ? existingCartItem.quantity
+        : 0;
+      const availableToAdd = selectedVariant.stock - currentQuantityInCart;
+
+      if (quantity >= availableToAdd) {
+        toast.warning(
+          `Chỉ có thể thêm tối đa ${availableToAdd} sản phẩm! ` +
+            `(Đã có ${currentQuantityInCart} trong giỏ hàng)`
+        );
         return;
       }
+
       setQuantity(quantity + 1);
     } else if (type === "decrease" && quantity > 1) {
       setQuantity(quantity - 1);
@@ -229,8 +244,33 @@ const [activeTab, setActiveTab] = useState('description');
       return;
     }
 
+    // Kiểm tra số lượng đã có trong giỏ hàng
+    const existingCartItem = cartItems.find(
+      (item) => item.productVariantId === selectedVariant.id
+    );
+
+    const currentQuantityInCart = existingCartItem
+      ? existingCartItem.quantity
+      : 0;
+    const totalQuantityAfterAdd = currentQuantityInCart + quantity;
+
+    // Kiểm tra xem tổng số lượng có vượt quá stock không
+    if (totalQuantityAfterAdd > selectedVariant.stock) {
+      const remainingStock = selectedVariant.stock - currentQuantityInCart;
+
+      if (remainingStock <= 0) {
+        toast.error("Bạn đã thêm tối đa số lượng có sẵn vào giỏ hàng!");
+        return;
+      }
+
+      toast.error(
+        `Chỉ có thể thêm tối đa ${remainingStock} sản phẩm nữa. ` +
+          `(Đã có ${currentQuantityInCart} trong giỏ hàng)`
+      );
+      return;
+    }
+
     try {
-      // Gọi API để thêm vào giỏ hàng
       await dispatch(
         addToCartAPI({
           productId: product.id,
@@ -239,7 +279,10 @@ const [activeTab, setActiveTab] = useState('description');
         })
       ).unwrap();
 
-      toast.success("Đã thêm vào giỏ hàng!");
+      toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng!`);
+
+      // Reset quantity về 1 sau khi thêm thành công
+      setQuantity(1);
     } catch (error) {
       toast.error(error || "Không thể thêm vào giỏ hàng");
     }
@@ -262,8 +305,32 @@ const [activeTab, setActiveTab] = useState('description');
       return;
     }
 
+    // Kiểm tra số lượng đã có trong giỏ hàng
+    const existingCartItem = cartItems.find(
+      (item) => item.productVariantId === selectedVariant.id
+    );
+
+    const currentQuantityInCart = existingCartItem
+      ? existingCartItem.quantity
+      : 0;
+    const totalQuantityAfterAdd = currentQuantityInCart + quantity;
+
+    if (totalQuantityAfterAdd > selectedVariant.stock) {
+      const remainingStock = selectedVariant.stock - currentQuantityInCart;
+
+      if (remainingStock <= 0) {
+        toast.error("Bạn đã thêm tối đa số lượng có sẵn vào giỏ hàng!");
+        return;
+      }
+
+      toast.error(
+        `Chỉ có thể thêm tối đa ${remainingStock} sản phẩm nữa. ` +
+          `(Đã có ${currentQuantityInCart} trong giỏ hàng)`
+      );
+      return;
+    }
+
     try {
-      // Gọi API để thêm vào giỏ hàng
       await dispatch(
         addToCartAPI({
           productId: product.id,
@@ -611,12 +678,35 @@ const [activeTab, setActiveTab] = useState('description');
 
             {/* Stock info */}
             {selectedVariant && (
-              <div className="text-sm text-gray-600">
-                Còn lại:{" "}
-                <span className="font-semibold text-green-600">
-                  {selectedVariant.stock}
-                </span>{" "}
-                sản phẩm
+              <div className="text-sm">
+                {(() => {
+                  const existingCartItem = cartItems.find(
+                    (item) => item.productVariantId === selectedVariant.id
+                  );
+                  const currentQuantityInCart = existingCartItem
+                    ? existingCartItem.quantity
+                    : 0;
+                  const availableToAdd =
+                    selectedVariant.stock - currentQuantityInCart;
+
+                  return (
+                    <>
+                      <span className="text-gray-600">
+                        Kho còn:{" "}
+                        <span className="font-semibold text-green-600">
+                          {selectedVariant.stock}
+                        </span>{" "}
+                        sản phẩm
+                      </span>
+                      {currentQuantityInCart > 0 && (
+                        <span className="text-orange-600 ml-2">
+                          (Đã có {currentQuantityInCart} trong giỏ, có thể thêm{" "}
+                          {availableToAdd})
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
 
@@ -637,7 +727,18 @@ const [activeTab, setActiveTab] = useState('description');
                   onClick={() => handleQuantityChange("increase")}
                   className="px-4 py-2 hover:bg-gray-100 transition"
                   disabled={
-                    selectedVariant && quantity >= selectedVariant.stock
+                    !selectedVariant ||
+                    (() => {
+                      const existingCartItem = cartItems.find(
+                        (item) => item.productVariantId === selectedVariant?.id
+                      );
+                      const currentQuantityInCart = existingCartItem
+                        ? existingCartItem.quantity
+                        : 0;
+                      const availableToAdd =
+                        (selectedVariant?.stock || 0) - currentQuantityInCart;
+                      return quantity >= availableToAdd;
+                    })()
                   }
                 >
                   <Plus className="w-4 h-4" />
