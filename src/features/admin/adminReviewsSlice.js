@@ -8,31 +8,65 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// Fetch all reviews with pagination
+// Fetch all reviews with pagination and filters
 export const fetchAllReviews = createAsyncThunk(
   'adminReviews/fetchAll',
-  async ({ page = 0, size = 10, rating = null, productId = null }, { rejectWithValue }) => {
+  async ({ page = 0, size = 10, rating = null }, { rejectWithValue }) => {
     try {
+      let url;
       const params = new URLSearchParams({ page, size });
-      if (rating) params.append('rating', rating);
       
-      // Nếu có productId, sử dụng endpoint product-specific
-      // Ngược lại, sử dụng endpoint admin để lấy tất cả reviews
-      let url = productId 
-        ? `${API_URL}/product/${productId}`
-        : `${API_URL}/admin`;
+      // Nếu có rating filter, sử dụng endpoint /admin/filter
+      // Ngược lại, sử dụng endpoint /admin để lấy tất cả reviews
+      if (rating) {
+        params.append('rating', rating);
+        url = `${API_URL}/admin/filter`;
+      } else {
+        url = `${API_URL}/admin`;
+      }
       
       const response = await axios.get(`${url}?${params.toString()}`, {
         headers: getAuthHeader(),
       });
       
       if (response.data.code === 1000) {
+        const result = response.data.result;
         return {
-          reviews: response.data.result.data || [],
-          totalPages: response.data.result.totalPages || 0,
-          totalElements: response.data.result.totalElements || 0,
-          currentPage: response.data.result.page || 0,
-          averageRating: response.data.result.extra?.averageRating || 0,
+          reviews: result.data || [],
+          totalPages: result.totalPages || 0,
+          totalElements: result.totalElements || 0,
+          currentPage: result.page || 0,
+          // Khi filter theo rating, extra có thể là null
+          averageRating: result.extra?.averageRating || 0,
+        };
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
+// Fetch reviews by product ID
+export const fetchReviewsByProduct = createAsyncThunk(
+  'adminReviews/fetchByProduct',
+  async ({ productId, page = 0, size = 10 }, { rejectWithValue }) => {
+    try {
+      const params = new URLSearchParams({ page, size });
+      const url = `${API_URL}/product/${productId}`;
+      
+      const response = await axios.get(`${url}?${params.toString()}`, {
+        headers: getAuthHeader(),
+      });
+      
+      if (response.data.code === 1000) {
+        const result = response.data.result;
+        return {
+          reviews: result.data || [],
+          totalPages: result.totalPages || 0,
+          totalElements: result.totalElements || 0,
+          currentPage: result.page || 0,
+          averageRating: result.extra?.averageRating || 0,
         };
       }
       return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
@@ -97,6 +131,23 @@ const adminReviewsSlice = createSlice({
         state.averageRating = action.payload.averageRating;
       })
       .addCase(fetchAllReviews.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // Fetch reviews by product
+      .addCase(fetchReviewsByProduct.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchReviewsByProduct.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.reviews = action.payload.reviews;
+        state.totalPages = action.payload.totalPages;
+        state.totalElements = action.payload.totalElements;
+        state.currentPage = action.payload.currentPage;
+        state.averageRating = action.payload.averageRating;
+      })
+      .addCase(fetchReviewsByProduct.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })

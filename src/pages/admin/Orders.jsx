@@ -19,6 +19,7 @@ import {
   Clock,
   Filter,
   X,
+  Calendar,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -58,6 +59,17 @@ const AdminOrders = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const [orderStats, setOrderStats] = useState({
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0,
+  });
 
   // Debounce search term
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
@@ -89,9 +101,71 @@ const AdminOrders = () => {
         size: pageSize,
         status: statusFilter || null,
         keyword: debouncedSearchTerm,
+        fromDate: fromDate || null,
+        toDate: toDate || null,
       })
     );
-  }, [dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm]);
+  }, [dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm, fromDate, toDate]);
+
+  // Fetch stats separately for each status
+  useEffect(() => {
+    const fetchStats = async () => {
+      const token = localStorage.getItem("access_token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
+      try {
+        // Fetch count for each status (including total without status filter)
+        const statuses = [null, "PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
+        
+        const statsPromises = statuses.map(async (status) => {
+          const params = new URLSearchParams();
+          params.append("page", 0);
+          params.append("size", 1); // Chỉ cần totalElements, không cần data
+          
+          if (status) {
+            params.append("status", status);
+          }
+          if (debouncedSearchTerm && debouncedSearchTerm.trim() !== "") {
+            params.append("keyword", debouncedSearchTerm.trim());
+          }
+          if (fromDate) {
+            params.append("fromDate", fromDate);
+          }
+          if (toDate) {
+            params.append("toDate", toDate);
+          }
+          
+          const res = await fetch(
+            `http://localhost:8080/api/orders/search?${params.toString()}`,
+            { headers }
+          );
+          const data = await res.json();
+          
+          console.log(`Stats for ${status || 'ALL'}:`, data.result?.totalElements);
+          
+          return { 
+            status: status || 'total', 
+            count: data.result?.totalElements || 0 
+          };
+        });
+        
+        const statsResults = await Promise.all(statsPromises);
+        
+        setOrderStats({
+          total: statsResults.find(s => s.status === "total")?.count || 0,
+          pending: statsResults.find(s => s.status === "PENDING")?.count || 0,
+          confirmed: statsResults.find(s => s.status === "CONFIRMED")?.count || 0,
+          shipped: statsResults.find(s => s.status === "SHIPPED")?.count || 0,
+          delivered: statsResults.find(s => s.status === "DELIVERED")?.count || 0,
+          cancelled: statsResults.find(s => s.status === "CANCELLED")?.count || 0,
+        });
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+    
+    fetchStats();
+  }, [debouncedSearchTerm, fromDate, toDate]);
 
   // Handle messages
   useEffect(() => {
@@ -109,10 +183,12 @@ const AdminOrders = () => {
           size: pageSize,
           status: statusFilter || null,
           keyword: debouncedSearchTerm,
+          fromDate: fromDate || null,
+          toDate: toDate || null,
         })
       );
     }
-  }, [error, success, dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm]);
+  }, [error, success, dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm, fromDate, toDate]);
 
   const handleStatusChange = (orderId, newStatus) => {
     if (
@@ -133,6 +209,8 @@ const AdminOrders = () => {
         size: pageSize, 
         status: statusFilter || null,
         keyword: debouncedSearchTerm,
+        fromDate: fromDate || null,
+        toDate: toDate || null,
       })
     );
   };
@@ -146,6 +224,8 @@ const AdminOrders = () => {
         size: pageSize, 
         status: status || null,
         keyword: debouncedSearchTerm,
+        fromDate: fromDate || null,
+        toDate: toDate || null,
       })
     );
   };
@@ -154,6 +234,38 @@ const AdminOrders = () => {
     const value = e.target.value;
     setSearchTerm(value);
     dispatch(setSearchKeyword(value));
+  };
+
+  const handleDateFilterApply = () => {
+    if (fromDate && toDate && fromDate > toDate) {
+      toast.error("Ngày bắt đầu không được lớn hơn ngày kết thúc");
+      return;
+    }
+    dispatch(
+      fetchAllOrders({ 
+        page: 0, 
+        size: pageSize, 
+        status: statusFilter || null,
+        keyword: debouncedSearchTerm,
+        fromDate: fromDate || null,
+        toDate: toDate || null,
+      })
+    );
+  };
+
+  const handleClearDateFilter = () => {
+    setFromDate("");
+    setToDate("");
+    dispatch(
+      fetchAllOrders({ 
+        page: 0, 
+        size: pageSize, 
+        status: statusFilter || null,
+        keyword: debouncedSearchTerm,
+        fromDate: null,
+        toDate: null,
+      })
+    );
   };
 
   const getStatusColor = (status) => {
@@ -187,16 +299,6 @@ const AdminOrders = () => {
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
-  // Calculate stats
-  const stats = {
-    total: orders.length,
-    pending: orders.filter((o) => o.status === "PENDING").length,
-    confirmed: orders.filter((o) => o.status === "CONFIRMED").length,
-    shipped: orders.filter((o) => o.status === "SHIPPED").length,
-    delivered: orders.filter((o) => o.status === "DELIVERED").length,
-    cancelled: orders.filter((o) => o.status === "CANCELLED").length,
-  };
-
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-800 mb-6">
@@ -209,7 +311,7 @@ const AdminOrders = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 text-sm">Tổng đơn</p>
-              <p className="text-2xl font-bold text-gray-800">{totalElements}</p>
+              <p className="text-2xl font-bold text-gray-800">{orderStats.total}</p>
             </div>
             <Package className="w-8 h-8 text-gray-400" />
           </div>
@@ -219,7 +321,7 @@ const AdminOrders = () => {
             <div>
               <p className="text-gray-600 text-sm">Chờ xác nhận</p>
               <p className="text-2xl font-bold text-yellow-700">
-                {stats.pending}
+                {orderStats.pending}
               </p>
             </div>
             <Clock className="w-8 h-8 text-yellow-500" />
@@ -230,7 +332,7 @@ const AdminOrders = () => {
             <div>
               <p className="text-gray-600 text-sm">Đã xác nhận</p>
               <p className="text-2xl font-bold text-blue-700">
-                {stats.confirmed}
+                {orderStats.confirmed}
               </p>
             </div>
             <CheckCircle className="w-8 h-8 text-blue-500" />
@@ -241,7 +343,7 @@ const AdminOrders = () => {
             <div>
               <p className="text-gray-600 text-sm">Đang giao</p>
               <p className="text-2xl font-bold text-purple-700">
-                {stats.shipped}
+                {orderStats.shipped}
               </p>
             </div>
             <Truck className="w-8 h-8 text-purple-500" />
@@ -252,7 +354,7 @@ const AdminOrders = () => {
             <div>
               <p className="text-gray-600 text-sm">Đã giao</p>
               <p className="text-2xl font-bold text-green-700">
-                {stats.delivered}
+                {orderStats.delivered}
               </p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-500" />
@@ -263,7 +365,7 @@ const AdminOrders = () => {
             <div>
               <p className="text-gray-600 text-sm">Đã hủy</p>
               <p className="text-2xl font-bold text-red-700">
-                {stats.cancelled}
+                {orderStats.cancelled}
               </p>
             </div>
             <XCircle className="w-8 h-8 text-red-500" />
@@ -273,7 +375,7 @@ const AdminOrders = () => {
 
       {/* Filter and Search */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
@@ -310,9 +412,83 @@ const AdminOrders = () => {
             </select>
           </div>
         </div>
-        {searchTerm && (
-          <div className="mt-2 text-sm text-gray-600">
-            Đang tìm kiếm: <span className="font-medium">"{searchTerm}"</span>
+
+        {/* Date Filter Section */}
+        <div className="border-t pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={() => setShowDateFilter(!showDateFilter)}
+              className="flex items-center gap-2 text-gray-700 hover:text-sky-600 font-medium"
+            >
+              <Calendar className="w-5 h-5" />
+              <span>Lọc theo ngày</span>
+              <ChevronRight className={`w-4 h-4 transition-transform ${showDateFilter ? 'rotate-90' : ''}`} />
+            </button>
+            {(fromDate || toDate) && (
+              <button
+                onClick={handleClearDateFilter}
+                className="text-sm text-red-600 hover:text-red-700 font-medium"
+              >
+                Xóa bộ lọc
+              </button>
+            )}
+          </div>
+          
+          {showDateFilter && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Từ ngày
+                </label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Đến ngày
+                </label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={handleDateFilterApply}
+                  className="w-full px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition font-medium"
+                >
+                  Áp dụng
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Active Filters Display */}
+        {(searchTerm || fromDate || toDate) && (
+          <div className="mt-3 flex flex-wrap gap-2 items-center">
+            <span className="text-sm text-gray-600">Đang lọc:</span>
+            {searchTerm && (
+              <span className="px-3 py-1 bg-sky-100 text-sky-700 rounded-full text-sm font-medium">
+                Từ khóa: "{searchTerm}"
+              </span>
+            )}
+            {fromDate && (
+              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                Từ: {new Date(fromDate).toLocaleDateString('vi-VN')}
+              </span>
+            )}
+            {toDate && (
+              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                Đến: {new Date(toDate).toLocaleDateString('vi-VN')}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -359,7 +535,9 @@ const AdminOrders = () => {
                         colSpan="7"
                         className="text-center py-12 text-gray-500"
                       >
-                        {searchTerm ? `Không tìm thấy đơn hàng nào với từ khóa "${searchTerm}"` : "Không có đơn hàng nào"}
+                        {searchTerm || fromDate || toDate ? 
+                          "Không tìm thấy đơn hàng nào với bộ lọc đã chọn" : 
+                          "Không có đơn hàng nào"}
                       </td>
                     </tr>
                   ) : (
