@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Star, ChevronDown, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, ChevronDown, Filter, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { fetchProductReviews, clearReviews } from '../features/reviews/reviewsSlice';
 
 const ProductReviews = ({ productId }) => {
@@ -94,9 +94,6 @@ const ProductReviews = ({ productId }) => {
   };
 
   const renderPagination = () => {
-    // Debug: Log để kiểm tra
-    console.log('Total Pages:', totalPages, 'Current Page:', page);
-    
     if (!totalPages || totalPages <= 1) return null;
 
     const pages = [];
@@ -346,41 +343,65 @@ const ProductReviews = ({ productId }) => {
         ) : (
           <>
             {reviews.map((review) => (
-              <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
-                {/* Rating & Date */}
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`w-5 h-5 ${
-                          star <= review.rating
-                            ? 'fill-yellow-400 text-yellow-400'
-                            : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
+              <div key={review.id} className="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
+                {/* User Info & Date Header */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    {/* User Avatar */}
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3A6FB5] to-[#2d5a94] flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+                      {review.fullName ? review.fullName.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    
+                    {/* User Name & Verified Badge */}
+                    <div>
+                      <h4 className="font-semibold text-gray-900 text-base">
+                        {review.fullName || 'Người dùng ẩn danh'}
+                      </h4>
+                      {review.orderId && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                            ✓ Đã mua hàng
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  
+                  {/* Date */}
                   <span className="text-sm text-gray-500">
                     {formatDate(review.createdAt)}
                   </span>
                 </div>
 
+                {/* Rating */}
+                <div className="flex items-center gap-1 mb-3">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`w-5 h-5 ${
+                        star <= review.rating
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+
                 {/* Variant Info */}
                 {(review.color || review.size) && (
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-3 bg-gray-50 px-3 py-2 rounded-md">
                     <span className="text-sm text-gray-600">
-                      Phân loại: 
-                      {review.color && <span className="font-medium"> {review.color}</span>}
-                      {review.color && review.size && ' / '}
-                      {review.size && <span className="font-medium">{review.size}</span>}
+                      <span className="font-medium text-gray-700">Phân loại:</span>
+                      {review.color && <span className="ml-1 font-medium text-gray-800">{review.color}</span>}
+                      {review.color && review.size && <span className="mx-1 text-gray-400">•</span>}
+                      {review.size && <span className="font-medium text-gray-800">{review.size}</span>}
                     </span>
                   </div>
                 )}
 
                 {/* Title */}
                 {review.title && (
-                  <h4 className="font-semibold text-gray-900 mb-2">{review.title}</h4>
+                  <h5 className="font-semibold text-gray-900 mb-2 text-base">{review.title}</h5>
                 )}
 
                 {/* Comment */}
@@ -388,12 +409,6 @@ const ProductReviews = ({ productId }) => {
               </div>
             ))}
 
-            {/* Pagination - Always show for testing
-            <div className="flex items-center justify-center gap-2 mt-8 border-t pt-6">
-              <div className="text-sm text-gray-600 mb-2">
-                Debug: totalPages={totalPages}, currentPage={page}, totalElements={totalElements}
-              </div>
-            </div> */}
             {renderPagination()}
           </>
         )}

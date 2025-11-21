@@ -9,6 +9,7 @@ const Sidebar = () => {
     { name: "Thương hiệu", path: "/admin/brands" },
     { name: "Danh mục", path: "/admin/categories" },
     { name: "Voucher", path: "/admin/vouchers" },
+    { name: "Đánh giá", path: "/admin/reviews" },
   ];
 
   return (

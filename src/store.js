@@ -13,6 +13,7 @@ import voucherReducer from './features/vouchers/voucherSlice';
 import chatReducer from './features/chat/chatSlice';
 import adminOrdersReducer from './features/admin/adminOrdersSlice';
 import reviewsReducer from './features/reviews/reviewsSlice';
+import adminReviewsReducer from './features/admin/adminReviewsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -29,6 +30,7 @@ export const store = configureStore({
     vouchers: voucherReducer,
     chat: chatReducer,
     reviews: reviewsReducer,
+    adminReviews: adminReviewsReducer,
   },
 });
 
