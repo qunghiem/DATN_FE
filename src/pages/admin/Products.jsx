@@ -41,22 +41,28 @@ const Products = () => {
     sizes = [],
   } = useSelector((state) => state.metadata || {});
 
+  // Lấy thông tin user để check role
+  const { user } = useSelector((state) => state.auth);
+  const isOwner = user?.role === "OWNER";
+
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [modalStep, setModalStep] = useState(1); // 1: Product Info, 2: Variants, 3: Edit Variants
+  const [modalStep, setModalStep] = useState(1);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingVariantData, setEditingVariantData] = useState({});
+
   // Product Form Data
   const [productForm, setProductForm] = useState({
     name: "",
     description: "",
     price: "",
+    costPrice: "", // Giá gốc - chỉ cho OWNER
     discountPercent: 0,
     brandId: "",
     categoryIds: [],
     labelIds: [],
     images: [{ imageUrl: "", altText: "" }],
   });
+
   // Variant Form Data
   const [variants, setVariants] = useState([
     {
@@ -67,7 +73,6 @@ const Products = () => {
     },
   ]);
 
-  // Edit variant data - chỉ lưu số lượng import thêm
   const [editingVariants, setEditingVariants] = useState({});
 
   useEffect(() => {
@@ -97,11 +102,9 @@ const Products = () => {
       }
 
       if (success.includes("Cập nhật tồn kho thành công")) {
-        // Refresh variants list
         if (currentProduct) {
           dispatch(fetchProductVariants(currentProduct.id));
         }
-        // Clear editing state for this variant
         setEditingVariants({});
       }
     }
@@ -112,6 +115,7 @@ const Products = () => {
       name: "",
       description: "",
       price: "",
+      costPrice: "",
       discountPercent: 0,
       brandId: "",
       categoryIds: [],
@@ -132,35 +136,62 @@ const Products = () => {
     }
   };
 
-  const handleEdit = (product) => {
-    setProductForm({
-      name: product.name || "",
-      description: product.description || "",
-      price: product.price?.price || product.price || 0,
-      discountPercent:
-        product.price?.discount_percent || product.discountPercent || 0,
-      brandId: product.brandId || product.brand?.id || "",
-      categoryIds:
-        product.categoryIds || product.categories?.map((c) => c.id) || [],
-      labelIds: product.labelIds || product.labels?.map((l) => l.id) || [],
-      images: product.images?.map((img) => ({
-        id: img.id || null,
-        imageUrl: img.image_url || "",
-        altText: img.alt_text || "",
-      })) || [{ imageUrl: "", altText: "" }],
-    });
+const handleEdit = async (product) => {
+  try {
+    const token = localStorage.getItem('access_token'); // ← SỬA ĐÂY
+    const response = await fetch(
+      `http://localhost:8080/api/products/${product.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    const data = await response.json();
 
-    dispatch(setCurrentProduct(product));
-    setIsEditMode(true);
-    setModalStep(1);
-    setShowModal(true);
-  };
+    if (data.code === 1000) {
+      const productDetail = data.result;
+
+      setProductForm({
+        name: productDetail.name || "",
+        description: productDetail.description || "",
+        price: productDetail.price?.price || 0,
+        costPrice: productDetail.price?.cost_price || "", // ← Đúng rồi
+        discountPercent: productDetail.price?.discount_percent || 0,
+        brandId: productDetail.brandId || productDetail.brand?.id || "",
+        categoryIds:
+          productDetail.categoryIds ||
+          productDetail.categories?.map((c) => c.id) ||
+          [],
+        labelIds:
+          productDetail.labelIds ||
+          productDetail.labels?.map((l) => l.id) ||
+          [],
+        images: productDetail.images?.map((img) => ({
+          id: img.id || null,
+          imageUrl: img.image_url || "",
+          altText: img.alt_text || "",
+        })) || [{ imageUrl: "", altText: "" }],
+      });
+
+      dispatch(setCurrentProduct(productDetail));
+      setIsEditMode(true);
+      setModalStep(1);
+      setShowModal(true);
+    } else {
+      toast.error(data.message || "Không thể lấy thông tin sản phẩm");
+    }
+  } catch (error) {
+    console.error("Error fetching product detail:", error);
+    toast.error("Lỗi khi lấy thông tin sản phẩm");
+  }
+};
 
   const handleEditVariants = (product) => {
     dispatch(setCurrentProduct(product));
     dispatch(fetchProductVariants(product.id));
     setIsEditMode(true);
-    setModalStep(3); // Step 3 là Edit Variants
+    setModalStep(3);
     setShowModal(true);
   };
 
@@ -212,6 +243,21 @@ const Products = () => {
       return;
     }
 
+    // Validate giá gốc cho OWNER
+    if (
+      isOwner &&
+      (!productForm.costPrice || Number(productForm.costPrice) <= 0)
+    ) {
+      toast.error("Vui lòng nhập giá gốc hợp lệ");
+      return;
+    }
+
+    // Validate giá bán phải lớn hơn giá gốc (nếu là OWNER)
+    if (isOwner && Number(productForm.price) <= Number(productForm.costPrice)) {
+      toast.error("Giá bán phải lớn hơn giá gốc");
+      return;
+    }
+
     const payload = {
       ...productForm,
       price: Number(productForm.price),
@@ -220,6 +266,11 @@ const Products = () => {
       categoryIds: productForm.categoryIds.map(Number),
       labelIds: productForm.labelIds.map(Number),
     };
+
+    // Chỉ thêm costPrice nếu là OWNER
+    if (isOwner) {
+      payload.costPrice = Number(productForm.costPrice);
+    }
 
     if (!currentProduct || !isEditMode) {
       dispatch(createProduct(payload));
@@ -290,16 +341,7 @@ const Products = () => {
     dispatch(createProductVariant(payload));
   };
 
-  // Handle edit existing variant - chỉ cho phép thêm tồn kho
-  const handleImportStockChange = (variantId, value) => {
-    setEditingVariants((prev) => ({
-      ...prev,
-      [variantId]: value,
-    }));
-  };
-
   const handleUpdateVariant = (variantId, formData) => {
-    // Validation
     if (!formData.colorId || !formData.sizeId || !formData.stock) {
       toast.error("Vui lòng điền đầy đủ thông tin biến thể");
       return;
@@ -347,7 +389,10 @@ const Products = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Quản lý sản phẩm</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          Quản lý sản phẩm{" "}
+          {isOwner && <span className="text-sm text-blue-600">(Owner)</span>}
+        </h1>
         <button
           onClick={() => {
             resetForm();
@@ -391,12 +436,22 @@ const Products = () => {
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">
                     Thương hiệu
                   </th>
+                  {isOwner && (
+                    <th className="text-left py-3 px-4 text-gray-600 font-medium">
+                      Giá gốc
+                    </th>
+                  )}
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">
-                    Giá
+                    Giá bán
                   </th>
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">
                     Giảm giá
                   </th>
+                  {isOwner && (
+                    <th className="text-left py-3 px-4 text-gray-600 font-medium">
+                      Lợi nhuận
+                    </th>
+                  )}
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">
                     Hành động
                   </th>
@@ -405,54 +460,91 @@ const Products = () => {
               <tbody>
                 {filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="text-center py-12 text-gray-500">
+                    <td
+                      colSpan={isOwner ? "7" : "5"}
+                      className="text-center py-12 text-gray-500"
+                    >
                       Không tìm thấy sản phẩm nào
                     </td>
                   </tr>
                 ) : (
-                  filteredProducts.map((product) => (
-                    <tr key={product.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">{product.name}</td>
-                      <td className="py-3 px-4">
-                        {product.brand?.name || "N/A"}
-                      </td>
-                      <td className="py-3 px-4">
-                        {product.price?.price?.toLocaleString() ||
-                          product.price?.toLocaleString() ||
-                          0}{" "}
-                        ₫
-                      </td>
-                      <td className="py-3 px-4">
-                        {product.price?.discount_percent ||
-                          product.discountPercent ||
-                          0}
-                        %
-                      </td>
-                      <td className="py-3 px-4 flex gap-2">
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                          title="Sửa sản phẩm"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleEditVariants(product)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded transition"
-                          title="Sửa biến thể"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded transition"
-                          title="Xóa sản phẩm"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  filteredProducts.map((product) => {
+                    const price = product.price?.price || product.price || 0;
+                    const costPrice =
+                      product.costPrice || product.price?.costPrice || 0;
+                    const profit = price - costPrice;
+                    const profitPercent =
+                      costPrice > 0
+                        ? ((profit / costPrice) * 100).toFixed(1)
+                        : 0;
+
+                    return (
+                      <tr
+                        key={product.id}
+                        className="border-b hover:bg-gray-50"
+                      >
+                        <td className="py-3 px-4 font-medium">
+                          {product.name}
+                        </td>
+                        <td className="py-3 px-4">
+                          {product.brand?.name || "N/A"}
+                        </td>
+                        {isOwner && (
+  <td className="py-3 px-4 text-gray-600">
+    {product.price?.cost_price 
+      ? product.price.cost_price.toLocaleString() 
+      : "N/A"} ₫
+  </td>
+)}
+                        <td className="py-3 px-4 font-semibold">
+                          {price.toLocaleString()} ₫
+                        </td>
+                        <td className="py-3 px-4">
+                          {product.price?.discount_percent ||
+                            product.discountPercent ||
+                            0}
+                          %
+                        </td>
+                        {isOwner && (
+                          <td className="py-3 px-4">
+                            <span
+                              className={`font-semibold ${
+                                profit > 0 ? "text-green-600" : "text-red-600"
+                              }`}
+                            >
+                              {profit.toLocaleString()} ₫
+                            </span>
+                            <span className="text-xs text-gray-500 ml-1">
+                              ({profitPercent}%)
+                            </span>
+                          </td>
+                        )}
+                        <td className="py-3 px-4 flex gap-2">
+                          <button
+                            onClick={() => handleEdit(product)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                            title="Sửa sản phẩm"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleEditVariants(product)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded transition"
+                            title="Sửa biến thể"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(product.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                            title="Xóa sản phẩm"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -476,6 +568,7 @@ const Products = () => {
           labels={labels}
           isLoading={isLoading}
           isEditMode={isEditMode}
+          isOwner={isOwner}
           onClose={() => {
             setShowModal(false);
             resetForm();
@@ -537,6 +630,7 @@ const ProductFormModal = ({
   labels,
   isLoading,
   isEditMode,
+  isOwner,
   onClose,
 }) => (
   <div className="fixed inset-0 bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -544,6 +638,9 @@ const ProductFormModal = ({
       <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
         <h2 className="text-2xl font-bold">
           {isEditMode ? "Sửa sản phẩm" : "Bước 1: Thông tin sản phẩm"}
+          {isOwner && (
+            <span className="text-sm text-blue-600 ml-2">(Owner Mode)</span>
+          )}
         </h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
           <X className="w-6 h-6" />
@@ -567,7 +664,7 @@ const ProductFormModal = ({
 
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mô tả *
+              Mô tả
             </label>
             <textarea
               value={productForm.description}
@@ -576,13 +673,45 @@ const ProductFormModal = ({
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
               rows="3"
-              required
             />
           </div>
 
+          {/* Giá gốc - CHỈ hiển thị cho OWNER */}
+          {isOwner && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Giá gốc (Giá nhập) *
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={productForm.costPrice}
+                  onChange={(e) =>
+                    handleProductChange("costPrice", e.target.value)
+                  }
+                  className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-blue-50"
+                  required
+                  min="0"
+                  placeholder="Nhập giá nhập vào"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                  ₫
+                </span>
+              </div>
+              <p className="text-xs text-blue-600 mt-1">
+                Giá nhập sản phẩm từ nhà cung cấp
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Giá *
+              Giá bán *{" "}
+              {isOwner && (
+                <span className="text-xs text-gray-500">
+                  (phải lớn hơn giá gốc)
+                </span>
+              )}
             </label>
             <input
               type="number"
@@ -590,10 +719,26 @@ const ProductFormModal = ({
               onChange={(e) => handleProductChange("price", e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
               required
+              min={isOwner ? Number(productForm.costPrice) + 1 : 0}
             />
+            {isOwner && productForm.costPrice && productForm.price && (
+              <p className="text-xs text-green-600 mt-1">
+                Lợi nhuận dự kiến:{" "}
+                {(
+                  Number(productForm.price) - Number(productForm.costPrice)
+                ).toLocaleString()}{" "}
+                ₫ (
+                {(
+                  ((Number(productForm.price) - Number(productForm.costPrice)) /
+                    Number(productForm.costPrice)) *
+                  100
+                ).toFixed(1)}
+                %)
+              </p>
+            )}
           </div>
 
-          <div>
+          <div className={isOwner ? "md:col-span-2" : ""}>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Giảm giá (%)
             </label>
@@ -981,7 +1126,6 @@ const EditVariantsModal = ({
 
   const saveEdit = (variantId) => {
     handleUpdateVariant(variantId, editForm);
-
     cancelEdit();
   };
 

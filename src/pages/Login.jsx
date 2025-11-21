@@ -68,10 +68,15 @@ const Login = () => {
       const user = JSON.parse(localStorage.getItem("user"));
       console.log(user?.role);
       if (user?.role === "ADMIN") {
-        navigate("/admin/products"); // Admin → dashboard admin
-      } else if (user?.role === "EMPLOYEE") {
+        navigate("/admin"); // Admin → dashboard admin
+      } 
+      else if (user?.role === "OWNER") {
+        navigate("/admin"); // OWNER → giao diện admin
+      }
+      else if (user?.role === "EMPLOYEE") {
         navigate("/employee/chat"); // Employee → giao diện chat
-      } else {
+      }
+       else {
         navigate("/"); // Customer → trang chủ
       }
     }
@@ -102,8 +107,12 @@ const Login = () => {
     if (login.fulfilled.match(result)) {
       const user = result.payload.user;
       if (user?.role === "ADMIN") {
-        navigate("/admin/products");
-      } else if (user?.role === "EMPLOYEE") {
+        navigate("/admin");
+      } 
+      else if (user?.role === "OWNER") {
+        navigate("/admin");
+      }
+       else if (user?.role === "EMPLOYEE") {
         navigate("/employee/chat");
       } else {
         navigate("/");
@@ -118,7 +127,7 @@ const Login = () => {
       if (loginWithGoogle.fulfilled.match(result)) {
         const user = result.payload.user;
         if (user?.role === "ADMIN") {
-          navigate("/admin/products");
+          navigate("/admin");
         } else if (user?.role === "EMPLOYEE") {
           navigate("/employee/chat");
         } else {

@@ -11,7 +11,8 @@ const AdminLayout = () => {
   // Kiểm tra quyền admin
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
-    if (!user || user.role !== "ADMIN") {
+     console.log("AdminLayout user:", user);
+    if (!user || (user.role !== "ADMIN" && user.role !== "OWNER")) {
       navigate("/"); // Redirect nếu không phải admin
     }
   }, [navigate]);
