@@ -1237,7 +1237,7 @@ const EditVariantsModal = ({
                                 className="relative w-24 h-24 border rounded overflow-hidden bg-gray-100"
                               >
                                 <img
-                                  src={`http://localhost:8080/${image}`}
+                                  src={`${image}`}
                                   alt={`Variant ${idx + 1}`}
                                   className="w-full h-full object-cover"
                                   onError={(e) => {
