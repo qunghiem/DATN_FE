@@ -12,6 +12,7 @@ import {
   Gift,
   Truck,
   Package,
+  Award,
 } from "lucide-react";
 import {
   fetchCart,
@@ -49,17 +50,23 @@ const Cart = () => {
   const selectedItems = useSelector(selectSelectedItems);
   const subtotal = useSelector(selectCartSubtotal);
   const { error, isLoading } = useSelector((state) => state.cart);
-  const { isAuthenticated } = useSelector((state) => state.auth);
+  const { isAuthenticated, user, accessToken } = useSelector((state) => state.auth);
 
-  // Voucher state - chia thành 2 loại
+  // Voucher state
   const activeVouchers = useSelector(selectActiveVouchers);
   const validationError = useSelector(selectValidationError);
 
-  // State cho 2 loại voucher riêng biệt
-  const [productVoucher, setProductVoucher] = useState(null); // Voucher giảm tiền hàng
-  const [shippingVoucher, setShippingVoucher] = useState(null); // Voucher giảm ship
+  // State cho voucher
+  const [productVoucher, setProductVoucher] = useState(null);
+  const [shippingVoucher, setShippingVoucher] = useState(null);
   const [productDiscount, setProductDiscount] = useState(0);
   const [shippingDiscount, setShippingDiscount] = useState(0);
+
+  // State cho reward points
+  const [userRewardPoints, setUserRewardPoints] = useState(0);
+  const [isUsingPoints, setIsUsingPoints] = useState(false);
+  const [pointsToUse, setPointsToUse] = useState(0);
+  const [pointsDiscount, setPointsDiscount] = useState(0);
 
   const [itemToRemove, setItemToRemove] = useState(null);
   const [productVoucherCode, setProductVoucherCode] = useState("");
@@ -70,6 +77,63 @@ const Cart = () => {
   const [showShippingVoucherList, setShowShippingVoucherList] = useState(false);
 
   const [variantDetails, setVariantDetails] = useState({});
+
+  // Fetch user profile to get reward points
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (isAuthenticated) {
+        try {
+          // Ưu tiên lấy từ Redux state, sau đó mới tìm trong localStorage
+          let token = accessToken || 
+                      localStorage.getItem("access_token") ||
+                      localStorage.getItem("accessToken") || 
+                      localStorage.getItem("token") ||
+                      sessionStorage.getItem("access_token") ||
+                      sessionStorage.getItem("accessToken") ||
+                      sessionStorage.getItem("token");
+          
+          console.log("Token found:", token ? "Yes" : "No");
+          console.log("Token source:", accessToken ? "Redux" : "Storage");
+
+          if (!token) {
+            console.error("No access token found!");
+            toast.error("Vui lòng đăng nhập lại");
+            return;
+          }
+
+          const response = await axios.get(
+            "http://localhost:8080/api/users/profile",
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          console.log("Full API Response:", response.data);
+          console.log("Result object:", response.data.result);
+          console.log("Reward Points:", response.data.result?.rewardPoints);
+
+          // Thử cả 2 cách check code
+          if (response.data.code === 1000 || response.data.code === "1000") {
+            const points = response.data.result?.rewardPoints || 0;
+            console.log("Setting reward points to:", points);
+            setUserRewardPoints(points);
+          } else {
+            console.warn("Unexpected response code:", response.data.code);
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          console.error("Error response:", error.response?.data);
+          if (error.response?.status === 403) {
+            toast.error("Phiên đăng nhập hết hạn, vui lòng đăng nhập lại");
+          }
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, accessToken]);
 
   // Fetch variant details
   useEffect(() => {
@@ -159,6 +223,21 @@ const Cart = () => {
       setShippingDiscount(0);
     }
   }, [shippingVoucher]);
+
+  // Tính toán points discount khi toggle hoặc giá trị đơn hàng thay đổi
+  useEffect(() => {
+    if (isUsingPoints && userRewardPoints > 0) {
+      // Tính giá trị sau khi trừ voucher sản phẩm
+      const afterVoucherDiscount = subtotal - productDiscount;
+      // Sử dụng tối đa điểm có thể: min(điểm hiện có, giá trị đơn hàng)
+      const maxPointsCanUse = Math.min(userRewardPoints, afterVoucherDiscount);
+      setPointsToUse(maxPointsCanUse);
+      setPointsDiscount(maxPointsCanUse);
+    } else {
+      setPointsToUse(0);
+      setPointsDiscount(0);
+    }
+  }, [isUsingPoints, userRewardPoints, subtotal, productDiscount]);
 
   // Helper function để tính discount
   const calculateDiscountAmount = (voucher, amount) => {
@@ -281,7 +360,7 @@ const Cart = () => {
     }
   };
 
-  // Apply product voucher (giảm tiền hàng)
+  // Apply product voucher
   const handleApplyProductVoucher = async () => {
     if (!productVoucherCode.trim()) {
       toast.info("Vui lòng nhập mã giảm giá!");
@@ -301,13 +380,11 @@ const Cart = () => {
       if (response.data.code === 0) {
         const voucher = response.data.result;
         
-        // Kiểm tra loại voucher
         if (voucher.discountType === "FREESHIP") {
           toast.error("Đây là mã giảm ship, vui lòng nhập vào ô phí vận chuyển!");
           return;
         }
 
-        // Kiểm tra giá trị đơn hàng tối thiểu
         if (subtotal < voucher.minOrderValue) {
           toast.error(
             `Đơn hàng tối thiểu ${formatPrice(voucher.minOrderValue)} để sử dụng mã này!`
@@ -325,7 +402,7 @@ const Cart = () => {
     }
   };
 
-  // Apply shipping voucher (giảm ship)
+  // Apply shipping voucher
   const handleApplyShippingVoucher = async () => {
     if (!shippingVoucherCode.trim()) {
       toast.info("Vui lòng nhập mã giảm ship!");
@@ -345,13 +422,11 @@ const Cart = () => {
       if (response.data.code === 0) {
         const voucher = response.data.result;
         
-        // Chỉ chấp nhận voucher FREESHIP
         if (voucher.discountType !== "FREESHIP") {
           toast.error("Mã này không phải là mã giảm ship!");
           return;
         }
 
-        // Kiểm tra giá trị đơn hàng tối thiểu
         if (subtotal < voucher.minOrderValue) {
           toast.error(
             `Đơn hàng tối thiểu ${formatPrice(voucher.minOrderValue)} để sử dụng mã này!`
@@ -366,6 +441,35 @@ const Cart = () => {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Mã giảm ship không hợp lệ!");
+    }
+  };
+
+  // Handle reward points toggle
+  const handleTogglePoints = () => {
+    if (!isUsingPoints && userRewardPoints === 0) {
+      toast.info("Bạn chưa có điểm tích lũy!");
+      return;
+    }
+
+    if (!isUsingPoints && selectedItems.length === 0) {
+      toast.warning("Vui lòng chọn sản phẩm trước!");
+      return;
+    }
+
+    setIsUsingPoints(!isUsingPoints);
+    
+    if (!isUsingPoints) {
+      const afterVoucherDiscount = subtotal - productDiscount;
+      const maxPointsCanUse = Math.min(userRewardPoints, afterVoucherDiscount);
+      
+      if (maxPointsCanUse > 0) {
+        toast.success(`Đang sử dụng ${maxPointsCanUse.toLocaleString()} điểm!`);
+      } else {
+        toast.info("Giá trị đơn hàng chưa đủ để sử dụng điểm!");
+        setIsUsingPoints(false);
+      }
+    } else {
+      toast.info("Đã tắt sử dụng điểm tích lũy!");
     }
   };
 
@@ -460,6 +564,8 @@ const Cart = () => {
         shippingVoucher,
         productDiscount,
         shippingDiscount,
+        pointsToUse,
+        pointsDiscount,
       },
     });
   };
@@ -552,7 +658,8 @@ const Cart = () => {
 
   const shippingFee = 30000;
   const finalShipping = shippingFee - shippingDiscount;
-  const finalTotal = subtotal - productDiscount + finalShipping;
+  const finalTotal = subtotal - productDiscount - pointsDiscount + finalShipping;
+  const totalSavings = productDiscount + shippingDiscount + pointsDiscount;
 
   return (
     <div className="pt-16 min-h-screen bg-gray-50">
@@ -930,6 +1037,72 @@ const Cart = () => {
                 )}
               </div>
 
+              {/* Reward Points Section */}
+              <div className="mb-4">
+                <label className="flex items-center justify-between text-sm font-medium text-gray-700 mb-2">
+                  <span className="flex items-center gap-2">
+                    <Award className="w-4 h-4" />
+                    Điểm tích lũy
+                  </span>
+                  <span className="text-xs text-blue-600 font-normal">
+                    {userRewardPoints.toLocaleString()} điểm
+                  </span>
+                </label>
+
+                <div 
+                  onClick={handleTogglePoints}
+                  className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    isUsingPoints 
+                      ? "bg-blue-50 border-blue-500" 
+                      : "bg-gray-50 border-gray-200 hover:border-gray-300"
+                  } ${
+                    selectedItems.length === 0 || userRewardPoints === 0
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`relative w-12 h-6 rounded-full transition-colors ${
+                      isUsingPoints ? "bg-blue-500" : "bg-gray-300"
+                    }`}>
+                      <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                        isUsingPoints ? "translate-x-6" : "translate-x-0"
+                      }`}></div>
+                    </div>
+                    <div>
+                      <p className={`text-sm font-medium ${
+                        isUsingPoints ? "text-blue-700" : "text-gray-700"
+                      }`}>
+                        {isUsingPoints ? "Đang sử dụng điểm" : "Sử dụng điểm tích lũy"}
+                      </p>
+                      {isUsingPoints && pointsToUse > 0 && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          {pointsToUse.toLocaleString()} điểm = -{formatPrice(pointsDiscount)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {!isUsingPoints && (
+                    <span className="text-xs text-gray-500">
+                      Nhấn để bật
+                    </span>
+                  )}
+                </div>
+
+                {!isUsingPoints && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 Bật để tự động dùng tối đa điểm có thể
+                  </p>
+                )}
+
+                {isUsingPoints && userRewardPoints > pointsToUse && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    ⚠️ Chỉ dùng được {pointsToUse.toLocaleString()}/{userRewardPoints.toLocaleString()} điểm (giới hạn bởi giá trị đơn hàng)
+                  </p>
+                )}
+              </div>
+
               <div className="border-t border-gray-200 pt-4 space-y-3">
                 <div className="flex justify-between text-gray-600">
                   <span>Tạm tính ({selectedItems.length} sản phẩm):</span>
@@ -944,6 +1117,15 @@ const Cart = () => {
                     </span>
                     <span className="font-medium">
                       -{formatPrice(productDiscount)}
+                    </span>
+                  </div>
+                )}
+
+                {pointsDiscount > 0 && (
+                  <div className="flex justify-between text-blue-600">
+                    <span>Giảm giá điểm tích lũy:</span>
+                    <span className="font-medium">
+                      -{formatPrice(pointsDiscount)}
                     </span>
                   </div>
                 )}
@@ -987,9 +1169,9 @@ const Cart = () => {
                   </span>
                 </div>
 
-                {(productDiscount > 0 || shippingDiscount > 0) && (
+                {totalSavings > 0 && (
                   <div className="text-sm text-green-600 text-center">
-                    🎉 Bạn đã tiết kiệm được {formatPrice(productDiscount + shippingDiscount)}!
+                    🎉 Bạn đã tiết kiệm được {formatPrice(totalSavings)}!
                   </div>
                 )}
               </div>
