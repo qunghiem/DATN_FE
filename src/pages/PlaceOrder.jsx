@@ -14,6 +14,7 @@ import {
   Loader,
   Gift,
   Tag,
+  Award,
 } from 'lucide-react';
 import { clearSelectedItems } from '../features/cart/cartSlice';
 import { toast } from 'react-toastify';
@@ -30,7 +31,10 @@ const PlaceOrder = () => {
     productVoucher,
     shippingVoucher,
     productDiscount,
-    shippingDiscount
+    shippingDiscount,
+    pointsToUse,
+    pointsDiscount,
+    isUsingPoints,
   } = location.state || {};
 
   // Use the passed items directly
@@ -186,11 +190,11 @@ const PlaceOrder = () => {
   const baseShippingFee = 30000;
   const finalShippingFee = Math.max(0, baseShippingFee - (shippingDiscount || 0));
   
-  // Calculate final total
-  const finalTotal = subtotal - (productDiscount || 0) + finalShippingFee;
+  // Calculate final total with points discount
+  const finalTotal = subtotal - (productDiscount || 0) - (pointsDiscount || 0) + finalShippingFee;
 
-  // Total savings
-  const totalSavings = (productDiscount || 0) + (shippingDiscount || 0);
+  // Total savings including points
+  const totalSavings = (productDiscount || 0) + (shippingDiscount || 0) + (pointsDiscount || 0);
 
   // Handle input change
   const handleChange = (e) => {
@@ -390,7 +394,7 @@ const PlaceOrder = () => {
         address: fullAddress,
         fullName: formData.fullName.trim(),
         phone: formData.phone.trim(),
-        rewardPointsToUse: 0,
+        rewardPointsToUse: isUsingPoints && pointsToUse ? pointsToUse : 0,
         cartItemIds: cartItems.map(item => {
           const id = Number(item.id);
           if (isNaN(id)) {
@@ -421,6 +425,9 @@ const PlaceOrder = () => {
       console.log('Voucher Codes:', voucherCodes);
       console.log('Product Discount:', productDiscount);
       console.log('Shipping Discount:', shippingDiscount);
+      console.log('Points To Use:', pointsToUse);
+      console.log('Points Discount:', pointsDiscount);
+      console.log('Is Using Points:', isUsingPoints);
       console.log('=============================');
 
       // Call API to create order
@@ -920,12 +927,12 @@ const PlaceOrder = () => {
                   ))}
                 </div>
 
-                {/* Applied Vouchers Display */}
-                {(productVoucher || shippingVoucher) && (
+                {/* Applied Vouchers and Points Display */}
+                {(productVoucher || shippingVoucher || isUsingPoints) && (
                   <div className="mb-4 pb-4 border-b border-gray-200 space-y-2">
                     <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
                       <Gift className="w-4 h-4 mr-2 text-green-600" />
-                      Mã giảm giá đã áp dụng
+                      Ưu đãi đã áp dụng
                     </h3>
                     
                     {productVoucher && (
@@ -959,11 +966,27 @@ const PlaceOrder = () => {
                         </div>
                       </div>
                     )}
+
+                    {isUsingPoints && pointsToUse > 0 && (
+                      <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Award className="w-4 h-4 text-blue-600" />
+                          <div>
+                            <p className="font-medium text-blue-800 text-xs">
+                              {pointsToUse.toLocaleString()} điểm
+                            </p>
+                            <p className="text-xs text-blue-600">
+                              Điểm tích lũy
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Price Summary */}
-                <div className="border-t border-gray-200 pt-4 space-y-3">
+<div className="border-t border-gray-200 pt-4 space-y-3">
                   <div className="flex justify-between text-gray-600">
                     <span>Tạm tính:</span>
                     <span className="font-medium">{formatPrice(subtotal)}</span>
@@ -977,6 +1000,17 @@ const PlaceOrder = () => {
                       </span>
                       <span className="font-medium">
                         -{formatPrice(productDiscount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {pointsDiscount > 0 && (
+                    <div className="flex justify-between text-blue-600">
+                      <span>
+                        Giảm giá điểm tích lũy ({pointsToUse.toLocaleString()} điểm):
+                      </span>
+                      <span className="font-medium">
+                        -{formatPrice(pointsDiscount)}
                       </span>
                     </div>
                   )}
