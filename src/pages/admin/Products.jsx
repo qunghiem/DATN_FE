@@ -136,56 +136,56 @@ const Products = () => {
     }
   };
 
-const handleEdit = async (product) => {
-  try {
-    const token = localStorage.getItem('access_token'); // ← SỬA ĐÂY
-    const response = await fetch(
-      `http://localhost:8080/api/products/${product.id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+  const handleEdit = async (product) => {
+    try {
+      const token = localStorage.getItem("access_token"); 
+      const response = await fetch(
+        `http://localhost:8080/api/products/${product.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await response.json();
+
+      if (data.code === 1000) {
+        const productDetail = data.result;
+
+        setProductForm({
+          name: productDetail.name || "",
+          description: productDetail.description || "",
+          price: productDetail.price?.price || 0,
+          costPrice: productDetail.price?.cost_price || "", // ← Đúng rồi
+          discountPercent: productDetail.price?.discount_percent || 0,
+          brandId: productDetail.brandId || productDetail.brand?.id || "",
+          categoryIds:
+            productDetail.categoryIds ||
+            productDetail.categories?.map((c) => c.id) ||
+            [],
+          labelIds:
+            productDetail.labelIds ||
+            productDetail.labels?.map((l) => l.id) ||
+            [],
+          images: productDetail.images?.map((img) => ({
+            id: img.id || null,
+            imageUrl: img.image_url || "",
+            altText: img.alt_text || "",
+          })) || [{ imageUrl: "", altText: "" }],
+        });
+
+        dispatch(setCurrentProduct(productDetail));
+        setIsEditMode(true);
+        setModalStep(1);
+        setShowModal(true);
+      } else {
+        toast.error(data.message || "Không thể lấy thông tin sản phẩm");
       }
-    );
-    const data = await response.json();
-
-    if (data.code === 1000) {
-      const productDetail = data.result;
-
-      setProductForm({
-        name: productDetail.name || "",
-        description: productDetail.description || "",
-        price: productDetail.price?.price || 0,
-        costPrice: productDetail.price?.cost_price || "", // ← Đúng rồi
-        discountPercent: productDetail.price?.discount_percent || 0,
-        brandId: productDetail.brandId || productDetail.brand?.id || "",
-        categoryIds:
-          productDetail.categoryIds ||
-          productDetail.categories?.map((c) => c.id) ||
-          [],
-        labelIds:
-          productDetail.labelIds ||
-          productDetail.labels?.map((l) => l.id) ||
-          [],
-        images: productDetail.images?.map((img) => ({
-          id: img.id || null,
-          imageUrl: img.image_url || "",
-          altText: img.alt_text || "",
-        })) || [{ imageUrl: "", altText: "" }],
-      });
-
-      dispatch(setCurrentProduct(productDetail));
-      setIsEditMode(true);
-      setModalStep(1);
-      setShowModal(true);
-    } else {
-      toast.error(data.message || "Không thể lấy thông tin sản phẩm");
+    } catch (error) {
+      console.error("Error fetching product detail:", error);
+      toast.error("Lỗi khi lấy thông tin sản phẩm");
     }
-  } catch (error) {
-    console.error("Error fetching product detail:", error);
-    toast.error("Lỗi khi lấy thông tin sản phẩm");
-  }
-};
+  };
 
   const handleEditVariants = (product) => {
     dispatch(setCurrentProduct(product));
@@ -473,7 +473,7 @@ const handleEdit = async (product) => {
                     const costPrice =
                       product.costPrice || product.price?.costPrice || 0;
                     const profit = price - costPrice;
-                    
+
                     const profitPercent =
                       costPrice > 0
                         ? ((profit / costPrice) * 100).toFixed(1)
@@ -491,12 +491,20 @@ const handleEdit = async (product) => {
                           {product.brand?.name || "N/A"}
                         </td>
                         {isOwner && (
-  <td className="py-3 px-4 text-gray-600">
-    {product.price?.cost_price 
-      ? product.price.cost_price.toLocaleString() 
-      : "N/A"} ₫
-  </td>
-)}
+                          <td className="py-3 px-4 text-gray-600">
+                            {(() => {
+                              const costPrice =
+                                product.price?.cost_price || // Snake case trong price object
+                                product.costPrice || // Camel case ở root
+                                0;
+
+                              return costPrice > 0
+                                ? costPrice.toLocaleString()
+                                : "N/A";
+                            })()}{" "}
+                            ₫
+                          </td>
+                        )}
                         <td className="py-3 px-4 font-semibold">
                           {price.toLocaleString()} ₫
                         </td>

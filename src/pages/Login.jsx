@@ -68,10 +68,10 @@ const Login = () => {
       const user = JSON.parse(localStorage.getItem("user"));
       console.log(user?.role);
       if (user?.role === "ADMIN") {
-        navigate("/admin"); // Admin → dashboard admin
+        navigate("/admin"); // Admin →  statistics
       } 
       else if (user?.role === "OWNER") {
-        navigate("/admin"); // OWNER → giao diện admin
+        navigate("/admin"); // OWNER → giao diện statistics
       }
       else if (user?.role === "EMPLOYEE") {
         navigate("/employee/chat"); // Employee → giao diện chat

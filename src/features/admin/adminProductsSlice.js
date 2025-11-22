@@ -13,7 +13,9 @@ export const fetchAllProducts = createAsyncThunk(
   'adminProducts/fetchAll',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/products`);
+      const response = await axios.get(`${API_URL}/products`, {
+        headers: getAuthHeader(), // khi có token thì trả về data private
+      });
       return response.data.data || response.data.result || [];
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');

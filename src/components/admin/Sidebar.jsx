@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 
 const Sidebar = () => {
   const menu = [
-    { name: "Dashboard", path: "/admin" },
+  { name: "Thống kê", path: "/admin" },
     { name: "Sản phẩm", path: "/admin/products" },
     { name: "Đơn hàng", path: "/admin/orders" },
     { name: "Thương hiệu", path: "/admin/brands" },

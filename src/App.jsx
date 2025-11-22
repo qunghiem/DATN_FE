@@ -28,6 +28,7 @@ import ChatWidget from './components/ChatWidget';
 import { useSelector } from 'react-redux';
 import AdminOrders from './pages/admin/Orders';
 import AdminReviews from './pages/admin/AdminReviews';
+import AdminStatistics from './pages/admin/Statistics';
 
 const App = () => {
   const location = useLocation();
@@ -64,12 +65,16 @@ const App = () => {
         
         {/* Admin routes */}
         <Route path="/admin" element={<AdminLayout />}>
+          {/* vừa vào vào ở trang thống kê đầu tiên  */}
+          <Route path="" element={<AdminStatistics />} />
+
           <Route path="products" element={<AdminProducts />} />
           <Route path="brands" element={<AdminBrands />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="vouchers" element={<AdminVoucher />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="reviews" element={<AdminReviews />} />
+
         </Route>
       </Routes>
       {!hideLayout && <Footer />}
