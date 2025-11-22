@@ -447,11 +447,11 @@ const Products = () => {
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">
                     Giảm giá
                   </th>
-                  {isOwner && (
+                  {/* {isOwner && (
                     <th className="text-left py-3 px-4 text-gray-600 font-medium">
                       Lợi nhuận
                     </th>
-                  )}
+                  )} */}
                   <th className="text-left py-3 px-4 text-gray-600 font-medium">
                     Hành động
                   </th>
@@ -468,92 +468,55 @@ const Products = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredProducts.map((product) => {
-                    const price = product.price?.price || product.price || 0;
-                    const costPrice =
-                      product.costPrice || product.price?.costPrice || 0;
-                    const profit = price - costPrice;
+filteredProducts.map((product) => {
+  const price = product.price?.price || 0;
+  const costPrice = product.price?.cost_price || 0;
 
-                    const profitPercent =
-                      costPrice > 0
-                        ? ((profit / costPrice) * 100).toFixed(1)
-                        : 0;
-
-                    return (
-                      <tr
-                        key={product.id}
-                        className="border-b hover:bg-gray-50"
-                      >
-                        <td className="py-3 px-4 font-medium">
-                          {product.name}
-                        </td>
-                        <td className="py-3 px-4">
-                          {product.brand?.name || "N/A"}
-                        </td>
-                        {isOwner && (
-                          <td className="py-3 px-4 text-gray-600">
-                            {(() => {
-                              const costPrice =
-                                product.price?.cost_price || // Snake case trong price object
-                                product.costPrice || // Camel case ở root
-                                0;
-
-                              return costPrice > 0
-                                ? costPrice.toLocaleString()
-                                : "N/A";
-                            })()}{" "}
-                            ₫
-                          </td>
-                        )}
-                        <td className="py-3 px-4 font-semibold">
-                          {price.toLocaleString()} ₫
-                        </td>
-                        <td className="py-3 px-4">
-                          {product.price?.discount_percent ||
-                            product.discountPercent ||
-                            0}
-                          %
-                        </td>
-                        {isOwner && (
-                          <td className="py-3 px-4">
-                            <span
-                              className={`font-semibold ${
-                                profit > 0 ? "text-green-600" : "text-red-600"
-                              }`}
-                            >
-                              {profit.toLocaleString()} ₫
-                            </span>
-                            <span className="text-xs text-gray-500 ml-1">
-                              ({profitPercent}%)
-                            </span>
-                          </td>
-                        )}
-                        <td className="py-3 px-4 flex gap-2">
-                          <button
-                            onClick={() => handleEdit(product)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                            title="Sửa sản phẩm"
-                          >
-                            <Edit className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleEditVariants(product)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded transition"
-                            title="Sửa biến thể"
-                          >
-                            <Edit className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(product.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded transition"
-                            title="Xóa sản phẩm"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
+  return (
+    <tr key={product.id} className="border-b hover:bg-gray-50">
+      <td className="py-3 px-4 font-medium">{product.name}</td>
+      <td className="py-3 px-4">{product.brand?.name || "N/A"}</td>
+      
+      {isOwner && (
+        <td className="py-3 px-4 text-gray-600">
+          {costPrice > 0 ? costPrice.toLocaleString() : "N/A"} ₫
+        </td>
+      )}
+      
+      <td className="py-3 px-4 font-semibold">
+        {price.toLocaleString()} ₫
+      </td>
+      
+      <td className="py-3 px-4">
+        {product.price?.discount_percent || 0}%
+      </td>
+      
+      <td className="py-3 px-4 flex gap-2">
+        <button
+          onClick={() => handleEdit(product)}
+          className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+          title="Sửa sản phẩm"
+        >
+          <Edit className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => handleEditVariants(product)}
+          className="p-2 text-green-600 hover:bg-green-50 rounded transition"
+          title="Sửa biến thể"
+        >
+          <Edit className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => handleDelete(product.id)}
+          className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+          title="Xóa sản phẩm"
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </td>
+    </tr>
+  );
+})
                 )}
               </tbody>
             </table>
@@ -734,11 +697,13 @@ const ProductFormModal = ({
               <p className="text-xs text-green-600 mt-1">
                 Lợi nhuận dự kiến:{" "}
                 {(
-                  Number(productForm.price) - Number(productForm.costPrice)
+                  // (giá bán - giá bán * giảm giá) - giá nhập
+                  Number(productForm.price- (productForm.price*productForm.discountPercent)/100) - Number(productForm.costPrice)
                 ).toLocaleString()}{" "}
                 ₫ (
                 {(
-                  ((Number(productForm.price) - Number(productForm.costPrice)) /
+                  // (lợi nhuận / giá nhập) * 100
+                  ((Number(productForm.price- (productForm.price*productForm.discountPercent)/100) - Number(productForm.costPrice)) /
                     Number(productForm.costPrice)) *
                   100
                 ).toFixed(1)}
