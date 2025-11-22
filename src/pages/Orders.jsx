@@ -336,6 +336,7 @@ const Orders = () => {
                 size: item.size,
                 quantity: item.quantity,
                 image: item.imageUrl, 
+                price: item.unitPrice,
               })),
               shipping: {
                 fullName: order.fullName,
