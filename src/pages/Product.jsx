@@ -547,6 +547,30 @@ const Product = () => {
                 </span>
               </div>
             </div>
+            
+              {/* Total Sold */}
+             <div className="space-y-2">
+              <div className="text-sm text-gray-600">
+                Đã bán <span className="font-semibold text-gray-900">{product.sold || 0}</span>
+                {product.total_count > 0 && (
+                  <span className="text-gray-500">/{product.total_count}</span>
+                )}{" "}
+                sản phẩm
+              </div>
+              {product.total_count > 0 && (
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(
+                        ((product.sold || 0) / product.total_count) * 100,
+                        100
+                      )}%`,
+                    }}
+                  ></div>
+                </div>
+              )}
+            </div>
 
             {/* Flash Sale */}
             {product.price.discount_percent > 0 && (
@@ -934,7 +958,7 @@ const Product = () => {
 
       {/* Size Guide Modal */}
       {showSizeGuide && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 backdrop-blur-md bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">

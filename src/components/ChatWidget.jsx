@@ -168,7 +168,7 @@ const ChatWidget = () => {
       {/* Chat Button - Fixed ở góc phải */}
       <button
         onClick={toggleChat}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-sky-500 hover:bg-sky-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all z-50"
+        className="fixed bottom-18 right-5 w-14 h-14 bg-sky-500 hover:bg-sky-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all z-50"
       >
         {isOpen ? (
           <X className="w-6 h-6" />
