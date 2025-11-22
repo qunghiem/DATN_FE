@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   MapPin,
   User,
@@ -15,10 +15,10 @@ import {
   Gift,
   Tag,
   Award,
-} from 'lucide-react';
-import { clearSelectedItems } from '../features/cart/cartSlice';
-import { toast } from 'react-toastify';
-import axios from 'axios';
+} from "lucide-react";
+import { clearSelectedItems } from "../features/cart/cartSlice";
+import { toast } from "react-toastify";
+import axios from "axios";
 
 const PlaceOrder = () => {
   const dispatch = useDispatch();
@@ -26,8 +26,8 @@ const PlaceOrder = () => {
   const location = useLocation();
 
   // Get data from navigation state (passed from Cart)
-  const { 
-    selectedCartItems, 
+  const {
+    selectedCartItems,
     productVoucher,
     shippingVoucher,
     productDiscount,
@@ -39,7 +39,7 @@ const PlaceOrder = () => {
 
   // Use the passed items directly
   const cartItems = selectedCartItems || [];
-  
+
   // Redux state (only for user auth)
   const { user, isAuthenticated } = useSelector((state) => state.auth);
 
@@ -50,18 +50,18 @@ const PlaceOrder = () => {
 
   // Form state
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    address: '',
-    ward: '',
-    wardCode: '',
-    district: '',
-    districtCode: '',
-    city: '',
-    cityCode: '',
-    note: '',
-    paymentMethod: 'COD',
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
+    ward: "",
+    wardCode: "",
+    district: "",
+    districtCode: "",
+    city: "",
+    cityCode: "",
+    note: "",
+    paymentMethod: "COD",
   });
 
   // Address data state
@@ -72,7 +72,7 @@ const PlaceOrder = () => {
   const [loadingWards, setLoadingWards] = useState(false);
 
   // Payment state
-  const [paymentUrl, setPaymentUrl] = useState('');
+  const [paymentUrl, setPaymentUrl] = useState("");
   const [loadingPayment, setLoadingPayment] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState(null);
   const [orderResponse, setOrderResponse] = useState(null);
@@ -83,8 +83,8 @@ const PlaceOrder = () => {
   // Redirect if no items selected
   useEffect(() => {
     if (!cartItems || cartItems.length === 0) {
-      toast.info('Vui lòng chọn sản phẩm cần thanh toán!');
-      navigate('/cart');
+      toast.info("Vui lòng chọn sản phẩm cần thanh toán!");
+      navigate("/cart");
     }
   }, [cartItems, navigate]);
 
@@ -92,11 +92,13 @@ const PlaceOrder = () => {
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
-        const response = await axios.get('https://provinces.open-api.vn/api/p/');
+        const response = await axios.get(
+          "https://provinces.open-api.vn/api/p/"
+        );
         setProvinces(response.data);
       } catch (error) {
-        console.error('Error fetching provinces:', error);
-        toast.error('Không thể tải danh sách tỉnh/thành phố');
+        console.error("Error fetching provinces:", error);
+        toast.error("Không thể tải danh sách tỉnh/thành phố");
       }
     };
 
@@ -119,17 +121,17 @@ const PlaceOrder = () => {
         );
         setDistricts(response.data.districts || []);
         setWards([]);
-        
-        setFormData(prev => ({
+
+        setFormData((prev) => ({
           ...prev,
-          district: '',
-          districtCode: '',
-          ward: '',
-          wardCode: ''
+          district: "",
+          districtCode: "",
+          ward: "",
+          wardCode: "",
         }));
       } catch (error) {
-        console.error('Error fetching districts:', error);
-        toast.error('Không thể tải danh sách quận/huyện');
+        console.error("Error fetching districts:", error);
+        toast.error("Không thể tải danh sách quận/huyện");
       } finally {
         setLoadingDistricts(false);
       }
@@ -152,15 +154,15 @@ const PlaceOrder = () => {
           `https://provinces.open-api.vn/api/d/${formData.districtCode}?depth=2`
         );
         setWards(response.data.wards || []);
-        
-        setFormData(prev => ({
+
+        setFormData((prev) => ({
           ...prev,
-          ward: '',
-          wardCode: ''
+          ward: "",
+          wardCode: "",
         }));
       } catch (error) {
-        console.error('Error fetching wards:', error);
-        toast.error('Không thể tải danh sách phường/xã');
+        console.error("Error fetching wards:", error);
+        toast.error("Không thể tải danh sách phường/xã");
       } finally {
         setLoadingWards(false);
       }
@@ -174,27 +176,35 @@ const PlaceOrder = () => {
     if (isAuthenticated && user) {
       setFormData((prev) => ({
         ...prev,
-        fullName: user.fullName || '',
-        email: user.email || '',
-        phone: user.phone || '',
+        fullName: user.fullName || "",
+        email: user.email || "",
+        phone: user.phone || "",
       }));
     }
   }, [isAuthenticated, user]);
 
   // Format price
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + '₫';
+    return new Intl.NumberFormat("vi-VN").format(price) + "₫";
   };
 
   // Calculate shipping with discount
   const baseShippingFee = 30000;
-  const finalShippingFee = Math.max(0, baseShippingFee - (shippingDiscount || 0));
-  
+  const finalShippingFee = Math.max(
+    0,
+    baseShippingFee - (shippingDiscount || 0)
+  );
+
   // Calculate final total with points discount
-  const finalTotal = subtotal - (productDiscount || 0) - (pointsDiscount || 0) + finalShippingFee;
+  const finalTotal =
+    subtotal -
+    (productDiscount || 0) -
+    (pointsDiscount || 0) +
+    finalShippingFee;
 
   // Total savings including points
-  const totalSavings = (productDiscount || 0) + (shippingDiscount || 0) + (pointsDiscount || 0);
+  const totalSavings =
+    (productDiscount || 0) + (shippingDiscount || 0) + (pointsDiscount || 0);
 
   // Handle input change
   const handleChange = (e) => {
@@ -206,7 +216,7 @@ const PlaceOrder = () => {
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
-        [name]: '',
+        [name]: "",
       }));
     }
   };
@@ -214,54 +224,58 @@ const PlaceOrder = () => {
   // Handle province change
   const handleProvinceChange = (e) => {
     const selectedCode = e.target.value;
-    const selectedProvince = provinces.find(p => p.code.toString() === selectedCode);
-    
-    setFormData(prev => ({
+    const selectedProvince = provinces.find(
+      (p) => p.code.toString() === selectedCode
+    );
+
+    setFormData((prev) => ({
       ...prev,
       cityCode: selectedCode,
-      city: selectedProvince ? selectedProvince.name : '',
-      districtCode: '',
-      district: '',
-      wardCode: '',
-      ward: ''
+      city: selectedProvince ? selectedProvince.name : "",
+      districtCode: "",
+      district: "",
+      wardCode: "",
+      ward: "",
     }));
 
     if (errors.city) {
-      setErrors(prev => ({ ...prev, city: '' }));
+      setErrors((prev) => ({ ...prev, city: "" }));
     }
   };
 
   // Handle district change
   const handleDistrictChange = (e) => {
     const selectedCode = e.target.value;
-    const selectedDistrict = districts.find(d => d.code.toString() === selectedCode);
-    
-    setFormData(prev => ({
+    const selectedDistrict = districts.find(
+      (d) => d.code.toString() === selectedCode
+    );
+
+    setFormData((prev) => ({
       ...prev,
       districtCode: selectedCode,
-      district: selectedDistrict ? selectedDistrict.name : '',
-      wardCode: '',
-      ward: ''
+      district: selectedDistrict ? selectedDistrict.name : "",
+      wardCode: "",
+      ward: "",
     }));
 
     if (errors.district) {
-      setErrors(prev => ({ ...prev, district: '' }));
+      setErrors((prev) => ({ ...prev, district: "" }));
     }
   };
 
   // Handle ward change
   const handleWardChange = (e) => {
     const selectedCode = e.target.value;
-    const selectedWard = wards.find(w => w.code.toString() === selectedCode);
-    
-    setFormData(prev => ({
+    const selectedWard = wards.find((w) => w.code.toString() === selectedCode);
+
+    setFormData((prev) => ({
       ...prev,
       wardCode: selectedCode,
-      ward: selectedWard ? selectedWard.name : ''
+      ward: selectedWard ? selectedWard.name : "",
     }));
 
     if (errors.ward) {
-      setErrors(prev => ({ ...prev, ward: '' }));
+      setErrors((prev) => ({ ...prev, ward: "" }));
     }
   };
 
@@ -270,35 +284,35 @@ const PlaceOrder = () => {
     const newErrors = {};
 
     if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Vui lòng nhập họ tên';
+      newErrors.fullName = "Vui lòng nhập họ tên";
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Vui lòng nhập email';
+      newErrors.email = "Vui lòng nhập email";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
+      newErrors.email = "Email không hợp lệ";
     }
 
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Vui lòng nhập số điện thoại';
+      newErrors.phone = "Vui lòng nhập số điện thoại";
     } else if (!/^(0[3|5|7|8|9])+([0-9]{8})$/.test(formData.phone)) {
-      newErrors.phone = 'Số điện thoại không hợp lệ';
+      newErrors.phone = "Số điện thoại không hợp lệ";
     }
 
     if (!formData.address.trim()) {
-      newErrors.address = 'Vui lòng nhập địa chỉ';
+      newErrors.address = "Vui lòng nhập địa chỉ";
     }
 
     if (!formData.ward.trim()) {
-      newErrors.ward = 'Vui lòng chọn phường/xã';
+      newErrors.ward = "Vui lòng chọn phường/xã";
     }
 
     if (!formData.district.trim()) {
-      newErrors.district = 'Vui lòng chọn quận/huyện';
+      newErrors.district = "Vui lòng chọn quận/huyện";
     }
 
     if (!formData.city.trim()) {
-      newErrors.city = 'Vui lòng chọn tỉnh/thành phố';
+      newErrors.city = "Vui lòng chọn tỉnh/thành phố";
     }
 
     setErrors(newErrors);
@@ -309,47 +323,49 @@ const PlaceOrder = () => {
   const createPaymentUrl = async (orderId) => {
     setLoadingPayment(true);
     try {
-      console.log('Creating payment URL with orderId:', orderId);
-      
+      console.log("Creating payment URL with orderId:", orderId);
+
       const paymentData = {
         orderId: orderId,
-        bankCode: 'NCB'
+        bankCode: "NCB",
       };
-      
-      console.log('Payment request data:', paymentData);
-      
+
+      console.log("Payment request data:", paymentData);
+
       const response = await axios.post(
-        'http://localhost:8080/api/v1/payments/create',
+        "http://localhost:8080/api/v1/payments/create",
         paymentData,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-            'Content-Type': 'application/json',
-          }
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            "Content-Type": "application/json",
+          },
         }
       );
 
-      console.log('Payment API response:', response.data);
+      console.log("Payment API response:", response.data);
 
       if (response.data && response.data.paymentUrl) {
         setPaymentUrl(response.data.paymentUrl);
-        toast.success('Đã tạo link thanh toán! Vui lòng click vào nút để thanh toán');
+        toast.success(
+          "Đã tạo link thanh toán! Vui lòng click vào nút để thanh toán"
+        );
         return response.data.paymentUrl;
       } else {
-        throw new Error('Không nhận được URL thanh toán');
+        throw new Error("Không nhận được URL thanh toán");
       }
     } catch (error) {
-      console.error('Error creating payment URL:', {
+      console.error("Error creating payment URL:", {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
-        orderId: orderId
+        orderId: orderId,
       });
-      
+
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else {
-        toast.error(error.message || 'Không thể tạo link thanh toán');
+        toast.error(error.message || "Không thể tạo link thanh toán");
       }
       return null;
     } finally {
@@ -362,7 +378,7 @@ const PlaceOrder = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error('Vui lòng điền đầy đủ thông tin!');
+      toast.error("Vui lòng điền đầy đủ thông tin!");
       return;
     }
 
@@ -371,10 +387,10 @@ const PlaceOrder = () => {
     try {
       // Build full address string
       const fullAddress = `${formData.address}, ${formData.ward}, ${formData.district}, ${formData.city}`;
-      
+
       // Validate address
       if (fullAddress.length > 500) {
-        toast.error('Địa chỉ quá dài! Vui lòng rút gọn địa chỉ.');
+        toast.error("Địa chỉ quá dài! Vui lòng rút gọn địa chỉ.");
         setIsSubmitting(false);
         return;
       }
@@ -394,15 +410,18 @@ const PlaceOrder = () => {
         address: fullAddress,
         fullName: formData.fullName.trim(),
         phone: formData.phone.trim(),
-        rewardPointsToUse: isUsingPoints && pointsToUse ? pointsToUse : 0,
-        cartItemIds: cartItems.map(item => {
-          const id = Number(item.id);
-          if (isNaN(id)) {
-            console.error('Invalid cart item ID:', item.id, item);
-            return null;
-          }
-          return id;
-        }).filter(id => id !== null),
+        // rewardPointsToUse: isUsingPoints && pointsToUse ? pointsToUse : 0,
+        rewardPointsToUse: (pointsToUse && typeof pointsToUse === 'number' && pointsToUse > 0) ? Math.floor(pointsToUse) : 0,
+        cartItemIds: cartItems
+          .map((item) => {
+            const id = Number(item.id);
+            if (isNaN(id)) {
+              console.error("Invalid cart item ID:", item.id, item);
+              return null;
+            }
+            return id;
+          })
+          .filter((id) => id !== null),
         voucherCodes: voucherCodes,
       };
 
@@ -413,116 +432,133 @@ const PlaceOrder = () => {
 
       // Validate cartItemIds
       if (!orderData.cartItemIds || orderData.cartItemIds.length === 0) {
-        toast.error('Không tìm thấy sản phẩm trong giỏ hàng!');
+        toast.error("Không tìm thấy sản phẩm trong giỏ hàng!");
         setIsSubmitting(false);
         return;
       }
 
-      console.log('=== ORDER SUBMISSION DEBUG ===');
-      console.log('Order Data:', orderData);
-      console.log('Product Voucher:', productVoucher);
-      console.log('Shipping Voucher:', shippingVoucher);
-      console.log('Voucher Codes:', voucherCodes);
-      console.log('Product Discount:', productDiscount);
-      console.log('Shipping Discount:', shippingDiscount);
-      console.log('Points To Use:', pointsToUse);
-      console.log('Points Discount:', pointsDiscount);
-      console.log('Is Using Points:', isUsingPoints);
-      console.log('=============================');
+      console.log("=== ORDER SUBMISSION DEBUG ===");
+      console.log("Order Data:", orderData);
+      console.log("Product Voucher:", productVoucher);
+      console.log("Shipping Voucher:", shippingVoucher);
+      console.log("Voucher Codes:", voucherCodes);
+      console.log("Product Discount:", productDiscount);
+      console.log("Shipping Discount:", shippingDiscount);
+      console.log("Points To Use:", pointsToUse);
+      console.log("Points Discount:", pointsDiscount);
+      console.log("Is Using Points:", isUsingPoints);
+      console.log("=============================");
 
       // Call API to create order
       let orderSaved = false;
       let orderId = null;
       let orderResponse = null;
 
-      try {
-        const response = await axios.post('http://localhost:8080/api/orders', orderData, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        });
+      console.log("📤 Sending request to backend:");
+      console.log("URL:", "http://localhost:8080/api/orders");
+      console.log("Method: POST");
+      console.log("Headers:", {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      });
+      console.log("Body:", orderData);
 
-        console.log('Full API Response:', response);
-        console.log('Response data:', response.data);
-        
+      try {
+        const response = await axios.post(
+          "http://localhost:8080/api/orders",
+          orderData,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
+          }
+        );
+
+        console.log("Full API Response:", response);
+        console.log("Response data:", response.data);
+
         if (response.data.code === 1000) {
           orderResponse = response.data.result;
           orderId = orderResponse.id;
           setOrderResponse(orderResponse);
           orderSaved = true;
-          
-          console.log('✅ Order created successfully with ID:', orderId);
-        } else {
-          throw new Error(response.data.message || 'Không thể tạo đơn hàng');
-        }
 
+          console.log("✅ Order created successfully with ID:", orderId);
+        } else {
+          throw new Error(response.data.message || "Không thể tạo đơn hàng");
+        }
       } catch (apiError) {
-        console.error('❌ API ERROR DETAILS:', {
+        console.error("❌ API ERROR DETAILS:", {
           message: apiError.message,
           response: apiError.response?.data,
           status: apiError.response?.status,
-          requestData: orderData
+          requestData: orderData,
         });
-        
+
         if (apiError.response?.data?.message) {
           toast.error(apiError.response.data.message);
         } else if (apiError.response?.status === 400) {
-          toast.error('Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin!');
+          toast.error("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin!");
         } else if (apiError.response?.status === 401) {
-          toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
-          setTimeout(() => navigate('/login'), 2000);
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
+          setTimeout(() => navigate("/login"), 2000);
         } else {
-          toast.error('Không thể tạo đơn hàng. Vui lòng thử lại!');
+          toast.error("Không thể tạo đơn hàng. Vui lòng thử lại!");
         }
-        
+
         setIsSubmitting(false);
         return;
       }
 
       if (orderSaved && orderId) {
         // If payment method is BANK_TRANSFER, create payment URL
-        if (formData.paymentMethod === 'BANK_TRANSFER') {
-          console.log('Creating payment URL for order:', orderId);
-          
+        if (formData.paymentMethod === "BANK_TRANSFER") {
+          console.log("Creating payment URL for order:", orderId);
+
           const paymentUrlResult = await createPaymentUrl(orderId);
-          
+
           if (!paymentUrlResult) {
-            toast.error('Đơn hàng đã được tạo nhưng không thể tạo link thanh toán. Vui lòng liên hệ hỗ trợ!');
+            toast.error(
+              "Đơn hàng đã được tạo nhưng không thể tạo link thanh toán. Vui lòng liên hệ hỗ trợ!"
+            );
             setIsSubmitting(false);
-            
+
             setTimeout(() => {
               dispatch(clearSelectedItems());
-              navigate('/orders');
+              navigate("/orders");
             }, 2000);
             return;
           }
-          
-          toast.success('Đơn hàng đã được tạo! Vui lòng thanh toán qua link bên dưới');
-          
+
+          toast.success(
+            "Đơn hàng đã được tạo! Vui lòng thanh toán qua link bên dưới"
+          );
+
           if (orderResponse && orderResponse.rewardPointsEarned) {
-            toast.info(`Bạn sẽ nhận được ${orderResponse.rewardPointsEarned.toLocaleString()} điểm thưởng sau khi thanh toán!`);
+            toast.info(
+              `Bạn sẽ nhận được ${orderResponse.rewardPointsEarned.toLocaleString()} điểm thưởng sau khi thanh toán!`
+            );
           }
         } else {
           // COD - just clear and navigate
           dispatch(clearSelectedItems());
-          toast.success('Đặt hàng thành công!');
-          
+          toast.success("Đặt hàng thành công!");
+
           if (orderResponse && orderResponse.rewardPointsEarned) {
-            toast.info(`Bạn sẽ nhận được ${orderResponse.rewardPointsEarned.toLocaleString()} điểm thưởng!`);
+            toast.info(
+              `Bạn sẽ nhận được ${orderResponse.rewardPointsEarned.toLocaleString()} điểm thưởng!`
+            );
           }
-          
+
           setTimeout(() => {
-            navigate('/orders');
+            navigate("/orders");
           }, 1500);
         }
       }
-
     } catch (error) {
-      console.error('❌ UNEXPECTED ERROR:', error);
-      toast.error(
-        error.message || 'Có lỗi xảy ra. Vui lòng thử lại!'
-      );
+      console.error("❌ UNEXPECTED ERROR:", error);
+      toast.error(error.message || "Có lỗi xảy ra. Vui lòng thử lại!");
     } finally {
       setIsSubmitting(false);
     }
@@ -531,7 +567,9 @@ const PlaceOrder = () => {
   // Handle opening payment URL
   const handleOpenPaymentUrl = () => {
     if (paymentUrl) {
-      toast.info('Sau khi thanh toán xong, VNPay sẽ tự động chuyển bạn về trang kết quả');
+      toast.info(
+        "Sau khi thanh toán xong, VNPay sẽ tự động chuyển bạn về trang kết quả"
+      );
       window.location.href = paymentUrl;
     }
   };
@@ -550,7 +588,9 @@ const PlaceOrder = () => {
       case "FIXED_AMOUNT":
         return `Giảm ${formatPrice(voucher.discountValue)}`;
       case "FREESHIP":
-        return `Miễn phí vận chuyển tối đa ${formatPrice(voucher.discountValue)}`;
+        return `Miễn phí vận chuyển tối đa ${formatPrice(
+          voucher.discountValue
+        )}`;
       default:
         return "";
     }
@@ -564,7 +604,7 @@ const PlaceOrder = () => {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Đặt hàng</h1>
           <div className="flex items-center text-sm text-gray-600">
             <span
-              onClick={() => navigate('/cart')}
+              onClick={() => navigate("/cart")}
               className="hover:text-[#3A6FB5] cursor-pointer"
             >
               Giỏ hàng
@@ -596,7 +636,7 @@ const PlaceOrder = () => {
                       value={formData.fullName}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition ${
-                        errors.fullName ? 'border-red-500' : 'border-gray-300'
+                        errors.fullName ? "border-red-500" : "border-gray-300"
                       }`}
                       placeholder="Nguyễn Văn A"
                     />
@@ -618,7 +658,7 @@ const PlaceOrder = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition ${
-                        errors.phone ? 'border-red-500' : 'border-gray-300'
+                        errors.phone ? "border-red-500" : "border-gray-300"
                       }`}
                       placeholder="0987654321"
                     />
@@ -640,7 +680,7 @@ const PlaceOrder = () => {
                       value={formData.email}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition ${
-                        errors.email ? 'border-red-500' : 'border-gray-300'
+                        errors.email ? "border-red-500" : "border-gray-300"
                       }`}
                       placeholder="example@email.com"
                     />
@@ -672,7 +712,7 @@ const PlaceOrder = () => {
                         value={formData.cityCode}
                         onChange={handleProvinceChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition ${
-                          errors.city ? 'border-red-500' : 'border-gray-300'
+                          errors.city ? "border-red-500" : "border-gray-300"
                         }`}
                       >
                         <option value="">Chọn Tỉnh/TP</option>
@@ -700,11 +740,11 @@ const PlaceOrder = () => {
                         onChange={handleDistrictChange}
                         disabled={!formData.cityCode || loadingDistricts}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                          errors.district ? 'border-red-500' : 'border-gray-300'
+                          errors.district ? "border-red-500" : "border-gray-300"
                         }`}
                       >
                         <option value="">
-                          {loadingDistricts ? 'Đang tải...' : 'Chọn Quận/Huyện'}
+                          {loadingDistricts ? "Đang tải..." : "Chọn Quận/Huyện"}
                         </option>
                         {districts.map((district) => (
                           <option key={district.code} value={district.code}>
@@ -730,11 +770,11 @@ const PlaceOrder = () => {
                         onChange={handleWardChange}
                         disabled={!formData.districtCode || loadingWards}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                          errors.ward ? 'border-red-500' : 'border-gray-300'
+                          errors.ward ? "border-red-500" : "border-gray-300"
                         }`}
                       >
                         <option value="">
-                          {loadingWards ? 'Đang tải...' : 'Chọn Phường/Xã'}
+                          {loadingWards ? "Đang tải..." : "Chọn Phường/Xã"}
                         </option>
                         {wards.map((ward) => (
                           <option key={ward.code} value={ward.code}>
@@ -761,7 +801,7 @@ const PlaceOrder = () => {
                       value={formData.address}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition ${
-                        errors.address ? 'border-red-500' : 'border-gray-300'
+                        errors.address ? "border-red-500" : "border-gray-300"
                       }`}
                       placeholder="Số nhà, tên đường"
                     />
@@ -797,14 +837,18 @@ const PlaceOrder = () => {
                 </h2>
 
                 <div className="space-y-3">
-                  <label className={`flex items-start space-x-3 cursor-pointer p-4 border-2 rounded-lg transition hover:border-[#3A6FB5] ${
-                    formData.paymentMethod === 'COD' ? 'border-[#3A6FB5] bg-blue-50' : 'border-gray-200'
-                  }`}>
+                  <label
+                    className={`flex items-start space-x-3 cursor-pointer p-4 border-2 rounded-lg transition hover:border-[#3A6FB5] ${
+                      formData.paymentMethod === "COD"
+                        ? "border-[#3A6FB5] bg-blue-50"
+                        : "border-gray-200"
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="paymentMethod"
                       value="COD"
-                      checked={formData.paymentMethod === 'COD'}
+                      checked={formData.paymentMethod === "COD"}
                       onChange={handleChange}
                       className="w-5 h-5 text-[#3A6FB5] mt-0.5"
                     />
@@ -821,14 +865,18 @@ const PlaceOrder = () => {
                     </div>
                   </label>
 
-                  <label className={`flex items-start space-x-3 cursor-pointer p-4 border-2 rounded-lg transition hover:border-[#3A6FB5] ${
-                    formData.paymentMethod === 'BANK_TRANSFER' ? 'border-[#3A6FB5] bg-blue-50' : 'border-gray-200'
-                  }`}>
+                  <label
+                    className={`flex items-start space-x-3 cursor-pointer p-4 border-2 rounded-lg transition hover:border-[#3A6FB5] ${
+                      formData.paymentMethod === "BANK_TRANSFER"
+                        ? "border-[#3A6FB5] bg-blue-50"
+                        : "border-gray-200"
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="paymentMethod"
                       value="BANK_TRANSFER"
-                      checked={formData.paymentMethod === 'BANK_TRANSFER'}
+                      checked={formData.paymentMethod === "BANK_TRANSFER"}
                       onChange={handleChange}
                       className="w-5 h-5 text-[#3A6FB5] mt-0.5"
                     />
@@ -847,7 +895,7 @@ const PlaceOrder = () => {
                 </div>
 
                 {/* Payment URL Display */}
-                {paymentUrl && formData.paymentMethod === 'BANK_TRANSFER' && (
+                {paymentUrl && formData.paymentMethod === "BANK_TRANSFER" && (
                   <div className="mt-4 p-4 border-2 border-green-300 rounded-lg bg-green-50">
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
@@ -856,7 +904,8 @@ const PlaceOrder = () => {
                           Link thanh toán đã sẵn sàng!
                         </h3>
                         <p className="text-sm text-gray-700 mb-3">
-                          Click vào nút bên dưới để chuyển đến trang thanh toán VNPay
+                          Click vào nút bên dưới để chuyển đến trang thanh toán
+                          VNPay
                         </p>
                         <button
                           type="button"
@@ -867,7 +916,8 @@ const PlaceOrder = () => {
                           Thanh toán ngay
                         </button>
                         <p className="text-xs text-gray-600 mt-3">
-                          💡 Sau khi thanh toán, bạn sẽ được tự động chuyển về trang kết quả
+                          💡 Sau khi thanh toán, bạn sẽ được tự động chuyển về
+                          trang kết quả
                         </p>
                       </div>
                     </div>
@@ -884,7 +934,7 @@ const PlaceOrder = () => {
                 )}
               </div>
             </div>
-  
+
             {/* Right: Order Summary */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-sm p-6 sticky top-20">
@@ -934,7 +984,7 @@ const PlaceOrder = () => {
                       <Gift className="w-4 h-4 mr-2 text-green-600" />
                       Ưu đãi đã áp dụng
                     </h3>
-                    
+
                     {productVoucher && (
                       <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center gap-2">
@@ -986,7 +1036,7 @@ const PlaceOrder = () => {
                 )}
 
                 {/* Price Summary */}
-<div className="border-t border-gray-200 pt-4 space-y-3">
+                <div className="border-t border-gray-200 pt-4 space-y-3">
                   <div className="flex justify-between text-gray-600">
                     <span>Tạm tính:</span>
                     <span className="font-medium">{formatPrice(subtotal)}</span>
@@ -1007,7 +1057,8 @@ const PlaceOrder = () => {
                   {pointsDiscount > 0 && (
                     <div className="flex justify-between text-blue-600">
                       <span>
-                        Giảm giá điểm tích lũy ({pointsToUse.toLocaleString()} điểm):
+                        Giảm giá điểm tích lũy ({pointsToUse.toLocaleString()}{" "}
+                        điểm):
                       </span>
                       <span className="font-medium">
                         -{formatPrice(pointsDiscount)}
@@ -1113,11 +1164,18 @@ const PlaceOrder = () => {
                           Điểm thưởng
                         </p>
                         <p className="text-xs text-yellow-700 mt-1">
-                          Bạn sẽ nhận được <span className="font-bold">{orderResponse.rewardPointsEarned.toLocaleString()}</span> điểm sau khi hoàn thành đơn hàng
+                          Bạn sẽ nhận được{" "}
+                          <span className="font-bold">
+                            {orderResponse.rewardPointsEarned.toLocaleString()}
+                          </span>{" "}
+                          điểm sau khi hoàn thành đơn hàng
                         </p>
-                        {orderResponse.userRemainingRewardPoints !== undefined && (
+                        {orderResponse.userRemainingRewardPoints !==
+                          undefined && (
                           <p className="text-xs text-yellow-600 mt-1">
-                            Điểm hiện tại: {orderResponse.userRemainingRewardPoints.toLocaleString()} điểm
+                            Điểm hiện tại:{" "}
+                            {orderResponse.userRemainingRewardPoints.toLocaleString()}{" "}
+                            điểm
                           </p>
                         )}
                       </div>

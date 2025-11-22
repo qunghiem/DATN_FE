@@ -317,11 +317,6 @@ const Orders = () => {
 
           if (response.data.code === 1000 && response.data.result) {
             const ordersData = response.data.result;
-            console.log(
-              "✅ Orders loaded from API:",
-              ordersData.length,
-              "orders"
-            );
 
             const transformedOrders = ordersData.map((order) => ({
               id: order.id,
@@ -1034,7 +1029,7 @@ const Orders = () => {
                   </div>
                   {selectedOrder.payment?.discount > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Giảm giá:</span>
+                      <span>Giảm giá</span>
                       <span className="font-medium">
                         -{formatPrice(selectedOrder.payment?.discount)}
                       </span>
