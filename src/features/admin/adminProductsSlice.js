@@ -39,12 +39,50 @@ export const fetchProductVariants = createAsyncThunk(
   }
 );
 
+// Tạo sản phẩm mới - Gửi FormData
 export const createProduct = createAsyncThunk(
   'adminProducts/create',
   async (productData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/products`, productData, {
-        headers: getAuthHeader(),
+      const formData = new FormData();
+      
+      // Append các field thông thường
+      formData.append('name', productData.name);
+      formData.append('description', productData.description);
+      formData.append('price', productData.price);
+      formData.append('discountPercent', productData.discountPercent);
+      formData.append('brandId', productData.brandId);
+      
+      if (productData.costPrice !== undefined) {
+        formData.append('costPrice', productData.costPrice);
+      }
+      
+      // Append arrays
+      productData.categoryIds.forEach(id => {
+        formData.append('categoryIds', id);
+      });
+      
+      productData.labelIds.forEach(id => {
+        formData.append('labelIds', id);
+      });
+      
+      // Append images (File objects)
+      productData.images.forEach((file) => {
+        if (file instanceof File) {
+          formData.append('images', file);
+        }
+      });
+      
+      // Append imageAltTexts
+      productData.imageAltTexts.forEach(altText => {
+        formData.append('imageAltTexts', altText);
+      });
+
+      const response = await axios.post(`${API_URL}/products`, formData, {
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'multipart/form-data',
+        },
       });
       return response.data.result;
     } catch (error) {
@@ -53,13 +91,32 @@ export const createProduct = createAsyncThunk(
   }
 );
 
+// Tạo biến thể sản phẩm - Gửi FormData
 export const createProductVariant = createAsyncThunk(
   'adminProducts/createVariant',
   async (variantData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/product-variants`, variantData, {
-        headers: getAuthHeader(),
+      const formData = new FormData();
+      
+      formData.append('productId', variantData.productId);
+      formData.append('colorId', variantData.colorId);
+      formData.append('sizeId', variantData.sizeId);
+      formData.append('stock', variantData.stock);
+      
+      // Append variant images
+      variantData.images.forEach((file) => {
+        if (file instanceof File) {
+          formData.append('images', file);
+        }
       });
+
+      const response = await axios.post(`${API_URL}/product-variants`, formData, {
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
       if (response.data.code === 1000) {
         return response.data.result;
       }
@@ -70,21 +127,38 @@ export const createProductVariant = createAsyncThunk(
   }
 );
 
-// Cập nhật variant
+// Cập nhật variant - Gửi FormData
 export const updateProductVariant = createAsyncThunk(
   'adminProducts/updateVariant',
   async ({ variantId, colorId, sizeId, stock, images }, { rejectWithValue }) => {
     try {
-      const payload = {};
-      if (colorId !== undefined) payload.colorId = colorId;
-      if (sizeId !== undefined) payload.sizeId = sizeId;
-      if (stock !== undefined) payload.stock = stock;
-      if (images !== undefined) payload.images = images;
+      const formData = new FormData();
+      
+      if (colorId !== undefined) formData.append('colorId', colorId);
+      if (sizeId !== undefined) formData.append('sizeId', sizeId);
+      if (stock !== undefined) formData.append('stock', stock);
+      
+      // Append images
+      if (images && images.length > 0) {
+        images.forEach((file) => {
+          if (file instanceof File) {
+            formData.append('images', file);
+          } else if (typeof file === 'string') {
+            // Nếu là string (tên file cũ), gửi riêng
+            formData.append('existingImages', file);
+          }
+        });
+      }
 
       const response = await axios.put(
         `${API_URL}/product-variants/${variantId}`,
-        payload,
-        { headers: getAuthHeader() }
+        formData,
+        { 
+          headers: {
+            ...getAuthHeader(),
+            'Content-Type': 'multipart/form-data',
+          }
+        }
       );
       
       if (response.data.code === 1000) {
@@ -116,12 +190,52 @@ export const deleteProductVariant = createAsyncThunk(
   }
 );
 
+// Cập nhật sản phẩm - Gửi FormData
 export const updateProduct = createAsyncThunk(
   'adminProducts/update',
   async ({ id, ...productData }, { rejectWithValue }) => {
     try {
-      const response = await axios.put(`${API_URL}/products/${id}`, productData, {
-        headers: getAuthHeader(),
+      const formData = new FormData();
+      
+      // Append các field thông thường
+      formData.append('name', productData.name);
+      formData.append('description', productData.description);
+      formData.append('price', productData.price);
+      formData.append('discountPercent', productData.discountPercent);
+      formData.append('brandId', productData.brandId);
+      
+      if (productData.costPrice !== undefined) {
+        formData.append('costPrice', productData.costPrice);
+      }
+      
+      // Append arrays
+      productData.categoryIds.forEach(id => {
+        formData.append('categoryIds', id);
+      });
+      
+      productData.labelIds.forEach(id => {
+        formData.append('labelIds', id);
+      });
+      
+      // Append images (có thể là File mới hoặc string - tên file cũ)
+      productData.images.forEach((file) => {
+        if (file instanceof File) {
+          formData.append('images', file);
+        } else if (typeof file === 'string') {
+          formData.append('existingImages', file);
+        }
+      });
+      
+      // Append imageAltTexts
+      productData.imageAltTexts.forEach(altText => {
+        formData.append('imageAltTexts', altText);
+      });
+
+      const response = await axios.put(`${API_URL}/products/${id}`, formData, {
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'multipart/form-data',
+        },
       });
       return response.data.result;
     } catch (error) {
