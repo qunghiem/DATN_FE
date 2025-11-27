@@ -493,7 +493,7 @@ const Product = () => {
             </div>
 
             {/* Main Image */}
-            <div className="flex-1 bg-gray-100 relative">
+            <div className="flex-1relative">
               <img
                 src={selectedImage}
                 alt={product.name}

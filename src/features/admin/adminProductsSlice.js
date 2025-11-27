@@ -13,7 +13,7 @@ export const fetchAllProducts = createAsyncThunk(
   'adminProducts/fetchAll',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/products`, {
+      const response = await axios.get(`${API_URL}/products?active=true`, {
         headers: getAuthHeader(), // khi có token thì trả về data private
       });
       return response.data.data || response.data.result || [];
@@ -244,15 +244,19 @@ export const updateProduct = createAsyncThunk(
   }
 );
 
+// Xóa mềm sản phẩm (set active = false)
 export const deleteProduct = createAsyncThunk(
   'adminProducts/delete',
   async (id, { rejectWithValue }) => {
     try {
-      await axios.delete(`${API_URL}/products/${id}`, {
+      // Soft delete: gọi API DELETE để set active = false
+      const response = await axios.delete(`${API_URL}/products/${id}`, {
         headers: getAuthHeader(),
       });
+      
       return id;
     } catch (error) {
+      console.error('Delete product error:', error);
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
     }
   }
@@ -389,7 +393,7 @@ const adminProductsSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
-      // Delete product
+      // Delete product (soft delete)
       .addCase(deleteProduct.pending, (state) => {
         state.isLoading = true;
         state.error = null;
