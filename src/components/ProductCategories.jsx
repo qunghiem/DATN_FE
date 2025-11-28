@@ -172,12 +172,12 @@ const CategoryCard = ({ category }) => {
           {category.productCount} sản phẩm
         </p>
       </div>
-
+{/* 
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
         <button className="bg-white text-[#3A6FB5] px-4 py-1.5 rounded-full font-medium text-sm shadow-sm hover:shadow-md transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
           Xem ngay
         </button>
-      </div>
+      </div> */}
     </Link>
   );
 };

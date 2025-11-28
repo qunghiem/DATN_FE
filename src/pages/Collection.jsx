@@ -276,7 +276,9 @@ const Collection = () => {
 
     // Category filter
     if (selectedCategory.length > 0) {
-      filtered = filtered.filter((p) => selectedCategory.includes(p.category));
+      filtered = filtered.filter((p) => 
+        p.categories.some((cat) => selectedCategory.includes(cat))
+      );
     }
 
     // Shipping filter
