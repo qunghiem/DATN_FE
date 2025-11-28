@@ -581,27 +581,6 @@ const Product = () => {
               </div>
             )}
 
-            {/* Total Sold */}
-            {product.sold === 0 && (
-              <>
-                <div className="text-sm text-gray-600">
-                  Đã bán <span className="font-semibold">{product.sold}</span>{" "}
-                  sản phẩm
-                </div>
-                <div className="h-2 bg-gray-200 rounded-full">
-                  <div
-                    className="h-full bg-blue-500 rounded-full"
-                    style={{
-                      width: `${Math.min(
-                        (product.total_count / 500) * 100,
-                        100
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
-              </>
-            )}
-
             {/* Price */}
             <div>
               <div className="flex items-center gap-3">
