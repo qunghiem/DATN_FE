@@ -103,12 +103,15 @@ export const createProductVariant = createAsyncThunk(
       formData.append('sizeId', variantData.sizeId);
       formData.append('stock', variantData.stock);
       
-      // Append variant images
-      variantData.images.forEach((file) => {
-        if (file instanceof File) {
-          formData.append('images', file);
-        }
-      });
+      // CHỈ append images nếu có ít nhất 1 file
+      if (variantData.images && variantData.images.length > 0) {
+        variantData.images.forEach((file) => {
+          if (file instanceof File) {
+            formData.append('images', file);
+          }
+        });
+      }
+      // Nếu không có images, KHÔNG append field này vào FormData
 
       const response = await axios.post(`${API_URL}/product-variants`, formData, {
         headers: {

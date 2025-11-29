@@ -138,7 +138,9 @@ const Collection = () => {
           ? res.data.data
           : [];
 
-        const mappedProducts = data.map((p) => {
+        const activeProducts = data.filter((p) => p.active === true);
+
+        const mappedProducts = activeProducts.map((p) => {
           const images = Array.isArray(p.images)
             ? p.images
                 .filter((img) => {
