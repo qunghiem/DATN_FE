@@ -469,7 +469,7 @@ const Collection = () => {
           {/* Mobile Filter Button */}
           <button
             onClick={() => setShowMobileFilters(true)}
-            className="lg:hidden fixed bottom-20 right-4 z-40 bg-[#3A6FB5] text-white p-4 rounded-full shadow-lg hover:bg-[#2E5C99] transition"
+            className="lg:hidden fixed bottom-35 right-5 z-40 bg-[#3A6FB5] text-white p-4 rounded-full shadow-lg hover:bg-[#2E5C99] transition"
           >
             <Menu className="w-6 h-6" />
           </button>
