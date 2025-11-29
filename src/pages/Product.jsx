@@ -842,7 +842,7 @@ const Product = () => {
           <div className="py-6">
             {activeTab === "description" && product.description && (
               <div className="prose max-w-none">
-                <span className="font-bold">{product.name}</span>
+                <span className="font-bold">{product.name}</span>{" "}
                 <span className="text-gray-700 whitespace-pre-line">{product.description}</span>
               </div>
             )}
