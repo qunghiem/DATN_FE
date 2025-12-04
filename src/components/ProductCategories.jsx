@@ -60,7 +60,7 @@ const ProductCategories = () => {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 md:py-10 bg-white">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 bg-white">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#3A6FB5]"></div>
           <p className="mt-4 text-gray-600">Đang tải danh mục...</p>
@@ -71,7 +71,7 @@ const ProductCategories = () => {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 md:py-10 bg-white">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 bg-white">
         <div className="text-center text-red-600">
           <p className="text-lg font-medium">Lỗi: {error}</p>
           <button
@@ -87,7 +87,7 @@ const ProductCategories = () => {
 
   if (categories.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 md:py-10 bg-white">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 bg-white">
         <div className="text-center text-gray-600">
           <p className="text-lg">Chưa có danh mục nào</p>
         </div>
@@ -96,10 +96,10 @@ const ProductCategories = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-6 md:py-10 bg-white">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 bg-white">
       {/* Header */}
-      <div className="text-center mb-6 md:mb-8">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
+      <div className="text-center mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
           Danh mục sản phẩm
         </h2>
         <p className="text-gray-600 text-sm md:text-base">
@@ -107,37 +107,25 @@ const ProductCategories = () => {
         </p>
       </div>
 
-      {/* Desktop: Grid 6 cột bình thường (>= 992px) */}
-      <div className="hidden lg:grid grid-cols-6 gap-5">
-        {categories.map((category) => (
-          <CategoryCard key={category.id} category={category} />
-        ))}
-      </div>
-
-      {/* Tablet: Hiển thị 3.5 item (768px - 991px) */}
-      <div className="hidden md:block lg:hidden overflow-x-auto scrollbar-hide">
-        <div className="flex gap-4" style={{ width: "fit-content" }}>
+      {/* Category List - Giống BestSeller */}
+      {/* Mobile: 1.5 item (65%), Tablet: 3.5 item (27.5%), Desktop: 4 item (25%) */}
+      <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 hide-scrollbar">
+        <div className="flex gap-3 md:gap-4 lg:flex-nowrap lg:overflow-x-auto lg:gap-4 xl:justify-start hide-scrollbar">
           {categories.map((category) => (
-            <div
-              key={category.id}
-              style={{ minWidth: "calc(28.57% - 11.43px)" }}
-            >
-              <CategoryCard category={category} />
-            </div>
+            <CategoryCard key={category.id} category={category} />
           ))}
         </div>
       </div>
 
-      {/* Mobile: Hiển thị 2.5 item (< 768px) */}
-      <div className="block md:hidden overflow-x-auto scrollbar-hide">
-        <div className="flex gap-3" style={{ width: "fit-content" }}>
-          {categories.map((category) => (
-            <div key={category.id} style={{ minWidth: "calc(40% - 9.6px)" }}>
-              <CategoryCard category={category} />
-            </div>
-          ))}
-        </div>
-      </div>
+      <style jsx>{`
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 };
@@ -147,7 +135,7 @@ const CategoryCard = ({ category }) => {
   return (
     <Link
       to={category.link}
-      className="group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 block"
+      className="flex-none w-[65%] md:w-[27.5%] lg:w-1/4 group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 block"
     >
       {/* Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-100">
@@ -164,7 +152,7 @@ const CategoryCard = ({ category }) => {
       </div>
 
       {/* Info */}
-      <div className="p-2 md:p-3 text-center">
+      <div className="p-3 text-center">
         <h3 className="font-medium text-gray-900 text-sm md:text-base mb-0.5 group-hover:text-[#3A6FB5] transition-colors line-clamp-2">
           {category.name}
         </h3>
@@ -172,12 +160,6 @@ const CategoryCard = ({ category }) => {
           {category.productCount} sản phẩm
         </p>
       </div>
-{/* 
-      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-        <button className="bg-white text-[#3A6FB5] px-4 py-1.5 rounded-full font-medium text-sm shadow-sm hover:shadow-md transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
-          Xem ngay
-        </button>
-      </div> */}
     </Link>
   );
 };
