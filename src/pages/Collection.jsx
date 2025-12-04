@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Heart, Menu, X, ChevronDown, Info } from "lucide-react";
+import { Heart, Menu, X, ChevronDown, Info, ChevronLeft, ChevronRight } from "lucide-react";
 import axios from "axios";
 import Vouchers from "../components/Vouchers";
 import FilterSection from "../components/FilterSection";
@@ -13,7 +13,6 @@ const Collection = () => {
 
   // State
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [favorites, setFavorites] = useState([]);
   const [selectedColors, setSelectedColors] = useState({});
@@ -35,6 +34,14 @@ const Collection = () => {
   const [selectedSex, setSelectedSex] = useState([]);
   const [sortBy, setSortBy] = useState("default");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  // Pagination states
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 12,
+    totalPages: 1,
+    totalElements: 0
+  });
 
   // custom price range
   const [customMinPrice, setCustomMinPrice] = useState("");
@@ -105,24 +112,8 @@ const Collection = () => {
         const categoryNames = categoriesData.map((c) => c.name);
         setCategories([...categoryNames]);
 
-        // Fetch labels for shipping options
-        // const labelsRes = await axios.get(`${VITE_API_URL}/api/labels`);
-        // const labelsData = labelsRes.data?.result || labelsRes.data?.data || [];
-
-        // const shippingLabels = labelsData
-        //   .filter((label) => {
-        //     const name = (label.name || "").toLowerCase();
-        //     return (
-        //       name.includes("giao hàng") ||
-        //       name.includes("freeship") ||
-        //       name.includes("miễn phí") ||
-        //       name.includes("ship") ||
-        //       name.includes("vận chuyển")
-        //     );
-        //   })
-        //   .map((label) => label.name);
-
-        // setShippingOptions(shippingLabels);
+        // Fetch labels for shipping options (nếu cần)
+        // ...
       } catch (err) {
         console.error("Error fetching brands/categories/labels:", err);
       }
@@ -191,8 +182,8 @@ const Collection = () => {
         }
         
         // Pagination
-        params.append("page", "1");
-        params.append("size", "12");
+        params.append("page", pagination.currentPage.toString());
+        params.append("size", pagination.pageSize.toString());
         
         const res = await axios.get(`${VITE_API_URL}/api/products/search?${params.toString()}`);
 
@@ -274,17 +265,42 @@ const Collection = () => {
         });
 
         setProducts(mappedProducts);
-        setFilteredProducts(mappedProducts);
+        
+        // Update pagination info from API response
+        setPagination(prev => ({
+          ...prev,
+          totalPages: res.data?.totalPages || 1,
+          totalElements: res.data?.totalElements || 0,
+          currentPage: res.data?.currentPage || prev.currentPage
+        }));
       } catch (err) {
         console.error("Error fetching products:", err);
         setProducts([]);
-        setFilteredProducts([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProducts();
+  }, [
+    searchParams,
+    selectedBrand,
+    selectedSex,
+    selectedCategory,
+    selectedPriceRange,
+    customMinPrice,
+    customMaxPrice,
+    sortBy,
+    pagination.currentPage, // Thêm dependency này
+    pagination.pageSize,    // Thêm dependency này
+  ]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPagination(prev => ({
+      ...prev,
+      currentPage: 1
+    }));
   }, [
     searchParams,
     selectedBrand,
@@ -335,6 +351,66 @@ const Collection = () => {
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN").format(price) + "đ";
+  };
+
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= pagination.totalPages) {
+      setPagination(prev => ({
+        ...prev,
+        currentPage: page
+      }));
+      // Scroll to top when page changes
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePageSizeChange = (size) => {
+    setPagination(prev => ({
+      ...prev,
+      pageSize: size,
+      currentPage: 1 // Reset về trang 1 khi thay đổi số lượng mỗi trang
+    }));
+  };
+
+  // Generate page numbers for pagination
+  const generatePageNumbers = () => {
+    const pages = [];
+    const totalPages = pagination.totalPages;
+    const currentPage = pagination.currentPage;
+    
+    // Always show first page
+    if (totalPages > 0) {
+      pages.push(1);
+    }
+    
+    // Calculate range around current page
+    let startPage = Math.max(2, currentPage - 1);
+    let endPage = Math.min(totalPages - 1, currentPage + 1);
+    
+    // Add ellipsis if needed
+    if (startPage > 2) {
+      pages.push('...');
+    }
+    
+    // Add middle pages
+    for (let i = startPage; i <= endPage; i++) {
+      if (i > 1 && i < totalPages) {
+        pages.push(i);
+      }
+    }
+    
+    // Add ellipsis if needed
+    if (endPage < totalPages - 1) {
+      pages.push('...');
+    }
+    
+    // Always show last page if there is more than 1 page
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+    
+    return pages;
   };
 
   return (
@@ -504,33 +580,56 @@ const Collection = () => {
           <div className="w-full">
             {/* Header & Sort */}
             <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">
-                  {selectedCategory.length > 0 ? (
-                    <>
-                      Danh mục:{" "}
-                      <span className="font-semibold">
-                        {selectedCategory.join(", ")}
-                      </span>{" "}
-                      ({filteredProducts.length} sản phẩm)
-                    </>
-                  ) : (
-                    <>Tất cả sản phẩm ({filteredProducts.length})</>
-                  )}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Sắp xếp:</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-white border border-gray-300 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none"
-                  >
-                    {sortOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </select>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-sm text-gray-600">
+                    {selectedCategory.length > 0 ? (
+                      <>
+                        Danh mục:{" "}
+                        <span className="font-semibold">
+                          {selectedCategory.join(", ")}
+                        </span>{" "}
+                        ({pagination.totalElements} sản phẩm)
+                      </>
+                    ) : (
+                      <>Tất cả sản phẩm ({pagination.totalElements})</>
+                    )}
+                  </span>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Trang {pagination.currentPage} / {pagination.totalPages} • Hiển thị {products.length} sản phẩm
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  {/* Items per page selector */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Hiển thị:</span>
+                    <select
+                      value={pagination.pageSize}
+                      onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                      className="bg-white border border-gray-300 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none"
+                    >
+                      <option value={12}>12</option>
+                      <option value={24}>24</option>
+                      <option value={36}>36</option>
+                      <option value={48}>48</option>
+                    </select>
+                  </div>
+                  
+                  {/* Sort selector */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Sắp xếp:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="bg-white border border-gray-300 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none"
+                    >
+                      {sortOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -544,7 +643,7 @@ const Collection = () => {
             )}
 
             {/* No Results */}
-            {!isLoading && filteredProducts.length === 0 && (
+            {!isLoading && products.length === 0 && (
               <div className="text-center py-12 bg-white rounded-lg">
                 <div className="text-6xl mb-4">🔍</div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -563,181 +662,262 @@ const Collection = () => {
             )}
 
             {/* Products Grid */}
-            {!isLoading && filteredProducts.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {filteredProducts.map((p) => {
-                  const uniqueColors = getUniqueColors(p.colors);
+            {!isLoading && products.length > 0 && (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {products.map((p) => {
+                    const uniqueColors = getUniqueColors(p.colors);
 
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => handleProductClick(p.id)}
-                      className="bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1 cursor-pointer overflow-hidden"
-                    >
-                      {/* Product Image */}
-                      <div className="relative aspect-[3/4] bg-gray-100">
-                        {p.mainImage ? (
-                          <img
-                            src={selectedColors[p.id] || p.mainImage}
-                            alt={p.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
-                            No Image
-                          </div>
-                        )}
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => handleProductClick(p.id)}
+                        className="bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1 cursor-pointer overflow-hidden"
+                      >
+                        {/* Product Image */}
+                        <div className="relative aspect-[3/4] bg-gray-100">
+                          {p.mainImage ? (
+                            <img
+                              src={selectedColors[p.id] || p.mainImage}
+                              alt={p.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                              No Image
+                            </div>
+                          )}
 
-                        {/* Labels - Top Left */}
-                        {p.labels.includes("Bán chạy") && (
-                          <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
-                            Bán chạy
-                          </div>
-                        )}
+                          {/* Labels - Top Left */}
+                          {p.labels.includes("Bán chạy") && (
+                            <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
+                              Bán chạy
+                            </div>
+                          )}
 
-                        {/* Favorite Button - Top Right */}
-                        <button
-                          onClick={(e) => toggleFavorite(p.id, e)}
-                          className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition z-10 ${
-                            favorites.includes(p.id)
-                              ? "text-red-500"
-                              : "text-gray-400 hover:text-[#3A6FB5]"
-                          }`}
-                        >
-                          <Heart
-                            className="w-4 h-4"
-                            fill={
-                              favorites.includes(p.id) ? "currentColor" : "none"
-                            }
-                          />
-                        </button>
+                          {/* Favorite Button - Top Right */}
+                          <button
+                            onClick={(e) => toggleFavorite(p.id, e)}
+                            className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition z-10 ${
+                              favorites.includes(p.id)
+                                ? "text-red-500"
+                                : "text-gray-400 hover:text-[#3A6FB5]"
+                            }`}
+                          >
+                            <Heart
+                              className="w-4 h-4"
+                              fill={
+                                favorites.includes(p.id) ? "currentColor" : "none"
+                              }
+                            />
+                          </button>
 
-                        {/* Labels - Bottom Left */}
-                        <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
-                          {p.labels.map((label, idx) => {
-                            if (label === "Bán chạy") return null;
+                          {/* Labels - Bottom Left */}
+                          <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
+                            {p.labels.map((label, idx) => {
+                              if (label === "Bán chạy") return null;
 
-                            const isFreeship =
-                              label.toLowerCase().includes("freeship") ||
-                              label.toLowerCase().includes("free ship") ||
-                              label.toLowerCase().includes("miễn phí") ||
-                              label.toLowerCase().includes("giao hàng");
-                            const isCombo =
-                              label.toLowerCase().includes("mua 2") ||
-                              label.toLowerCase().includes("combo");
+                              const isFreeship =
+                                label.toLowerCase().includes("freeship") ||
+                                label.toLowerCase().includes("free ship") ||
+                                label.toLowerCase().includes("miễn phí") ||
+                                label.toLowerCase().includes("giao hàng");
+                              const isCombo =
+                                label.toLowerCase().includes("mua 2") ||
+                                label.toLowerCase().includes("combo");
 
-                            if (isFreeship) {
+                              if (isFreeship) {
+                                return (
+                                  <span
+                                    key={idx}
+                                    className="bg-[#3A6FB5] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm"
+                                  >
+                                    {label}
+                                  </span>
+                                );
+                              }
+
+                              if (isCombo) {
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="bg-[#003EA7] text-white text-[11px] font-semibold px-2 py-[2px] rounded-md shadow-md"
+                                  >
+                                    {label}
+                                  </div>
+                                );
+                              }
+
                               return (
                                 <span
                                   key={idx}
-                                  className="bg-[#3A6FB5] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm"
+                                  className="bg-[#003EA7] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm"
                                 >
                                   {label}
                                 </span>
                               );
-                            }
-
-                            if (isCombo) {
-                              return (
-                                <div
-                                  key={idx}
-                                  className="bg-[#003EA7] text-white text-[11px] font-semibold px-2 py-[2px] rounded-md shadow-md"
-                                >
-                                  {label}
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <span
-                                key={idx}
-                                className="bg-[#003EA7] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm"
-                              >
-                                {label}
-                              </span>
-                            );
-                          })}
+                            })}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Product Info */}
-                      <div className="p-3">
-                        <p className="text-gray-400 text-xs uppercase mb-1 tracking-wide">
-                          {p.brand || "YINLI"}
-                        </p>
-                        <h3 className="font-medium text-gray-800 text-[15px] leading-snug hover:text-[#3A6FB5] transition line-clamp-2 mb-2">
-                          {p.name}
-                        </h3>
+                        {/* Product Info */}
+                        <div className="p-3">
+                          <p className="text-gray-400 text-xs uppercase mb-1 tracking-wide">
+                            {p.brand || "YINLI"}
+                          </p>
+                          <h3 className="font-medium text-gray-800 text-[15px] leading-snug hover:text-[#3A6FB5] transition line-clamp-2 mb-2">
+                            {p.name}
+                          </h3>
 
-                        {/* Price */}
-                        <div className="flex items-center gap-1 mb-2">
-                          <span className="text-[#111] font-bold text-[15px]">
-                            {Math.round(p.price).toLocaleString("vi-VN")}₫
-                          </span>
-                          {p.originalPrice > p.price && (
-                            <>
-                              <span className="text-gray-400 text-xs line-through ml-1">
-                                {Math.round(p.originalPrice).toLocaleString(
-                                  "vi-VN"
-                                )}
-                                ₫
-                              </span>
-                              <span className="text-red-500 text-xs font-medium ml-1">
-                                -{p.discount}%
-                              </span>
-                            </>
-                          )}
-                        </div>
-                        {/* Color Variant Dots */}
-                        {uniqueColors.length > 1 && (
-                          <div className="flex items-center gap-2 mt-2">
-                            {uniqueColors.slice(0, 5).map((color, i) => (
-                              <div key={i} className="relative group">
-                                <button
-                                  onMouseEnter={(e) => {
-                                    e.stopPropagation();
-                                    handleColorChange(p.id, color.image);
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
-                                    selectedColors[p.id] === color.image
-                                      ? "border-gray-800 scale-110"
-                                      : "border-gray-300 hover:border-gray-500"
-                                  }`}
-                                  style={{
-                                    backgroundColor: color.code,
-                                    boxShadow:
-                                      color.code === "#FFFFFF"
-                                        ? "inset 0 0 0 1px rgba(0,0,0,0.1)"
-                                        : "none",
-                                  }}
-                                  aria-label={color.name}
-                                />
-
-                                {/* Tooltip */}
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-20">
-                                  {color.name}
-                                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
-                                </div>
-                              </div>
-                            ))}
-                            {uniqueColors.length > 5 && (
-                              <span className="text-gray-400 text-xs ml-1">
-                                +{uniqueColors.length - 5}
-                              </span>
+                          {/* Price */}
+                          <div className="flex items-center gap-1 mb-2">
+                            <span className="text-[#111] font-bold text-[15px]">
+                              {Math.round(p.price).toLocaleString("vi-VN")}₫
+                            </span>
+                            {p.originalPrice > p.price && (
+                              <>
+                                <span className="text-gray-400 text-xs line-through ml-1">
+                                  {Math.round(p.originalPrice).toLocaleString(
+                                    "vi-VN"
+                                  )}
+                                  ₫
+                                </span>
+                                <span className="text-red-500 text-xs font-medium ml-1">
+                                  -{p.discount}%
+                                </span>
+                              </>
                             )}
                           </div>
-                        )}
+                          {/* Color Variant Dots */}
+                          {uniqueColors.length > 1 && (
+                            <div className="flex items-center gap-2 mt-2">
+                              {uniqueColors.slice(0, 5).map((color, i) => (
+                                <div key={i} className="relative group">
+                                  <button
+                                    onMouseEnter={(e) => {
+                                      e.stopPropagation();
+                                      handleColorChange(p.id, color.image);
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
+                                      selectedColors[p.id] === color.image
+                                        ? "border-gray-800 scale-110"
+                                        : "border-gray-300 hover:border-gray-500"
+                                    }`}
+                                    style={{
+                                      backgroundColor: color.code,
+                                      boxShadow:
+                                        color.code === "#FFFFFF"
+                                          ? "inset 0 0 0 1px rgba(0,0,0,0.1)"
+                                          : "none",
+                                    }}
+                                    aria-label={color.name}
+                                  />
+
+                                  {/* Tooltip */}
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-20">
+                                    {color.name}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                                  </div>
+                                </div>
+                              ))}
+                              {uniqueColors.length > 5 && (
+                                <span className="text-gray-400 text-xs ml-1">
+                                  +{uniqueColors.length - 5}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 mb-4">
+                    <div className="text-sm text-gray-600">
+                      Hiển thị {((pagination.currentPage - 1) * pagination.pageSize) + 1} - {Math.min(pagination.currentPage * pagination.pageSize, pagination.totalElements)} trong tổng số {pagination.totalElements} sản phẩm
                     </div>
-                  );
-                })}
-              </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {/* Previous button */}
+                      <button
+                        onClick={() => handlePageChange(pagination.currentPage - 1)}
+                        disabled={pagination.currentPage === 1}
+                        className={`flex items-center justify-center w-10 h-10 rounded-lg border ${
+                          pagination.currentPage === 1
+                            ? "border-gray-300 text-gray-400 cursor-not-allowed"
+                            : "border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+                        }`}
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+
+                      {/* Page numbers */}
+                      <div className="flex items-center gap-1">
+                        {generatePageNumbers().map((page, index) => (
+                          page === '...' ? (
+                            <span key={`ellipsis-${index}`} className="px-3 py-2 text-gray-500">
+                              ...
+                            </span>
+                          ) : (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              className={`w-10 h-10 rounded-lg border flex items-center justify-center text-sm font-medium ${
+                                pagination.currentPage === page
+                                  ? "bg-[#3A6FB5] text-white border-[#3A6FB5]"
+                                  : "border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          )
+                        ))}
+                      </div>
+
+                      {/* Next button */}
+                      <button
+                        onClick={() => handlePageChange(pagination.currentPage + 1)}
+                        disabled={pagination.currentPage === pagination.totalPages}
+                        className={`flex items-center justify-center w-10 h-10 rounded-lg border ${
+                          pagination.currentPage === pagination.totalPages
+                            ? "border-gray-300 text-gray-400 cursor-not-allowed"
+                            : "border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+                        }`}
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                    
+                    {/* Quick jump */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-gray-600">Đi đến trang:</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={pagination.totalPages}
+                        value={pagination.currentPage}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value);
+                          if (!isNaN(page)) {
+                            handlePageChange(Math.min(Math.max(1, page), pagination.totalPages));
+                          }
+                        }}
+                        className="w-16 px-2 py-1.5 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none"
+                      />
+                      <span className="text-gray-500">/ {pagination.totalPages}</span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
       </div>
-      </div>
+    </div>
   );
 };
 

@@ -18,9 +18,6 @@ const FilterSection = ({
   sexOptions,
   selectedSex,
   setSelectedSex,
-  shippingOptions,
-  selectedShipping,
-  setSelectedShipping,
   toggleFilter
 }) => (
   <div className={isMobile ? "p-4" : "p-4"}>
