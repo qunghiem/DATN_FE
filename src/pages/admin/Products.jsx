@@ -248,7 +248,7 @@ const Products = () => {
     setProductForm({
       ...productForm,
       images: [...productForm.images, null],
-      imageAltTexts: [...productForm.imageAltTexts, ""],
+      imageAltTexts: [...productForm.imageAltTexts, "Mô tả ảnh"],
       imagePreviews: [...productForm.imagePreviews, ""],
     });
   };
