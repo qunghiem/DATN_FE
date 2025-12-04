@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { FaRegHeart, FaBars, FaTimes } from "react-icons/fa";
 import { logout } from "../features/auth/authSlice";
@@ -11,6 +11,7 @@ import search from "../assets/search.png";
 const Navbar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const cartState = useSelector((state) => state.cart);
   const items = cartState?.items || [];
@@ -35,6 +36,17 @@ const Navbar = () => {
     }
   }, [isAuthenticated, dispatch]);
 
+  // Parse search query from URL khi component mount hoặc URL thay đổi
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchQuery = params.get("search");
+    if (searchQuery) {
+      setSearchValue(searchQuery);
+      // Tự động mở thanh tìm kiếm nếu có query trong URL
+      if (!searchOpen) setSearchOpen(true);
+    }
+  }, [location.search]);
+
   const handleLogout = () => {
     dispatch(logout());
     setAvatarMenuOpen(false);
@@ -51,7 +63,7 @@ const Navbar = () => {
 
   const handleSearchToggle = () => {
     setSearchOpen((s) => !s);
-    setSearchValue("");
+    // Không reset searchValue khi toggle
     setAvatarMenuOpen(false);
   };
 
@@ -60,11 +72,21 @@ const Navbar = () => {
     const q = searchValue.trim();
     if (q) {
       navigate(`/collection?search=${encodeURIComponent(q)}`);
-      setSearchOpen(false);
-      setSearchValue("");
+      // KHÔNG đóng thanh tìm kiếm, KHÔNG reset giá trị
+      // setSearchOpen(false);
+      // setSearchValue("");
     } else {
-      setSearchOpen(false);
+      // Nếu search rỗng thì vẫn giữ thanh tìm kiếm mở để người dùng có thể nhập
+      // Hoặc có thể đóng nếu bạn muốn
+      // setSearchOpen(false);
     }
+  };
+
+  // Hàm để đóng thanh tìm kiếm một cách tường minh
+  const handleCloseSearch = () => {
+    setSearchOpen(false);
+    // Tùy chọn: có thể reset searchValue khi đóng
+    // setSearchValue("");
   };
 
   return (
@@ -141,12 +163,16 @@ const Navbar = () => {
           {/* RIGHT ICONS */}
           <div className="flex items-center space-x-4 h-10 relative">
             {/* Search icon */}
-            <img
-              src={search}
-              className="w-5 h-5 cursor-pointer hover:opacity-70 transition"
-              alt="Search"
-              onClick={handleSearchToggle}
-            />
+            <div className="relative">
+              <img
+                src={search}
+                className={`w-5 h-5 cursor-pointer hover:opacity-70 transition ${
+                  searchOpen ? "opacity-70" : ""
+                }`}
+                alt="Search"
+                onClick={handleSearchToggle}
+              />
+            </div>
 
             {/* Avatar */}
             <div className="relative" ref={avatarRef}>
@@ -253,19 +279,29 @@ const Navbar = () => {
 
         {/* SEARCH BAR */}
         {searchOpen && (
-          <form
-            onSubmit={handleSearchSubmit}
-            className="flex justify-center mt-3 transition-all duration-200"
-          >
-            <input
-              type="text"
-              placeholder="Tìm kiếm sản phẩm..."
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              className="w-full max-w-lg border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-              autoFocus
-            />
-          </form>
+          <div className="flex justify-center mt-3 transition-all duration-200">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="w-full max-w-lg flex items-center relative"
+            >
+              <input
+                type="text"
+                placeholder="Tìm kiếm sản phẩm..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="w-full border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 pr-10"
+                autoFocus
+              />
+              {/* Nút đóng (X) */}
+              <button
+                type="button"
+                onClick={handleCloseSearch}
+                className="absolute right-3 text-gray-500 hover:text-gray-700"
+              >
+                <FaTimes size={16} />
+              </button>
+            </form>
+          </div>
         )}
       </div>
 
@@ -324,4 +360,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;  
+export default Navbar;
