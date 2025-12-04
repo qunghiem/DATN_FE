@@ -1,4 +1,3 @@
-// src/pages/Collection.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Heart, Menu, X, ChevronDown, Info } from "lucide-react";
@@ -33,6 +32,7 @@ const Collection = () => {
   const [selectedPriceRange, setSelectedPriceRange] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState([]);
   const [selectedShipping, setSelectedShipping] = useState([]);
+  const [selectedSex, setSelectedSex] = useState([]); // NEW: Sex filter state
   const [sortBy, setSortBy] = useState("default");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
@@ -40,12 +40,17 @@ const Collection = () => {
   const [customMinPrice, setCustomMinPrice] = useState("");
   const [customMaxPrice, setCustomMaxPrice] = useState("");
 
+  // NEW: Sex options
+  const sexOptions = [
+    { value: 'MALE', label: 'Nam' },
+    { value: 'FEMALE', label: 'Nữ' },
+  ];
+
   const getUniqueColors = (colors) => {
     if (!colors || colors.length === 0) return [];
 
     const uniqueMap = new Map();
     colors.forEach((color) => {
-      // Sử dụng tên màu làm key để loại bỏ trùng lặp
       const key = color.name || color.color_name;
       if (key && !uniqueMap.has(key)) {
         uniqueMap.set(key, color);
@@ -53,6 +58,7 @@ const Collection = () => {
     });
     return Array.from(uniqueMap.values());
   };
+
   // Initialize category from URL
   useEffect(() => {
     const categoryName = searchParams.get("categoryName");
@@ -60,8 +66,8 @@ const Collection = () => {
       setSelectedCategory([categoryName]);
     }
   }, [searchParams]);
-  // Filter options - Static
 
+  // Filter options - Static
   const priceRanges = [
     { id: "0-300000", label: "Giá dưới 300,000đ" },
     { id: "300000-5000000", label: "300,000đ - 500,000đ" },
@@ -188,6 +194,7 @@ const Collection = () => {
             id: p.id,
             name: p.name || "No name",
             brand: p.brand?.name || p.brandName || "Unknown",
+            sex: p.sex || "UNISEX", // NEW: Map sex field
             price: currentPrice,
             originalPrice: originalPrice,
             discount: discountPercent,
@@ -242,6 +249,11 @@ const Collection = () => {
     // Brand filter
     if (selectedBrand.length > 0) {
       filtered = filtered.filter((p) => selectedBrand.includes(p.brand));
+    }
+
+    // NEW: Sex filter
+    if (selectedSex.length > 0) {
+      filtered = filtered.filter((p) => selectedSex.includes(p.sex));
     }
 
     // Color filter
@@ -321,6 +333,7 @@ const Collection = () => {
     products,
     searchParams,
     selectedBrand,
+    selectedSex, // NEW: Add to dependencies
     selectedColorFilter,
     selectedPriceRange,
     selectedCategory,
@@ -361,6 +374,7 @@ const Collection = () => {
     setSelectedPriceRange([]);
     setSelectedCategory([]);
     setSelectedShipping([]);
+    setSelectedSex([]); // NEW: Clear sex filter
     setSortBy("default");
     setCustomMinPrice("");
     setCustomMaxPrice("");
@@ -461,6 +475,9 @@ const Collection = () => {
                   categories={categories}
                   selectedCategory={selectedCategory}
                   setSelectedCategory={setSelectedCategory}
+                  sexOptions={sexOptions}
+                  selectedSex={selectedSex}
+                  setSelectedSex={setSelectedSex}
                   shippingOptions={shippingOptions}
                   selectedShipping={selectedShipping}
                   setSelectedShipping={setSelectedShipping}
@@ -504,6 +521,9 @@ const Collection = () => {
                 categories={categories}
                 selectedCategory={selectedCategory}
                 setSelectedCategory={setSelectedCategory}
+                sexOptions={sexOptions}
+                selectedSex={selectedSex}
+                setSelectedSex={setSelectedSex}
                 shippingOptions={shippingOptions}
                 selectedShipping={selectedShipping}
                 setSelectedShipping={setSelectedShipping}
@@ -593,7 +613,6 @@ const Collection = () => {
             {!isLoading && filteredProducts.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {filteredProducts.map((p) => {
-                  // Lọc màu unique cho mỗi sản phẩm
                   const uniqueColors = getUniqueColors(p.colors);
 
                   return (
@@ -643,7 +662,6 @@ const Collection = () => {
                         {/* Labels - Bottom Left */}
                         <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
                           {p.labels.map((label, idx) => {
-                            // Skip "Bán chạy" vì đã hiển thị ở trên
                             if (label === "Bán chạy") return null;
 
                             const isFreeship =
@@ -717,7 +735,6 @@ const Collection = () => {
                             </>
                           )}
                         </div>
-
                         {/* Color Variant Dots - SỬ DỤNG uniqueColors */}
                         {uniqueColors.length > 1 && (
                           <div className="flex items-center gap-2 mt-2">

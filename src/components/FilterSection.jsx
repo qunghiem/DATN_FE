@@ -1,3 +1,5 @@
+import React from 'react';
+
 const FilterSection = ({ 
   isMobile = false,
   brands,
@@ -13,12 +15,15 @@ const FilterSection = ({
   categories,
   selectedCategory,
   setSelectedCategory,
+  sexOptions,
+  selectedSex,
+  setSelectedSex,
   shippingOptions,
   selectedShipping,
   setSelectedShipping,
   toggleFilter
 }) => (
-  <div className={isMobile ? "p-4" : ""}>
+  <div className={isMobile ? "p-4" : "p-4"}>
     {/* Brand Filter */}
     <div className="mb-6">
       <h4 className="font-bold text-gray-900 mb-3 uppercase text-sm">
@@ -39,6 +44,31 @@ const FilterSection = ({
               className="w-4 h-4 text-[#3A6FB5] border-gray-300 rounded focus:ring-[#3A6FB5]"
             />
             <span className="text-sm text-gray-700">{brand}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+
+    {/* Sex Filter */}
+    <div className="mb-6">
+      <h4 className="font-bold text-gray-900 mb-3 uppercase text-sm">
+        GIỚI TÍNH
+      </h4>
+      <div className="space-y-2">
+        {sexOptions.map((sex) => (
+          <label
+            key={sex.value}
+            className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition"
+          >
+            <input
+              type="checkbox"
+              checked={selectedSex.includes(sex.value)}
+              onChange={() =>
+                toggleFilter(selectedSex, setSelectedSex, sex.value)
+              }
+              className="w-4 h-4 text-[#3A6FB5] border-gray-300 rounded focus:ring-[#3A6FB5]"
+            />
+            <span className="text-sm text-gray-700">{sex.label}</span>
           </label>
         ))}
       </div>
@@ -131,33 +161,6 @@ const FilterSection = ({
         ))}
       </div>
     </div>
-
-    {/* Shipping Filter */}
-    {shippingOptions.length > 0 && (
-      <div className="mb-6">
-        <h4 className="font-bold text-gray-900 mb-3 uppercase text-sm">
-          DỊCH VỤ GIAO HÀNG
-        </h4>
-        <div className="space-y-2">
-          {shippingOptions.map((option) => (
-            <label
-              key={option}
-              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition"
-            >
-              <input
-                type="checkbox"
-                checked={selectedShipping.includes(option)}
-                onChange={() =>
-                  toggleFilter(selectedShipping, setSelectedShipping, option)
-                }
-                className="w-4 h-4 text-[#3A6FB5] border-gray-300 rounded focus:ring-[#3A6FB5]"
-              />
-              <span className="text-sm text-gray-700">{option}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-    )}
   </div>
 );
 
