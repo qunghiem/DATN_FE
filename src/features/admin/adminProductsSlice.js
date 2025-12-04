@@ -52,7 +52,7 @@ export const createProduct = createAsyncThunk(
       formData.append('price', productData.price);
       formData.append('discountPercent', productData.discountPercent);
       formData.append('brandId', productData.brandId);
-      
+      formData.append('sex', productData.sex);
       if (productData.costPrice !== undefined) {
         formData.append('costPrice', productData.costPrice);
       }
@@ -206,6 +206,7 @@ export const updateProduct = createAsyncThunk(
       formData.append('price', productData.price);
       formData.append('discountPercent', productData.discountPercent);
       formData.append('brandId', productData.brandId);
+      formData.append('sex', productData.sex);
       
       if (productData.costPrice !== undefined) {
         formData.append('costPrice', productData.costPrice);

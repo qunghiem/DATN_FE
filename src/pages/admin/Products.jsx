@@ -60,6 +60,7 @@ const Products = () => {
     brandId: "",
     categoryIds: [],
     labelIds: [],
+    sex: "",
     images: [],
     imageAltTexts: [""],
     imagePreviews: [],
@@ -127,6 +128,7 @@ const Products = () => {
       brandId: "",
       categoryIds: [],
       labelIds: [],
+
       images: [],
       imageAltTexts: [""],
       imagePreviews: [],
@@ -184,6 +186,7 @@ const Products = () => {
             productDetail.labelIds ||
             productDetail.labels?.map((l) => l.id) ||
             [],
+          sex: productDetail.sex || "",
           images: [],
           imageAltTexts: productDetail.images?.map(
             (img) => img.alt_text || ""
@@ -322,9 +325,12 @@ const Products = () => {
       brandId: Number(productForm.brandId),
       categoryIds: productForm.categoryIds.map(Number),
       labelIds: productForm.labelIds.map(Number),
+      sex: productForm.sex,
       images: productForm.images.filter((img) => img !== null),
       imageAltTexts: productForm.imageAltTexts,
     };
+    console.log("📦 Payload gửi lên:", payload);
+    console.log("🚹 Sex value:", productForm.sex);
 
     if (isOwner) {
       payload.costPrice = Number(productForm.costPrice);
@@ -443,12 +449,18 @@ const Products = () => {
       return;
     }
 
-    if (!variant.useExistingImages && (!variant.images || variant.images.length === 0)) {
+    if (
+      !variant.useExistingImages &&
+      (!variant.images || variant.images.length === 0)
+    ) {
       toast.error("Vui lòng thêm ảnh cho biến thể!");
       return;
     }
 
-    if (variant.useExistingImages && (!variant.imagePreviews || variant.imagePreviews.length === 0)) {
+    if (
+      variant.useExistingImages &&
+      (!variant.imagePreviews || variant.imagePreviews.length === 0)
+    ) {
       toast.error("Không tìm thấy ảnh từ màu này!");
       return;
     }
@@ -458,16 +470,16 @@ const Products = () => {
     try {
       if (variant.useExistingImages) {
         toast.info("Đang xử lý ảnh...");
-        
+
         const imageUrls = variant.imagePreviews;
         const filePromises = imageUrls.map(async (url, index) => {
           try {
             const response = await fetch(url);
             const blob = await response.blob();
-            
-            const extension = blob.type.split('/')[1] || 'jpg';
+
+            const extension = blob.type.split("/")[1] || "jpg";
             const fileName = `variant-color${variant.colorId}-${index}.${extension}`;
-            
+
             return new File([blob], fileName, { type: blob.type });
           } catch (error) {
             console.error(`Error fetching image ${index}:`, error);
@@ -476,7 +488,9 @@ const Products = () => {
         });
 
         imagesToSend = await Promise.all(filePromises);
-        console.log(`Converted ${imagesToSend.length} images from URLs to Files`);
+        console.log(
+          `Converted ${imagesToSend.length} images from URLs to Files`
+        );
       } else {
         imagesToSend = variant.images;
       }
@@ -502,7 +516,7 @@ const Products = () => {
       toast.success(`Đã lưu biến thể ${variantIndex + 1}`);
     } catch (error) {
       console.error("Error creating variant:", error);
-      
+
       if (error.message && error.message.includes("fetch")) {
         toast.error("Không thể tải ảnh từ server. Vui lòng thử lại!");
       } else {
@@ -934,6 +948,38 @@ const ProductFormModal = ({
               ))}
             </select>
           </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Giới tính *
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="sex"
+                  value="MALE"
+                  checked={productForm.sex === "MALE"}
+                  onChange={(e) => handleProductChange("sex", e.target.value)}
+                  className="w-4 h-4 text-sky-500 focus:ring-2 focus:ring-sky-500"
+                  required
+                />
+                <span className="ml-2 text-gray-700">Nam</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="sex"
+                  value="FEMALE"
+                  checked={productForm.sex === "FEMALE"}
+                  onChange={(e) => handleProductChange("sex", e.target.value)}
+                  className="w-4 h-4 text-sky-500 focus:ring-2 focus:ring-sky-500"
+                  required
+                />
+                <span className="ml-2 text-gray-700">Nữ</span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -1117,7 +1163,6 @@ const VariantFormModal = ({
               <span className="font-medium">{currentProduct.name}</span>
             </p>
             <div className="flex items-center gap-4 mt-2">
-
               <div className="flex items-center gap-3 text-xs">
                 <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
                   ✓ Đã lưu: {savedCount}
@@ -1465,21 +1510,24 @@ const EditVariantsModal = ({
       return;
     }
 
+    // Kiểm tra xem có thay đổi ảnh không
+    const hasImageChanges = editForm.images.some((img) => img instanceof File);
+
     // ← XỬ LÝ KHI DÙNG ẢNH CŨ (useExistingImages)
     let imagesToSend = [];
 
     try {
       if (editForm.useExistingImages && editForm.imagePreviews.length > 0) {
         toast.info("Đang xử lý ảnh...");
-        
+
         const filePromises = editForm.imagePreviews.map(async (url, index) => {
           try {
             const response = await fetch(url);
             const blob = await response.blob();
-            
-            const extension = blob.type.split('/')[1] || 'jpg';
+
+            const extension = blob.type.split("/")[1] || "jpg";
             const fileName = `variant-edit-color${editForm.colorId}-${index}.${extension}`;
-            
+
             return new File([blob], fileName, { type: blob.type });
           } catch (error) {
             console.error(`Error fetching image ${index}:`, error);
@@ -1501,6 +1549,39 @@ const EditVariantsModal = ({
       };
 
       await handleUpdateVariant(variantId, payload);
+
+      // ← NẾU CÓ THAY ĐỔI ẢNH, CẬP NHẬT TẤT CẢ VARIANT CÙNG MÀU
+      if (hasImageChanges || editForm.useExistingImages) {
+        const sameColorVariants = productVariants.filter(
+          (v) => v.color?.id === Number(editForm.colorId) && v.id !== variantId
+        );
+
+        if (sameColorVariants.length > 0) {
+          toast.info(
+            `Đang cập nhật ảnh cho ${sameColorVariants.length} biến thể cùng màu...`
+          );
+
+          // Cập nhật tuần tự từng variant
+          for (const variant of sameColorVariants) {
+            const sameColorPayload = {
+              variantId: variant.id,
+              colorId: Number(editForm.colorId),
+              sizeId: variant.size?.id,
+              stock: variant.stock,
+              images: imagesToSend, // Dùng cùng ảnh
+            };
+
+            await handleUpdateVariant(variant.id, sameColorPayload);
+          }
+
+          toast.success(
+            `Đã cập nhật ảnh cho ${
+              sameColorVariants.length + 1
+            } biến thể cùng màu!`
+          );
+        }
+      }
+
       cancelEdit();
     } catch (error) {
       console.error("Error updating variant:", error);
@@ -1541,7 +1622,7 @@ const EditVariantsModal = ({
   // ← HÀM MỚI: Xử lý khi đổi màu trong edit mode
   const handleEditColorChange = (colorId) => {
     const existingImages = getExistingColorImages(colorId);
-    
+
     if (existingImages.length > 0) {
       setEditForm({
         ...editForm,
@@ -1603,23 +1684,28 @@ const EditVariantsModal = ({
     let imagesToSend = [];
 
     try {
-      if (newVariantForm.useExistingImages && newVariantForm.imagePreviews.length > 0) {
+      if (
+        newVariantForm.useExistingImages &&
+        newVariantForm.imagePreviews.length > 0
+      ) {
         toast.info("Đang xử lý ảnh...");
-        
-        const filePromises = newVariantForm.imagePreviews.map(async (url, index) => {
-          try {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            
-            const extension = blob.type.split('/')[1] || 'jpg';
-            const fileName = `variant-new-color${newVariantForm.colorId}-${index}.${extension}`;
-            
-            return new File([blob], fileName, { type: blob.type });
-          } catch (error) {
-            console.error(`Error fetching image ${index}:`, error);
-            throw error;
+
+        const filePromises = newVariantForm.imagePreviews.map(
+          async (url, index) => {
+            try {
+              const response = await fetch(url);
+              const blob = await response.blob();
+
+              const extension = blob.type.split("/")[1] || "jpg";
+              const fileName = `variant-new-color${newVariantForm.colorId}-${index}.${extension}`;
+
+              return new File([blob], fileName, { type: blob.type });
+            } catch (error) {
+              console.error(`Error fetching image ${index}:`, error);
+              throw error;
+            }
           }
-        });
+        );
 
         imagesToSend = await Promise.all(filePromises);
       } else {
@@ -1676,7 +1762,7 @@ const EditVariantsModal = ({
   // ← HÀM MỚI: Xử lý khi đổi màu trong new variant form
   const handleNewVariantColorChange = (colorId) => {
     const existingImages = getExistingColorImages(colorId);
-    
+
     if (existingImages.length > 0) {
       setNewVariantForm({
         ...newVariantForm,
@@ -1749,7 +1835,9 @@ const EditVariantsModal = ({
                     </label>
                     <select
                       value={newVariantForm.colorId}
-                      onChange={(e) => handleNewVariantColorChange(e.target.value)}
+                      onChange={(e) =>
+                        handleNewVariantColorChange(e.target.value)
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
                     >
                       <option value="">Chọn màu</option>
@@ -1932,7 +2020,9 @@ const EditVariantsModal = ({
                           </label>
                           <select
                             value={editForm.colorId}
-                            onChange={(e) => handleEditColorChange(e.target.value)}
+                            onChange={(e) =>
+                              handleEditColorChange(e.target.value)
+                            }
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
                           >
                             <option value="">Chọn màu</option>
@@ -1974,7 +2064,7 @@ const EditVariantsModal = ({
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Tồn kho *
+                            Thêm tồn kho
                           </label>
                           <input
                             type="number"
