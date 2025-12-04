@@ -32,7 +32,7 @@ const Collection = () => {
   const [selectedPriceRange, setSelectedPriceRange] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState([]);
   const [selectedShipping, setSelectedShipping] = useState([]);
-  const [selectedSex, setSelectedSex] = useState([]); // NEW: Sex filter state
+  const [selectedSex, setSelectedSex] = useState([]);
   const [sortBy, setSortBy] = useState("default");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
@@ -40,7 +40,7 @@ const Collection = () => {
   const [customMinPrice, setCustomMinPrice] = useState("");
   const [customMaxPrice, setCustomMaxPrice] = useState("");
 
-  // NEW: Sex options
+  // Sex options
   const sexOptions = [
     { value: 'MALE', label: 'Nam' },
     { value: 'FEMALE', label: 'Nữ' },
@@ -70,9 +70,9 @@ const Collection = () => {
   // Filter options - Static
   const priceRanges = [
     { id: "0-300000", label: "Giá dưới 300,000đ" },
-    { id: "300000-5000000", label: "300,000đ - 500,000đ" },
-    { id: "5000000-10000000", label: "500,000đ - 1,000,000đ" },
-    { id: "1000000-20000000", label: "1,000,000đ - 2,000,000đ" },
+    { id: "300000-500000", label: "300,000đ - 500,000đ" },
+    { id: "500000-1000000", label: "500,000đ - 1,000,000đ" },
+    { id: "1000000-2000000", label: "1,000,000đ - 2,000,000đ" },
     { id: "2000000-3000000", label: "2,000,000đ - 3,000,000đ" },
     { id: "3000000-above", label: "Giá trên 3,000,000đ" },
   ];
@@ -82,8 +82,6 @@ const Collection = () => {
     { id: "name-desc", name: "Tên Z → A" },
     { id: "price-asc", name: "Giá thấp đến cao" },
     { id: "price-desc", name: "Giá cao đến thấp" },
-    { id: "newest", name: "Hàng mới nhất" },
-    { id: "best-selling", name: "Bán chạy nhất" },
   ];
 
   // Fetch brands, categories, and labels
@@ -96,7 +94,7 @@ const Collection = () => {
         const brandNames = brandsData
           .filter((b) => b.isActive !== false)
           .map((b) => b.name);
-        setBrands([...brandNames, "Khác"]);
+        setBrands([...brandNames]);
 
         // Fetch categories
         const categoriesRes = await axios.get(
@@ -105,26 +103,26 @@ const Collection = () => {
         const categoriesData =
           categoriesRes.data?.result || categoriesRes.data?.data || [];
         const categoryNames = categoriesData.map((c) => c.name);
-        setCategories([...categoryNames, "Khác"]);
+        setCategories([...categoryNames]);
 
         // Fetch labels for shipping options
-        const labelsRes = await axios.get(`${VITE_API_URL}/api/labels`);
-        const labelsData = labelsRes.data?.result || labelsRes.data?.data || [];
+        // const labelsRes = await axios.get(`${VITE_API_URL}/api/labels`);
+        // const labelsData = labelsRes.data?.result || labelsRes.data?.data || [];
 
-        const shippingLabels = labelsData
-          .filter((label) => {
-            const name = (label.name || "").toLowerCase();
-            return (
-              name.includes("giao hàng") ||
-              name.includes("freeship") ||
-              name.includes("miễn phí") ||
-              name.includes("ship") ||
-              name.includes("vận chuyển")
-            );
-          })
-          .map((label) => label.name);
+        // const shippingLabels = labelsData
+        //   .filter((label) => {
+        //     const name = (label.name || "").toLowerCase();
+        //     return (
+        //       name.includes("giao hàng") ||
+        //       name.includes("freeship") ||
+        //       name.includes("miễn phí") ||
+        //       name.includes("ship") ||
+        //       name.includes("vận chuyển")
+        //     );
+        //   })
+        //   .map((label) => label.name);
 
-        setShippingOptions(shippingLabels);
+        // setShippingOptions(shippingLabels);
       } catch (err) {
         console.error("Error fetching brands/categories/labels:", err);
       }
@@ -133,12 +131,70 @@ const Collection = () => {
     fetchBrandsCategoriesLabels();
   }, []);
 
-  // Fetch products
+  // Fetch products with filters from API
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
-        const res = await axios.get(`${VITE_API_URL}/api/products`);
+        
+        // Build query params
+        const params = new URLSearchParams();
+        
+        // Search query
+        const urlSearch = searchParams.get("search");
+        if (urlSearch) {
+          params.append("search", urlSearch);
+        }
+        
+        // Brand filter (multiple)
+        selectedBrand.forEach(brand => {
+          params.append("brand", brand);
+        });
+        
+        // Sex filter (multiple)
+        selectedSex.forEach(sex => {
+          params.append("sex", sex);
+        });
+        
+        // Category filter (multiple)
+        selectedCategory.forEach(cat => {
+          params.append("category", cat);
+        });
+        
+        // Price range filter
+        let minPrice = customMinPrice ? Number(customMinPrice) : null;
+        let maxPrice = customMaxPrice ? Number(customMaxPrice) : null;
+        
+        // If predefined ranges are selected, calculate min/max
+        if (selectedPriceRange.length > 0) {
+          const mins = [];
+          const maxs = [];
+          
+          selectedPriceRange.forEach(range => {
+            const parts = range.split('-');
+            mins.push(Number(parts[0]));
+            if (parts[1] && parts[1] !== 'above') {
+              maxs.push(Number(parts[1]));
+            }
+          });
+          
+          if (!minPrice) minPrice = Math.min(...mins);
+          if (!maxPrice && maxs.length > 0) maxPrice = Math.max(...maxs);
+        }
+        
+        if (minPrice) params.append("priceMin", minPrice);
+        if (maxPrice) params.append("priceMax", maxPrice);
+        
+        // Sort
+        if (sortBy && sortBy !== 'default') {
+          params.append("sort", sortBy);
+        }
+        
+        // Pagination
+        params.append("page", "1");
+        params.append("size", "12");
+        
+        const res = await axios.get(`${VITE_API_URL}/api/products/search?${params.toString()}`);
 
         const data = Array.isArray(res.data?.result)
           ? res.data.result
@@ -146,9 +202,7 @@ const Collection = () => {
           ? res.data.data
           : [];
 
-        const activeProducts = data.filter((p) => p.active === true);
-
-        const mappedProducts = activeProducts.map((p) => {
+        const mappedProducts = data.map((p) => {
           const images = Array.isArray(p.images)
             ? p.images
                 .filter((img) => {
@@ -194,7 +248,7 @@ const Collection = () => {
             id: p.id,
             name: p.name || "No name",
             brand: p.brand?.name || p.brandName || "Unknown",
-            sex: p.sex || "UNISEX", // NEW: Map sex field
+            sex: p.sex || "UNISEX",
             price: currentPrice,
             originalPrice: originalPrice,
             discount: discountPercent,
@@ -220,127 +274,26 @@ const Collection = () => {
         });
 
         setProducts(mappedProducts);
+        setFilteredProducts(mappedProducts);
       } catch (err) {
         console.error("Error fetching products:", err);
         setProducts([]);
+        setFilteredProducts([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProducts();
-  }, []);
-
-  // Apply filters
-  useEffect(() => {
-    let filtered = [...products];
-
-    // Search from URL
-    const urlSearch = searchParams.get("search");
-    if (urlSearch) {
-      const query = urlSearch.toLowerCase().trim();
-      filtered = filtered.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.brand.toLowerCase().includes(query)
-      );
-    }
-
-    // Brand filter
-    if (selectedBrand.length > 0) {
-      filtered = filtered.filter((p) => selectedBrand.includes(p.brand));
-    }
-
-    // NEW: Sex filter
-    if (selectedSex.length > 0) {
-      filtered = filtered.filter((p) => selectedSex.includes(p.sex));
-    }
-
-    // Color filter
-    if (selectedColorFilter.length > 0) {
-      filtered = filtered.filter((p) =>
-        p.colors.some((c) => selectedColorFilter.includes(c.name))
-      );
-    }
-
-    // Price range filter
-    if (selectedPriceRange.length > 0 || customMinPrice || customMaxPrice) {
-      filtered = filtered.filter((p) => {
-        const min = customMinPrice ? Number(customMinPrice) : 0;
-        const max = customMaxPrice ? Number(customMaxPrice) : Infinity;
-        const matchesCustomRange = p.price >= min && p.price <= max;
-
-        const matchesPredefinedRange =
-          selectedPriceRange.length === 0 ||
-          selectedPriceRange.some((range) => {
-            const [min, max] = range.split("-").map(Number);
-            if (max) {
-              return p.price >= min && p.price <= max;
-            } else {
-              return p.price >= min;
-            }
-          });
-
-        if (
-          selectedPriceRange.length === 0 &&
-          (customMinPrice || customMaxPrice)
-        ) {
-          return matchesCustomRange;
-        }
-
-        return matchesPredefinedRange && matchesCustomRange;
-      });
-    }
-
-    // Category filter
-    if (selectedCategory.length > 0) {
-      filtered = filtered.filter((p) =>
-        p.categories.some((cat) => selectedCategory.includes(cat))
-      );
-    }
-
-    // Shipping filter
-    if (selectedShipping.length > 0) {
-      filtered = filtered.filter((p) =>
-        p.labels.some((label) => selectedShipping.includes(label))
-      );
-    }
-
-    // Sort
-    switch (sortBy) {
-      case "price-asc":
-        filtered.sort((a, b) => a.price - b.price);
-        break;
-      case "price-desc":
-        filtered.sort((a, b) => b.price - a.price);
-        break;
-      case "name-desc":
-        filtered.sort((a, b) => b.name.localeCompare(a.name));
-        break;
-      case "best-selling":
-        filtered = filtered.filter((p) => p.labels.includes("Bán chạy"));
-        break;
-      case "newest":
-        filtered = filtered.filter((p) => p.labels.includes("Mới"));
-        break;
-      default:
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-    }
-
-    setFilteredProducts(filtered);
   }, [
-    products,
     searchParams,
     selectedBrand,
-    selectedSex, // NEW: Add to dependencies
-    selectedColorFilter,
-    selectedPriceRange,
+    selectedSex,
     selectedCategory,
-    selectedShipping,
-    sortBy,
+    selectedPriceRange,
     customMinPrice,
     customMaxPrice,
+    sortBy,
   ]);
 
   // Handlers
@@ -374,7 +327,7 @@ const Collection = () => {
     setSelectedPriceRange([]);
     setSelectedCategory([]);
     setSelectedShipping([]);
-    setSelectedSex([]); // NEW: Clear sex filter
+    setSelectedSex([]);
     setSortBy("default");
     setCustomMinPrice("");
     setCustomMaxPrice("");
@@ -735,7 +688,7 @@ const Collection = () => {
                             </>
                           )}
                         </div>
-                        {/* Color Variant Dots - SỬ DỤNG uniqueColors */}
+                        {/* Color Variant Dots */}
                         {uniqueColors.length > 1 && (
                           <div className="flex items-center gap-2 mt-2">
                             {uniqueColors.slice(0, 5).map((color, i) => (
@@ -784,7 +737,7 @@ const Collection = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
   );
 };
 
