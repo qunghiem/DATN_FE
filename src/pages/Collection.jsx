@@ -102,7 +102,7 @@ const Collection = () => {
         setCategories([...categoryNames, "Khác"]);
 
         // Fetch labels for shipping options
-        const labelsRes = await axios.get(`${VITE_API_URL}/api/brands/api/labels`);
+        const labelsRes = await axios.get(`${VITE_API_URL}/api/labels`);
         const labelsData = labelsRes.data?.result || labelsRes.data?.data || [];
 
         const shippingLabels = labelsData
