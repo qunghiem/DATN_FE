@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api/reviews';
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 // Async thunks
 export const createReview = createAsyncThunk(
@@ -9,7 +9,7 @@ export const createReview = createAsyncThunk(
   async ({ orderId, productVariantId, rating, comment }, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        API_URL,
+        `${VITE_API_URL}/api/reviews`,
         { orderId, productVariantId, rating, comment },
         {
           headers: {
@@ -39,7 +39,7 @@ export const fetchProductReviews = createAsyncThunk(
       if (rating) params.append('rating', rating);
       
       const response = await axios.get(
-        `${API_URL}/product/${productId}?${params.toString()}`
+        `${VITE_API_URL}/api/reviews/product/${productId}?${params.toString()}`
       );
       
       if (response.data.code === 1000) {
@@ -59,7 +59,7 @@ export const deleteReview = createAsyncThunk(
   'reviews/delete',
   async (reviewId, { rejectWithValue }) => {
     try {
-      const response = await axios.delete(`${API_URL}/${reviewId}`, {
+      const response = await axios.delete(`${VITE_API_URL}/api/reviews/${reviewId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('access_token')}`,
         },

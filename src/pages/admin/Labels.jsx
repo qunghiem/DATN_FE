@@ -5,8 +5,7 @@ import { Plus, Edit, Trash2, Search, X, Tag } from 'lucide-react';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api';
-
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 const Labels = () => {
   const dispatch = useDispatch();
   const { labels = [], isLoading } = useSelector((state) => state.metadata || {});
@@ -50,7 +49,7 @@ const Labels = () => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa nhãn này?')) return;
 
     try {
-      await axios.delete(`${API_URL}/labels/${id}`, {
+      await axios.delete(`${VITE_API_URL}/api/labels/${id}`, {
         headers: getAuthHeader(),
       });
       toast.success('Xóa nhãn thành công');
@@ -66,12 +65,12 @@ const Labels = () => {
 
     try {
       if (editMode && currentLabel) {
-        await axios.put(`${API_URL}/labels/${currentLabel.id}`, formData, {
+        await axios.put(`${VITE_API_URL}/api/labels/${currentLabel.id}`, formData, {
           headers: getAuthHeader(),
         });
         toast.success('Cập nhật nhãn thành công');
       } else {
-        await axios.post(`${API_URL}/labels`, formData, {
+        await axios.post(`${VITE_API_URL}/api/labels`, formData, {
           headers: getAuthHeader(),
         });
         toast.success('Thêm nhãn thành công');

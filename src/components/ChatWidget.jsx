@@ -5,6 +5,8 @@ import { initChat, addMessage, markAsRead } from '../features/chat/chatSlice';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
 const ChatWidget = () => {
   const dispatch = useDispatch();
   const { messages, roomId, isLoading } = useSelector((state) => state.chat);
@@ -40,7 +42,7 @@ const ChatWidget = () => {
     const connectWebSocket = () => {
       console.log('🔌 [ChatWidget] Connecting WebSocket...');
       const token = localStorage.getItem('access_token');
-      const socket = new SockJS('http://localhost:8080/ws-chat');
+      const socket = new SockJS(`${VITE_API_URL}/ws-chat`);
       const client = Stomp.over(socket);
       
       client.debug = null;

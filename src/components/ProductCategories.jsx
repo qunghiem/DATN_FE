@@ -9,12 +9,12 @@ const ProductCategories = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
-
+  const VITE_API_URL = import.meta.env.VITE_API_URL;
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://localhost:8080/api/categories");
+        const response = await fetch(`${VITE_API_URL}/api/categories`);
 
         if (!response.ok) {
           throw new Error("Không thể tải danh mục");

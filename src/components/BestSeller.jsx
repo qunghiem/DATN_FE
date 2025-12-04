@@ -8,7 +8,7 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
   const [products, setProducts] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [selectedImages, setSelectedImages] = useState({});
-
+  const VITE_API_URL = import.meta.env.VITE_API_URL;
   // Hàm loại bỏ màu trùng lặp
   const getUniqueColors = (colors) => {
     if (!colors || colors.length === 0) return [];
@@ -26,7 +26,7 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await axios.get("http://localhost:8080/api/products");
+        const res = await axios.get(`${VITE_API_URL}/api/products`);
         const data = Array.isArray(res.data?.data) ? res.data.data : [];
         
         const mappedProducts = data.map((p) => {

@@ -6,6 +6,8 @@ import axios from "axios";
 import Vouchers from "../components/Vouchers";
 import FilterSection from "../components/FilterSection";
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
 const Collection = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -83,7 +85,7 @@ const Collection = () => {
     const fetchBrandsCategoriesLabels = async () => {
       try {
         // Fetch brands
-        const brandsRes = await axios.get("http://localhost:8080/api/brands");
+        const brandsRes = await axios.get(`${VITE_API_URL}/api/brands`);
         const brandsData = brandsRes.data?.result || brandsRes.data?.data || [];
         const brandNames = brandsData
           .filter((b) => b.isActive !== false)
@@ -92,7 +94,7 @@ const Collection = () => {
 
         // Fetch categories
         const categoriesRes = await axios.get(
-          "http://localhost:8080/api/categories"
+          `${VITE_API_URL}/api/categories`
         );
         const categoriesData =
           categoriesRes.data?.result || categoriesRes.data?.data || [];
@@ -100,7 +102,7 @@ const Collection = () => {
         setCategories([...categoryNames, "Khác"]);
 
         // Fetch labels for shipping options
-        const labelsRes = await axios.get("http://localhost:8080/api/labels");
+        const labelsRes = await axios.get(`${VITE_API_URL}/api/brands/api/labels`);
         const labelsData = labelsRes.data?.result || labelsRes.data?.data || [];
 
         const shippingLabels = labelsData
@@ -130,7 +132,7 @@ const Collection = () => {
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
-        const res = await axios.get("http://localhost:8080/api/products");
+        const res = await axios.get(`${VITE_API_URL}/api/products`);
 
         const data = Array.isArray(res.data?.result)
           ? res.data.result
@@ -151,7 +153,7 @@ const Collection = () => {
                   const url = img.image_url || img.imageUrl;
                   const fullUrl = url.startsWith("http")
                     ? url
-                    : `http://localhost:8080/${url}`;
+                    : `${VITE_API_URL}/${url}`;
                   const altText =
                     img.alt_text || img.altText || p.name || "Product image";
 

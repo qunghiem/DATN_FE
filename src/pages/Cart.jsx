@@ -42,6 +42,8 @@ import {
 import { toast } from "react-toastify";
 import axios from "axios";
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
 const Cart = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -102,7 +104,7 @@ const Cart = () => {
           }
 
           const response = await axios.get(
-            "http://localhost:8080/api/users/profile",
+            `${VITE_API_URL}/api/users/profile`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -152,7 +154,7 @@ const Cart = () => {
 
           try {
             const response = await axios.get(
-              `http://localhost:8080/api/product-variants/${item.variantId}`
+              `${VITE_API_URL}/api/product-variants/${item.variantId}`
             );
 
             if (response.data.code === 1000) {
@@ -374,7 +376,7 @@ const Cart = () => {
 
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/vouchers/validate/${productVoucherCode.toUpperCase()}`
+        `${VITE_API_URL}/api/vouchers/validate/${productVoucherCode.toUpperCase()}`
       );
 
       if (response.data.code === 0) {
@@ -416,7 +418,7 @@ const Cart = () => {
 
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/vouchers/validate/${shippingVoucherCode.toUpperCase()}`
+        `${VITE_API_URL}/api/vouchers/validate/${shippingVoucherCode.toUpperCase()}`
       );
 
       if (response.data.code === 0) {

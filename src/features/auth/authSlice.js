@@ -1,15 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api/auth';
-// const API_URL = 'https://fnzv9bcp-8080.asse.devtunnels.ms/api/auth';
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 // Async thunks
 export const login = createAsyncThunk(
   'auth/login',
   async ({ email, password, remember_me, captcha_response }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/login`, {
+      const response = await axios.post(`${VITE_API_URL}/api/auth/login`, {
         email,
         password,
         remember_me,
@@ -36,7 +35,7 @@ export const loginWithGoogle = createAsyncThunk(
   'auth/loginWithGoogle',
   async ({ idToken }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/login/google`, { idToken });
+      const response = await axios.post(`${VITE_API_URL}/api/auth/login/google`, { idToken });
       
       if (response.data.success) {
         localStorage.setItem('access_token', response.data.data.tokens.access_token);
@@ -57,7 +56,7 @@ export const register = createAsyncThunk(
   'auth/register',
   async ({ fullName, email, password, confirmPassword, phone, captcha_token }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/register`, {
+      const response = await axios.post(`${VITE_API_URL}/api/auth/register`, {
         fullName,
         email,
         password,
@@ -85,7 +84,7 @@ export const forgotPassword = createAsyncThunk(
   'auth/forgot-password',
   async ({ email }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/forgot-password`, { email });
+      const response = await axios.post(`${VITE_API_URL}/api/auth/forgot-password`, { email });
       
       if (response.data.code === 1000) {
         return response.data.result;
@@ -106,7 +105,7 @@ export const verifyOTP = createAsyncThunk(
   'auth/verifyOTP',
   async ({ email, otp }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/verify-otp`, { email, otp });
+      const response = await axios.post(`${VITE_API_URL}/api/auth/verify-otp`, { email, otp });
       
       if (response.data.code === 1000) {
         return response.data.result;
@@ -127,7 +126,7 @@ export const resetPassword = createAsyncThunk(
   'auth/resetPassword',
   async ({ email, resetToken, newPassword, confirmPassword }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/reset-password`, {
+      const response = await axios.post(`${VITE_API_URL}/api/auth/reset-password`, {
         email,
         resetToken,
         newPassword,

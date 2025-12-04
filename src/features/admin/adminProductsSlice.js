@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api';
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('access_token');
@@ -13,7 +13,7 @@ export const fetchAllProducts = createAsyncThunk(
   'adminProducts/fetchAll',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/products?active=true`, {
+      const response = await axios.get(`${VITE_API_URL}/api/products?active=true`, {
         headers: getAuthHeader(), // khi có token thì trả về data private
       });
       return response.data.data || response.data.result || [];
@@ -28,7 +28,7 @@ export const fetchProductVariants = createAsyncThunk(
   'adminProducts/fetchVariants',
   async (productId, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/product-variants/product/${productId}`);
+      const response = await axios.get(`${VITE_API_URL}/api/product-variants/product/${productId}`);
       if (response.data.code === 1000) {
         return response.data.result || [];
       }
@@ -78,7 +78,7 @@ export const createProduct = createAsyncThunk(
         formData.append('imageAltTexts', altText);
       });
 
-      const response = await axios.post(`${API_URL}/products`, formData, {
+      const response = await axios.post(`${VITE_API_URL}/api/products`, formData, {
         headers: {
           ...getAuthHeader(),
           'Content-Type': 'multipart/form-data',
@@ -113,7 +113,7 @@ export const createProductVariant = createAsyncThunk(
       }
       // Nếu không có images, KHÔNG append field này vào FormData
 
-      const response = await axios.post(`${API_URL}/product-variants`, formData, {
+      const response = await axios.post(`${VITE_API_URL}/api/product-variants`, formData, {
         headers: {
           ...getAuthHeader(),
           'Content-Type': 'multipart/form-data',
@@ -154,7 +154,7 @@ export const updateProductVariant = createAsyncThunk(
       }
 
       const response = await axios.put(
-        `${API_URL}/product-variants/${variantId}`,
+        `${VITE_API_URL}/api/product-variants/${variantId}`,
         formData,
         { 
           headers: {
@@ -179,7 +179,7 @@ export const deleteProductVariant = createAsyncThunk(
   'adminProducts/deleteVariant',
   async (variantId, { rejectWithValue }) => {
     try {
-      const response = await axios.delete(`${API_URL}/product-variants/${variantId}`, {
+      const response = await axios.delete(`${VITE_API_URL}/api/product-variants/${variantId}`, {
         headers: getAuthHeader(),
       });
       
@@ -235,7 +235,7 @@ export const updateProduct = createAsyncThunk(
         formData.append('imageAltTexts', altText);
       });
 
-      const response = await axios.put(`${API_URL}/products/${id}`, formData, {
+      const response = await axios.put(`${VITE_API_URL}/api/products/${id}`, formData, {
         headers: {
           ...getAuthHeader(),
           'Content-Type': 'multipart/form-data',
@@ -254,7 +254,7 @@ export const deleteProduct = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       // Soft delete: gọi API DELETE để set active = false
-      const response = await axios.delete(`${API_URL}/products/${id}`, {
+      const response = await axios.delete(`${VITE_API_URL}/api/products/${id}`, {
         headers: getAuthHeader(),
       });
       

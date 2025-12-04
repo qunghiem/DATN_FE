@@ -23,6 +23,9 @@ import {
 import { Plus, Edit, Trash2, Search, X, ImagePlus, Trash } from "lucide-react";
 import { toast } from "react-toastify";
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
+
 const Products = () => {
   const dispatch = useDispatch();
   const {
@@ -159,7 +162,7 @@ const Products = () => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `http://localhost:8080/api/products/${product.id}`,
+        `${VITE_API_URL}/api/products/${product.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

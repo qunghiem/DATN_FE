@@ -21,6 +21,8 @@ import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import logo from '../assets/logo.png';
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
 const EmployeeChat = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -57,7 +59,7 @@ const EmployeeChat = () => {
     const connectWebSocket = () => {
       console.log('🔌 Connecting WebSocket...');
       const token = localStorage.getItem('access_token');
-      const socket = new SockJS('http://localhost:8080/ws-chat');
+      const socket = new SockJS(`${VITE_API_URL}/ws-chat`);
       const client = Stomp.over(socket);
       
       client.debug = null;

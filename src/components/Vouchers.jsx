@@ -8,6 +8,7 @@ export default function Vouchers() {
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const VITE_API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     fetchVouchers();
@@ -16,7 +17,7 @@ export default function Vouchers() {
   const fetchVouchers = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:8080/api/vouchers");
+      const response = await fetch(`${VITE_API_URL}/api/vouchers`);
       const data = await response.json();
       
       if (data.code === 0) {

@@ -6,6 +6,8 @@ import { clearSelectedItems } from '../features/cart/cartSlice';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
 const PaymentReturn = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -26,7 +28,7 @@ const PaymentReturn = () => {
         
         // Call backend to verify payment
         const response = await axios.get(
-          `http://localhost:8080/api/v1/payments/return${queryString}`,
+          `${VITE_API_URL}/api/v1/payments/return${queryString}`,
           {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('access_token')}`

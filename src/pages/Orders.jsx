@@ -25,6 +25,8 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import ReviewModal from "../components/ReviewModal";
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
 // Helper function to get orders for current user
 const getUserOrders = (userId) => {
   try {
@@ -95,7 +97,7 @@ const Orders = () => {
             }
             try {
               const response = await axios.get(
-                `http://localhost:8080/api/product-variants/${item.variantId}`,
+                `${VITE_API_URL}/api/product-variants/${item.variantId}`,
                 {
                   headers: {
                     Authorization: `Bearer ${localStorage.getItem(
@@ -307,7 +309,7 @@ const Orders = () => {
 
         try {
           const response = await axios.get(
-            "http://localhost:8080/api/orders/me",
+            `${VITE_API_URL}/api/orders/me`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("access_token")}`,

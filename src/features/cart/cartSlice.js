@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api/cart';
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 // Helper function to get access token
 const getAccessToken = () => {
@@ -24,7 +24,7 @@ export const fetchCart = createAsyncThunk(
   'cart/fetchCart',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(API_URL, {
+      const response = await axios.get(`${VITE_API_URL}/api/cart`, {
         headers: getAuthHeaders(),
       });
       
@@ -47,7 +47,7 @@ export const addToCartAPI = createAsyncThunk(
   async ({ productVariantId, quantity }, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        `${API_URL}/add`,
+        `${VITE_API_URL}/api/cart/add`,
         {
           productVariantId,
           quantity,
@@ -76,7 +76,7 @@ export const updateCartItemAPI = createAsyncThunk(
   async ({ cartItemId, quantity }, { rejectWithValue }) => {
     try {
       const response = await axios.put(
-        `${API_URL}/update/${cartItemId}?quantity=${quantity}`,
+        `${VITE_API_URL}/api/cart/update/${cartItemId}?quantity=${quantity}`,
         {},
         {
           headers: getAuthHeaders(),
@@ -101,7 +101,7 @@ export const removeFromCartAPI = createAsyncThunk(
   'cart/removeFromCartAPI',
   async (cartItemId, { rejectWithValue }) => {
     try {
-      const response = await axios.delete(`${API_URL}/remove/${cartItemId}`, {
+      const response = await axios.delete(`${VITE_API_URL}/api/cart/remove/${cartItemId}`, {
         headers: getAuthHeaders(),
       });
       
@@ -123,7 +123,7 @@ export const clearCartAPI = createAsyncThunk(
   'cart/clearCartAPI',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.delete(`${API_URL}/clear`, {
+      const response = await axios.delete(`${VITE_API_URL}/api/cart/clear`, {
         headers: getAuthHeaders(),
       });
       

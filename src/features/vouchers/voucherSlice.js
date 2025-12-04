@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api/vouchers';
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -19,7 +19,7 @@ export const fetchActiveVouchers = createAsyncThunk(
   'vouchers/fetchActiveVouchers',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/active`, {
+      const response = await axios.get(`${VITE_API_URL}/api/vouchers/active`, {
         headers: getAuthHeaders(),
       });
       
@@ -41,7 +41,7 @@ export const validateVoucher = createAsyncThunk(
   'vouchers/validateVoucher',
   async ({ code, orderValue }, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/validate/${code}`, {
+      const response = await axios.get(`${VITE_API_URL}/api/vouchers/validate/${code}`, {
         headers: getAuthHeaders(),
       });
       
@@ -72,7 +72,7 @@ export const getVoucherByCode = createAsyncThunk(
   'vouchers/getVoucherByCode',
   async (code, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/code/${code}`, {
+      const response = await axios.get(`${VITE_API_URL}/api/vouchers/code/${code}`, {
         headers: getAuthHeaders(),
       });
       

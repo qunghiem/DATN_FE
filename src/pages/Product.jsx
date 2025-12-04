@@ -21,6 +21,8 @@ import {
 import { addToCartAPI, selectCartItems } from "../features/cart/cartSlice";
 import ProductReviews from "../components/ProductReviews";
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
 const Product = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -56,7 +58,7 @@ const Product = () => {
         // console.log("Fetching product ID:", productId);
 
         const response = await axios.get(
-          `http://localhost:8080/api/products/${productId}`
+          `${VITE_API_URL}/api/products/${productId}`
         );
 
         // console.log("API Response:", response.data);
@@ -122,7 +124,7 @@ const Product = () => {
 
         try {
           const relatedResponse = await axios.get(
-            `http://localhost:8080/api/products`
+            `${VITE_API_URL}/api/products`
           );
 
           const relatedData =

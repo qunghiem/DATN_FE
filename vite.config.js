@@ -11,7 +11,8 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       }
-    }
+    },
+    // host: true
   },
   define: {
     global: 'window'  // Thay global bằng window

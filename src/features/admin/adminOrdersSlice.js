@@ -1,7 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api";
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
+
 
 const getAuthHeader = () => {
   const token = localStorage.getItem("access_token");
@@ -16,7 +18,7 @@ export const fetchAllOrders = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const url = `${API_URL}/orders/search`;
+      const url = `${VITE_API_URL}/api/orders/search`;
       const params = new URLSearchParams();
 
       params.append("page", page);
@@ -72,7 +74,7 @@ export const updateOrderStatus = createAsyncThunk(
   async ({ orderId, status }, { rejectWithValue }) => {
     try {
       const response = await axios.patch(
-        `${API_URL}/orders/${orderId}/status`,
+        `${VITE_API_URL}/api/orders/${orderId}/status`,
         { status },
         { headers: getAuthHeader() }
       );

@@ -20,6 +20,8 @@ import { clearSelectedItems } from "../features/cart/cartSlice";
 import { toast } from "react-toastify";
 import axios from "axios";
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
 const PlaceOrder = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -333,7 +335,7 @@ const PlaceOrder = () => {
       console.log("Payment request data:", paymentData);
 
       const response = await axios.post(
-        "http://localhost:8080/api/v1/payments/create",
+        `${VITE_API_URL}/api/v1/payments/create`,
         paymentData,
         {
           headers: {
@@ -455,7 +457,7 @@ const PlaceOrder = () => {
       let orderResponse = null;
 
       console.log("📤 Sending request to backend:");
-      console.log("URL:", "http://localhost:8080/api/orders");
+      console.log("URL:", `${VITE_API_URL}/api/orders`);
       console.log("Method: POST");
       console.log("Headers:", {
         "Content-Type": "application/json",
@@ -465,7 +467,7 @@ const PlaceOrder = () => {
 
       try {
         const response = await axios.post(
-          "http://localhost:8080/api/orders",
+          `${VITE_API_URL}/api/orders`,
           orderData,
           {
             headers: {

@@ -8,11 +8,11 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
   const [products, setProducts] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [selectedImages, setSelectedImages] = useState({});
-
+  const VITE_API_URL = import.meta.env.VITE_API_URL;
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await axios.get("http://localhost:8080/api/products");
+        const res = await axios.get(`${VITE_API_URL}/api/products`);
         const data = Array.isArray(res.data?.data) ? res.data.data : [];
         // console.log(res.data);
         const mappedProducts = data.map((p) => {

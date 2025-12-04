@@ -9,7 +9,8 @@ const TopLikedProducts = () => {
   const navigate = useNavigate();
   const topLikedProducts = useSelector(selectTopLikedProducts);
   const { isLoading } = useSelector((state) => state.wishlist);
-
+  const VITE_API_URL = import.meta.env.VITE_API_URL;
+  
   useEffect(() => {
     dispatch(fetchTopLiked());
   }, [dispatch]);
@@ -66,7 +67,7 @@ const TopLikedProducts = () => {
               <div className="block relative aspect-[3/4]">
                 {product.images && product.images.length > 0 ? (
                   <img
-                    src={`http://localhost:8080/${product.images[0]}`}
+                    src={`${VITE_API_URL}/${product.images[0]}`}
                     alt={product.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {

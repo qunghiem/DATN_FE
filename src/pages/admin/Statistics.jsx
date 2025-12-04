@@ -23,6 +23,8 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
 const Statistics = () => {
   const { user } = useSelector((state) => state.auth);
   const isOwner = user?.role === 'OWNER';
@@ -46,7 +48,7 @@ const Statistics = () => {
     setIsLoading(true);
     try {
       let url = '';
-      const baseUrl = 'http://localhost:8080/api/statistics';
+      const baseUrl = `${VITE_API_URL}/api/statistics`;
 
       if (period === 'range') {
         if (!dateRange.fromDate || !dateRange.toDate) {

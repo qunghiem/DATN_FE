@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api/reviews';
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('access_token');
@@ -20,17 +20,17 @@ export const fetchAllReviews = createAsyncThunk(
       if (productId && rating) {
         // Có cả productId và rating: sử dụng /product/{productId}?rating=X
         params.append('rating', rating);
-        url = `${API_URL}/product/${productId}`;
+        url = `${VITE_API_URL}/api/reviews/product/${productId}`;
       } else if (productId) {
         // Chỉ có productId: sử dụng /product/{productId}
-        url = `${API_URL}/product/${productId}`;
+        url = `${VITE_API_URL}/api/reviews/product/${productId}`;
       } else if (rating) {
         // Chỉ có rating: sử dụng /admin/filter?rating=X
         params.append('rating', rating);
-        url = `${API_URL}/admin/filter`;
+        url = `${VITE_API_URL}/api/reviews/admin/filter`;
       } else {
         // Không có filter: lấy tất cả reviews từ /admin
-        url = `${API_URL}/admin`;
+        url = `${VITE_API_URL}/api/reviews/admin`;
       }
       
       // Chỉ thêm Authorization header nếu không phải endpoint public
@@ -63,7 +63,7 @@ export const fetchReviewsByProduct = createAsyncThunk(
   async ({ productId, page = 0, size = 10 }, { rejectWithValue }) => {
     try {
       const params = new URLSearchParams({ page, size });
-      const url = `${API_URL}/product/${productId}`;
+      const url = `${VITE_API_URL}/api/reviews/product/${productId}`;
       
       const response = await axios.get(`${url}?${params.toString()}`, {
         headers: getAuthHeader(),
@@ -91,7 +91,7 @@ export const deleteReviewAdmin = createAsyncThunk(
   'adminReviews/delete',
   async (reviewId, { rejectWithValue }) => {
     try {
-      const response = await axios.delete(`${API_URL}/${reviewId}`, {
+      const response = await axios.delete(`${VITE_API_URL}/api/reviews/${reviewId}`, {
         headers: getAuthHeader(),
       });
       

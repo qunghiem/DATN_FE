@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/api/chat';
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 // Async thunks
 export const initChat = createAsyncThunk(
@@ -9,7 +9,7 @@ export const initChat = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await axios.post(`${API_URL}/init`, {}, {
+      const response = await axios.post(`${VITE_API_URL}/api/chat/init`, {}, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -31,7 +31,7 @@ export const getRoomMessages = createAsyncThunk(
   async (roomId, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await axios.get(`${API_URL}/rooms/${roomId}/messages`, {
+      const response = await axios.get(`${VITE_API_URL}/api/chat/rooms/${roomId}/messages`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -53,7 +53,7 @@ export const markAsRead = createAsyncThunk(
   async (roomId, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await axios.put(`${API_URL}/rooms/${roomId}/read`, {}, {
+      const response = await axios.put(`${VITE_API_URL}/api/chat/rooms/${roomId}/read`, {}, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

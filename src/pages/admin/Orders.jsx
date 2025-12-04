@@ -23,6 +23,9 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+
+
 // Debounce hook
 const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -136,7 +139,7 @@ const AdminOrders = () => {
           }
           
           const res = await fetch(
-            `http://localhost:8080/api/orders/search?${params.toString()}`,
+            `${VITE_API_URL}/api/orders/search?${params.toString()}`,
             { headers }
           );
           const data = await res.json();
@@ -723,7 +726,7 @@ const AdminOrders = () => {
                     >
                       <div className="flex items-center space-x-4">
                         <img
-                          src={`http://localhost:8080/${item.imageUrl}`}
+                          src={`${VITE_API_URL}/${item.imageUrl}`}
                           alt={item.productName}
                           className="w-16 h-16 object-cover rounded"
                           onError={(e) => {
