@@ -1,17 +1,98 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiCopy, FiCheck, FiInfo } from "react-icons/fi";
 import { FaTruck, FaPercent, FaTicketAlt } from "react-icons/fa";
 
 export default function Vouchers() {
   const [copied, setCopied] = useState(null);
   const [saved, setSaved] = useState([]);
+  const [vouchers, setVouchers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const vouchers = [
-    { id: 1, icon: <FaTruck />, title: "MIỄN PHÍ VẬN CHUYỂN", desc: "Freeship cho đơn từ 500k", code: "FREESHIP", expiry: "30/12/2025" },
-    { id: 2, icon: <FaTicketAlt />, title: "GIẢM 50K", desc: "Áp dụng đơn từ 600k", code: "GIAM50K", expiry: "06/12/2025" },
-    { id: 3, icon: <FaPercent />, title: "GIẢM 10%", desc: "Áp dụng đơn từ 1000k", code: "GIAM10", expiry: "09/12/2025" },
-    { id: 4, icon: <FaPercent />, title: "GIẢM 15%", desc: "Áp dụng đơn từ 2000k", code: "GIAM15", expiry: "20/12/2025" },
-  ];
+  useEffect(() => {
+    fetchVouchers();
+  }, []);
+
+  const fetchVouchers = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("http://localhost:8080/api/vouchers");
+      const data = await response.json();
+      
+      if (data.code === 0) {
+        // Transform API data to component format
+        const transformedVouchers = data.result.map((v) => ({
+          id: v.id,
+          code: v.code,
+          discountType: v.discountType,
+          discountValue: v.discountValue,
+          minOrderValue: v.minOrderValue,
+          maxDiscountValue: v.maxDiscountValue,
+          endDate: v.endDate,
+          remainingUses: v.remainingUses,
+          icon: getIcon(v.discountType),
+          title: getTitle(v),
+          desc: getDescription(v),
+          expiry: formatDate(v.endDate),
+        }));
+        setVouchers(transformedVouchers);
+      }
+    } catch (err) {
+      setError("Không thể tải danh sách voucher");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getIcon = (type) => {
+    switch (type) {
+      case "FREESHIP":
+        return <FaTruck />;
+      case "PERCENTAGE":
+        return <FaPercent />;
+      case "FIXED_AMOUNT":
+        return <FaTicketAlt />;
+      default:
+        return <FaTicketAlt />;
+    }
+  };
+
+  const getTitle = (voucher) => {
+    if (voucher.discountType === "FREESHIP") {
+      return "MIỄN PHÍ VẬN CHUYỂN";
+    } else if (voucher.discountType === "PERCENTAGE") {
+      return `GIẢM ${voucher.discountValue}%`;
+    } else {
+      return `GIẢM ${formatMoney(voucher.discountValue)}`;
+    }
+  };
+
+  const getDescription = (voucher) => {
+    const minOrder = formatMoney(voucher.minOrderValue);
+    if (voucher.discountType === "FREESHIP") {
+      return `Freeship cho đơn từ ${minOrder}`;
+    } else if (voucher.discountType === "PERCENTAGE") {
+      const maxDiscount = voucher.maxDiscountValue 
+        ? `, tối đa ${formatMoney(voucher.maxDiscountValue)}` 
+        : "";
+      return `Áp dụng đơn từ ${minOrder}${maxDiscount}`;
+    } else {
+      return `Áp dụng đơn từ ${minOrder}`;
+    }
+  };
+
+  const formatMoney = (amount) => {
+    return `${(amount / 1000).toFixed(0)}k`;
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   const handleCopy = (code) => {
     navigator.clipboard.writeText(code);
@@ -31,58 +112,84 @@ export default function Vouchers() {
         🎟️ Danh sách mã giảm giá
       </h1>
 
-      {/* Desktop: Grid bình thường (>= 992px) */}
-      <div className="hidden lg:grid grid-cols-4 gap-4">
-        {vouchers.map((v) => (
-          <VoucherCard
-            key={v.id}
-            voucher={v}
-            copied={copied}
-            saved={saved}
-            onCopy={handleCopy}
-            onSave={handleSave}
-          />
-        ))}
-      </div>
+      {/* Loading state */}
+      {loading && (
+        <div className="text-center py-8 text-gray-500">
+          Đang tải danh sách voucher...
+        </div>
+      )}
 
-      {/* Tablet: Hiển thị 2.5 voucher (768px - 991px) */}
-      <div className="hidden md:block lg:hidden overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="flex gap-4 w-fit">
-          {vouchers.map((v) => (
-            <div key={v.id} className="min-w-[calc(40%-12px)]">
+      {/* Error state */}
+      {error && (
+        <div className="text-center py-8 text-red-500">
+          {error}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !error && vouchers.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          Không có voucher nào
+        </div>
+      )}
+
+      {/* Vouchers list */}
+      {!loading && !error && vouchers.length > 0 && (
+        <>
+          {/* Desktop: Grid bình thường (>= 992px) */}
+          <div className="hidden lg:grid grid-cols-4 gap-4">
+            {vouchers.map((v) => (
               <VoucherCard
+                key={v.id}
                 voucher={v}
                 copied={copied}
                 saved={saved}
                 onCopy={handleCopy}
                 onSave={handleSave}
               />
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
 
-      {/* Mobile: Hiển thị 1.5 voucher (< 768px) */}
-      <div className="block md:hidden overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="flex gap-3 w-fit">
-          {vouchers.map((v) => (
-            <div key={v.id} className="min-w-[calc(66.666%-8px)]">
-              <VoucherCard
-                voucher={v}
-                copied={copied}
-                saved={saved}
-                onCopy={handleCopy}
-                onSave={handleSave}
-              />
+          {/* Tablet: Hiển thị 2.5 voucher (768px - 991px) */}
+          <div className="hidden md:block lg:hidden overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex gap-4 w-fit">
+              {vouchers.map((v) => (
+                <div key={v.id} className="min-w-[calc(40%-12px)]">
+                  <VoucherCard
+                    voucher={v}
+                    copied={copied}
+                    saved={saved}
+                    onCopy={handleCopy}
+                    onSave={handleSave}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+
+          {/* Mobile: Hiển thị 1.5 voucher (< 768px) */}
+          <div className="block md:hidden overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex gap-3 w-fit">
+              {vouchers.map((v) => (
+                <div key={v.id} className="min-w-[calc(66.666%-8px)]">
+                  <VoucherCard
+                    voucher={v}
+                    copied={copied}
+                    saved={saved}
+                    onCopy={handleCopy}
+                    onSave={handleSave}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-// Component Voucher Card tách riêng để tái sử dụng
+// Component Voucher Card tách riêng để tái sử dụng cho 3 kích thước màn hình
 function VoucherCard({ voucher: v, copied, saved, onCopy, onSave }) {
   return (
     <div className="rounded-xl shadow-sm hover:shadow-md transition transform hover:-translate-y-1 bg-white">
@@ -116,8 +223,6 @@ function VoucherCard({ voucher: v, copied, saved, onCopy, onSave }) {
           >
             {copied === v.code ? <><FiCheck /> Đã sao chép</> : <><FiCopy /> Sao chép</>}
           </button>
-
-          
         </div>
       </div>
     </div>
