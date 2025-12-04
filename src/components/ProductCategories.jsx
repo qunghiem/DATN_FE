@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 
 const ProductCategories = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const scrollContainerRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -58,6 +62,36 @@ const ProductCategories = () => {
     fetchCategories();
   }, []);
 
+  // Mouse drag handlers
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
+    setScrollLeft(scrollContainerRef.current.scrollLeft);
+    scrollContainerRef.current.style.cursor = 'grabbing';
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.cursor = 'grab';
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.cursor = 'grab';
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Tốc độ vuốt (nhân 2 để mượt hơn)
+    scrollContainerRef.current.scrollLeft = scrollLeft - walk;
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 bg-white">
@@ -109,7 +143,14 @@ const ProductCategories = () => {
 
       {/* Category List - Giống BestSeller */}
       {/* Mobile: 1.5 item (65%), Tablet: 3.5 item (27.5%), Desktop: 4 item (25%) */}
-      <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 hide-scrollbar">
+      <div 
+        ref={scrollContainerRef}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+        className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 hide-scrollbar cursor-grab active:cursor-grabbing select-none"
+      >
         <div className="flex gap-3 md:gap-4 lg:flex-nowrap lg:overflow-x-auto lg:gap-4 xl:justify-start hide-scrollbar">
           {categories.map((category) => (
             <CategoryCard key={category.id} category={category} />

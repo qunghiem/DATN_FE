@@ -62,7 +62,7 @@ const Products = () => {
     labelIds: [],
     sex: "",
     images: [],
-    imageAltTexts: [""],
+    imageAltTexts: ["Mô tả ảnh"],
     imagePreviews: [],
   });
 
@@ -130,7 +130,7 @@ const Products = () => {
       labelIds: [],
 
       images: [],
-      imageAltTexts: [""],
+      imageAltTexts: ["Mô tả ảnh"],
       imagePreviews: [],
     });
     setVariants([
@@ -469,7 +469,9 @@ const Products = () => {
 
     try {
       if (variant.useExistingImages) {
-        toast.info("Đang xử lý ảnh...");
+        toast.info("Đang xử lý ảnh...", {
+          autoClose: 2000
+        });
 
         const imageUrls = variant.imagePreviews;
         const filePromises = imageUrls.map(async (url, index) => {
@@ -1518,7 +1520,9 @@ const EditVariantsModal = ({
 
     try {
       if (editForm.useExistingImages && editForm.imagePreviews.length > 0) {
-        toast.info("Đang xử lý ảnh...");
+        toast.info("Đang xử lý ảnh...", {
+          autoClose: 2000
+        });
 
         const filePromises = editForm.imagePreviews.map(async (url, index) => {
           try {
@@ -1688,7 +1692,9 @@ const EditVariantsModal = ({
         newVariantForm.useExistingImages &&
         newVariantForm.imagePreviews.length > 0
       ) {
-        toast.info("Đang xử lý ảnh...");
+        toast.info("Đang xử lý ảnh...", {
+          autoClose: 2000
+        });
 
         const filePromises = newVariantForm.imagePreviews.map(
           async (url, index) => {
@@ -1771,7 +1777,7 @@ const EditVariantsModal = ({
         imagePreviews: existingImages,
         useExistingImages: true,
       });
-      toast.info(`Đã tự động điền ${existingImages.length} ảnh từ màu này!`);
+      // toast.info(`Đã tự động điền ${existingImages.length} ảnh từ màu này!`);
     } else {
       setNewVariantForm({
         ...newVariantForm,
