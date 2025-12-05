@@ -9,6 +9,7 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
   const [favorites, setFavorites] = useState([]);
   const [selectedImages, setSelectedImages] = useState({});
   const VITE_API_URL = import.meta.env.VITE_API_URL;
+  
   // Hàm loại bỏ màu trùng lặp
   const getUniqueColors = (colors) => {
     if (!colors || colors.length === 0) return [];
@@ -26,7 +27,15 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await axios.get(`${VITE_API_URL}/api/products`);
+        // Gọi API search với các tham số: sắp xếp theo sold giảm dần và chỉ lấy active = true
+        const params = new URLSearchParams({
+          sort: 'sold,desc', // Sắp xếp theo sold giảm dần
+          active: 'true' // Chỉ lấy product có active = true
+        });
+        
+        const res = await axios.get(`${VITE_API_URL}/api/products/search?${params.toString()}`);
+        
+        // Lấy data từ API response
         const data = Array.isArray(res.data?.data) ? res.data.data : [];
         
         const mappedProducts = data.map((p) => {
@@ -76,10 +85,15 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
             categories: Array.isArray(p.categories)
               ? p.categories.map((cat) => cat.name)
               : [],
-            sold: p.sold || 0,
+            sold: p.sold || 0, // Giữ lại thông tin sold
             totalCount: p.total_count || 0,
           };
         });
+
+        // DEBUG: Log để kiểm tra thứ tự từ API
+        console.log("Products từ API (đã sắp xếp theo sold,desc):", 
+          mappedProducts.map(p => ({ id: p.id, name: p.name, sold: p.sold }))
+        );
 
         setProducts(mappedProducts);
       } catch (err) {
@@ -139,6 +153,9 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
     navigate(`/product/${productId}`);
   };
 
+  // Sắp xếp lại trên client nếu API không sắp xếp đúng
+  const sortedProducts = [...products].sort((a, b) => b.sold - a.sold);
+
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 bg-white">
       {/* Header */}
@@ -160,7 +177,7 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
       {/* Product List */}
       <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 hide-scrollbar">
         <div className="flex gap-3 md:gap-4 lg:flex-nowrap lg:overflow-x-auto lg:gap-4 xl:justify-start hide-scrollbar">
-          {products.map((p) => {
+          {sortedProducts.map((p) => {
             // Lọc màu unique cho mỗi sản phẩm
             const uniqueColors = getUniqueColors(p.colors);
             
@@ -183,7 +200,8 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
                     </div>
                   )}
 
-                  {p.labels.includes("Bán chạy") && (
+                  {/* Hiển thị badge Bán chạy nếu sản phẩm có sold > 0 */}
+                  {p.sold > 0 && (
                     <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
                       Bán chạy
                     </div>
@@ -268,6 +286,11 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
                         </span>
                       </>
                     )}
+                  </div>
+
+                  {/* Hiển thị lượt bán sold - LUÔN HIỂN THỊ KỂ CẢ KHI = 0 */}
+                  <div className="text-gray-600 text-xs mt-1">
+                    Đã bán: <span className="font-semibold">{p.sold.toLocaleString()}</span>
                   </div>
 
                   {/* Color Variant Dots - THAY THẾ THUMBNAIL IMAGES */}

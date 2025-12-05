@@ -9,23 +9,44 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
   const [favorites, setFavorites] = useState([]);
   const [selectedImages, setSelectedImages] = useState({});
   const VITE_API_URL = import.meta.env.VITE_API_URL;
+  
+  // Hàm loại bỏ màu trùng lặp
+  const getUniqueColors = (colors) => {
+    if (!colors || colors.length === 0) return [];
+    
+    const uniqueMap = new Map();
+    colors.forEach(color => {
+      const key = color.name || color.color_name;
+      if (key && !uniqueMap.has(key)) {
+        uniqueMap.set(key, color);
+      }
+    });
+    return Array.from(uniqueMap.values());
+  };
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await axios.get(`${VITE_API_URL}/api/products`);
+        // Gọi API search với các tham số: sắp xếp theo created_at giảm dần và chỉ lấy active = true
+        const params = new URLSearchParams({
+          sort: 'createdAt,desc', // Sắp xếp theo created_at giảm dần (sản phẩm mới nhất trước)
+          active: 'true', // Chỉ lấy product có active = true
+          // size: '50' // Tăng số lượng sản phẩm hiển thị lên 50
+        });
+        
+        const res = await axios.get(`${VITE_API_URL}/api/products/search?${params.toString()}`);
+        
+        // Lấy data từ API response
         const data = Array.isArray(res.data?.data) ? res.data.data : [];
-        // console.log(res.data);
+        
         const mappedProducts = data.map((p) => {
-          // console.log(p);
           const images = Array.isArray(p.images)
             ? p.images
                 .filter((img) => {
-                  // Kiểm tra cả image_url và imageUrl để tương thích
                   const url = img.image_url || img.imageUrl;
                   return url && url.trim() !== "";
                 })
                 .map((img) => {
-                  // Hỗ trợ cả 2 format: image_url và imageUrl
                   const url = img.image_url || img.imageUrl;
                   const altText = img.alt_text || img.altText || p.name || "Product image";
                   
@@ -36,10 +57,17 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                 })
             : [];
           
-          // Giá đã được tính sẵn trong response
           const currentPrice = p.price?.discount_price || p.price?.price || 0;
           const originalPrice = p.price?.price || 0;
           const discountPercent = p.price?.discount_percent || 0;
+
+          // Map variants thành colors
+          const variants = Array.isArray(p.variants) ? p.variants : [];
+          const colors = variants.map((v) => ({
+            name: v.color_name || v.colorName || "Unknown",
+            code: v.color_hex || v.colorHex || "#ccc",
+            image: v.image || images[0]?.url || "",
+          }));
 
           return {
             id: p.id,
@@ -50,6 +78,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
             discount: discountPercent,
             images: images,
             mainImage: images[0]?.url || "",
+            colors: colors, // Thêm colors từ variants
             link: `/product/${p.id}`,
             labels: Array.isArray(p.labels)
               ? p.labels.map((label) => label.name)
@@ -57,10 +86,21 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
             categories: Array.isArray(p.categories)
               ? p.categories.map((cat) => cat.name)
               : [],
-            sold: p.sold || 0,
+            sold: p.sold || 0, // Giữ lại thông tin sold
             totalCount: p.total_count || 0,
+            createdAt: p.createdAt || p.created_at || new Date().toISOString(), // Lấy created_at từ API
           };
         });
+
+        // DEBUG: Log để kiểm tra thứ tự từ API
+        console.log("New Arrivals từ API (đã sắp xếp theo createdAt,desc):", 
+          mappedProducts.map(p => ({ 
+            id: p.id, 
+            name: p.name, 
+            sold: p.sold, 
+            createdAt: p.createdAt 
+          }))
+        );
 
         setProducts(mappedProducts);
       } catch (err) {
@@ -120,6 +160,11 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
     navigate(`/product/${productId}`);
   };
 
+  // Sắp xếp lại trên client nếu API không sắp xếp đúng
+  const sortedProducts = [...products].sort((a, b) => 
+    new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 bg-white">
       {/* Header */}
@@ -127,7 +172,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
         <div>
           <p className="text-gray-500 text-xs mb-1">NỮ</p>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
-            BÁN CHẠY NHẤT
+            SẢN PHẨM MỚI
           </h2>
         </div>
         <Link
@@ -141,161 +186,166 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
       {/* Product List */}
       <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 hide-scrollbar">
         <div className="flex gap-3 md:gap-4 lg:flex-nowrap lg:overflow-x-auto lg:gap-4 xl:justify-start hide-scrollbar">
-          {products.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => handleProductClick(p.id)}
-              className="flex-none w-[65%] md:w-[27.5%] lg:w-1/4 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1 relative overflow-hidden cursor-pointer"
-            >
-              <div className="block relative aspect-[3/4]">
-                {p.mainImage ? (
-                  <img
-                    src={selectedImages[p.id] || p.mainImage}
-                    alt={p.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
-                    No Image
-                  </div>
-                )}
+          {sortedProducts.map((p) => {
+            // Lọc màu unique cho mỗi sản phẩm
+            const uniqueColors = getUniqueColors(p.colors);
+            
+            return (
+              <div
+                key={p.id}
+                onClick={() => handleProductClick(p.id)}
+                className="flex-none w-[65%] md:w-[27.5%] lg:w-1/4 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-transform hover:-translate-y-1 relative overflow-hidden cursor-pointer"
+              >
+                <div className="block relative aspect-[3/4]">
+                  {p.mainImage ? (
+                    <img
+                      src={selectedImages[p.id] || p.mainImage}
+                      alt={p.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
+                      No Image
+                    </div>
+                  )}
 
-                {p.labels.includes("Bán chạy") && (
-                  <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
-                    Bán chạy
-                  </div>
-                )}
+                  {/* Hiển thị badge Hàng Mới nếu sản phẩm có label "Hàng Mới" */}
+                  {p.labels.includes("Hàng Mới") && (
+                    <div className="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
+                      NEW
+                    </div>
+                  )}
 
-                <button
-                  onClick={(e) => toggleFavorite(p.id, e)}
-                  className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition z-10 ${
-                    favorites.includes(p.id)
-                      ? "text-red-500"
-                      : "text-gray-400 hover:text-[#3A6FB5]"
-                  }`}
-                >
-                  <Heart
-                    className="w-4 h-4"
-                    fill={favorites.includes(p.id) ? "currentColor" : "none"}
-                  />
-                </button>
+                  <button
+                    onClick={(e) => toggleFavorite(p.id, e)}
+                    className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition z-10 ${
+                      favorites.includes(p.id)
+                        ? "text-red-500"
+                        : "text-gray-400 hover:text-[#3A6FB5]"
+                    }`}
+                  >
+                    <Heart
+                      className="w-4 h-4"
+                      fill={favorites.includes(p.id) ? "currentColor" : "none"}
+                    />
+                  </button>
 
-                <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
-                  {p.labels.map((label, idx) => {
-                    // Xác định style dựa trên tên label
-                    const isFreeship =
-                      label.toLowerCase().includes("freeship") ||
-                      label.toLowerCase().includes("free ship");
-                    const isCombo =
-                      label.toLowerCase().includes("mua 2") ||
-                      label.toLowerCase().includes("combo");
+                  <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
+                    {p.labels.map((label, idx) => {
+                      const isFreeship =
+                        label.toLowerCase().includes("freeship") ||
+                        label.toLowerCase().includes("free ship");
+                      const isCombo =
+                        label.toLowerCase().includes("mua 2") ||
+                        label.toLowerCase().includes("combo");
 
-                    if (isFreeship) {
+                      if (isFreeship) {
+                        return (
+                          <span
+                            key={idx}
+                            className="bg-[#3A6FB5] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm"
+                          >
+                            {label}
+                          </span>
+                        );
+                      }
+
+                      if (isCombo) {
+                        return (
+                          <div
+                            key={idx}
+                            className="bg-[#003EA7] text-white text-[11px] font-semibold px-2 py-[2px] rounded-md shadow-md"
+                          >
+                            {label}
+                          </div>
+                        );
+                      }
+
                       return (
                         <span
                           key={idx}
-                          className="bg-[#3A6FB5] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm"
+                          className="bg-[#003EA7] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm"
                         >
                           {label}
                         </span>
                       );
-                    }
-
-                    if (isCombo) {
-                      return (
-                        <div
-                          key={idx}
-                          className="bg-[#003EA7] text-white text-[11px] font-semibold px-2 py-[2px] rounded-md shadow-md"
-                        >
-                          {label}
-                        </div>
-                      );
-                    }
-
-                    // Label mặc định
-                    return (
-                      <span
-                        key={idx}
-                        className="bg-[#003EA7] text-white text-[11px] font-medium px-2 py-[1px] rounded-md shadow-sm"
-                      >
-                        {label}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="p-3">
-                <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">
-                  {p.brand || "YINLI"}
-                </p>
-                <div className="block font-medium text-gray-800 text-[15px] leading-snug hover:text-[#3A6FB5] transition line-clamp-2">
-                  {p.name || "Áo croptop tập gym yoga"}
+                    })}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-[#111] font-bold text-[15px]">
-                    {Math.round(p.price).toLocaleString("vi-VN")}₫
-                  </span>
-                  {p.originalPrice > p.price && (
-                    <>
-                      <span className="text-gray-400 text-xs line-through ml-1">
-                        {p.originalPrice.toLocaleString("vi-VN")}₫
-                      </span>
-                      <span className="text-red-500 text-xs font-medium ml-1">
-                        -{p.discount}%
-                      </span>
-                    </>
-                  )}
-                </div>
+                <div className="p-3">
+                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">
+                    {p.brand || "YINLI"}
+                  </p>
+                  <div className="block font-medium text-gray-800 text-[15px] leading-snug hover:text-[#3A6FB5] transition line-clamp-2">
+                    {p.name || "Áo croptop tập gym yoga"}
+                  </div>
 
-                {/* Thumbnail images nếu có nhiều hình */}
-                {p.images.length > 1 && (
-                  <div className="flex items-center gap-1.5 mt-2">
-                    {p.images.slice(0, 4).map((img, i) => (
-                      <div key={i} className="relative group">
-                        <button
-                          onMouseEnter={(e) => {
-                            e.stopPropagation();
-                            handleImageChange(p.id, img.url);
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className={`w-8 h-8 rounded-full border overflow-hidden ${
-                            selectedImages[p.id] === img.url
-                              ? "border-gray-800 border-2"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          <img
-                            src={img.url}
-                            alt={img.altText}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-20">
-                          {img.altText}
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
-                        </div>
-                      </div>
-                    ))}
-                    {p.images.length > 4 && (
-                      <span className="text-gray-400 text-xs">
-                        +{p.images.length - 4}
-                      </span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-[#111] font-bold text-[15px]">
+                      {Math.round(p.price).toLocaleString("vi-VN")}₫
+                    </span>
+                    {p.originalPrice > p.price && (
+                      <>
+                        <span className="text-gray-400 text-xs line-through ml-1">
+                          {p.originalPrice.toLocaleString("vi-VN")}₫
+                        </span>
+                        <span className="text-red-500 text-xs font-medium ml-1">
+                          -{p.discount}%
+                        </span>
+                      </>
                     )}
                   </div>
-                )}
 
-                <div className="flex items-center gap-1 mt-3">
-                  <span className="bg-[#FF6600] text-white text-[11px] font-semibold px-2 py-[2px] rounded-md">
-                    🔥 HOT DEAL
-                  </span>
+                  {/* Hiển thị lượt bán sold - LUÔN HIỂN THỊ KỂ CẢ KHI = 0 */}
+                  <div className="text-gray-600 text-xs mt-1">
+                    Đã bán: <span className="font-semibold">{p.sold.toLocaleString()}</span>
+                  </div>
+
+                  {/* Color Variant Dots - THAY THẾ THUMBNAIL IMAGES */}
+                  {uniqueColors.length > 1 && (
+                    <div className="flex items-center gap-2 mt-2">
+                      {uniqueColors.slice(0, 5).map((color, i) => (
+                        <div key={i} className="relative group">
+                          <button
+                            onMouseEnter={(e) => {
+                              e.stopPropagation();
+                              handleImageChange(p.id, color.image);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
+                              selectedImages[p.id] === color.image
+                                ? "border-gray-800 scale-110"
+                                : "border-gray-300 hover:border-gray-500"
+                            }`}
+                            style={{
+                              backgroundColor: color.code,
+                              boxShadow:
+                                color.code === "#FFFFFF"
+                                  ? "inset 0 0 0 1px rgba(0,0,0,0.1)"
+                                  : "none",
+                            }}
+                            aria-label={color.name}
+                          />
+
+                          {/* Tooltip */}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-20">
+                            {color.name}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </div>
+                      ))}
+                      {uniqueColors.length > 5 && (
+                        <span className="text-gray-400 text-xs ml-1">
+                          +{uniqueColors.length - 5}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
