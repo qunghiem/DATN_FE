@@ -34,6 +34,7 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
         });
         
         const res = await axios.get(`${VITE_API_URL}/api/products/search?${params.toString()}`);
+        // const res = await axios.get(`${VITE_API_URL}/api/products`);
         
         // Lấy data từ API response
         const data = Array.isArray(res.data?.data) ? res.data.data : [];
@@ -200,12 +201,10 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
                     </div>
                   )}
 
-                  {/* Hiển thị badge Bán chạy nếu sản phẩm có sold > 0 */}
-                  {p.sold > 0 && (
+                  {/* Hiển thị badge Bán chạy  */}
                     <div className="absolute top-2 left-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
                       Bán chạy
                     </div>
-                  )}
 
                   <button
                     onClick={(e) => toggleFavorite(p.id, e)}

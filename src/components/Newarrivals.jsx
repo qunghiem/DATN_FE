@@ -29,17 +29,19 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
       try {
         // Gọi API search với các tham số: sắp xếp theo created_at giảm dần và chỉ lấy active = true
         const params = new URLSearchParams({
-          sort: 'createdAt,desc', // Sắp xếp theo created_at giảm dần (sản phẩm mới nhất trước)
+          sort: 'created_at,desc', // Sửa thành created_at (snake_case)
           active: 'true', // Chỉ lấy product có active = true
-          // size: '50' // Tăng số lượng sản phẩm hiển thị lên 50
         });
         
+        
         const res = await axios.get(`${VITE_API_URL}/api/products/search?${params.toString()}`);
+        
         
         // Lấy data từ API response
         const data = Array.isArray(res.data?.data) ? res.data.data : [];
         
-        const mappedProducts = data.map((p) => {
+        
+        const mappedProducts = data.map((p, index) => {
           const images = Array.isArray(p.images)
             ? p.images
                 .filter((img) => {
@@ -78,7 +80,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
             discount: discountPercent,
             images: images,
             mainImage: images[0]?.url || "",
-            colors: colors, // Thêm colors từ variants
+            colors: colors,
             link: `/product/${p.id}`,
             labels: Array.isArray(p.labels)
               ? p.labels.map((label) => label.name)
@@ -86,23 +88,28 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
             categories: Array.isArray(p.categories)
               ? p.categories.map((cat) => cat.name)
               : [],
-            sold: p.sold || 0, // Giữ lại thông tin sold
+            sold: p.sold || 0,
             totalCount: p.total_count || 0,
-            createdAt: p.createdAt || p.created_at || new Date().toISOString(), // Lấy created_at từ API
+            created_at: p.created_at, // Lấy đúng field từ API
           };
         });
 
-        // DEBUG: Log để kiểm tra thứ tự từ API
-        console.log("New Arrivals từ API (đã sắp xếp theo createdAt,desc):", 
-          mappedProducts.map(p => ({ 
-            id: p.id, 
-            name: p.name, 
-            sold: p.sold, 
-            createdAt: p.createdAt 
-          }))
+
+        // Lọc bỏ sản phẩm không có created_at
+        const productsWithDate = mappedProducts.filter(p => p.created_at);
+        const productsWithoutDate = mappedProducts.filter(p => !p.created_at);
+        
+        // Sắp xếp sản phẩm có created_at giảm dần
+        const sortedWithDate = productsWithDate.sort((a, b) => 
+          new Date(b.created_at) - new Date(a.created_at)
         );
 
-        setProducts(mappedProducts);
+        // Thêm sản phẩm không có created_at vào cuối
+        const finalProducts = [...sortedWithDate, ...productsWithoutDate];
+
+      
+
+        setProducts(finalProducts);
       } catch (err) {
         console.error("Error fetching products:", err);
         setProducts([]);
@@ -160,11 +167,6 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
     navigate(`/product/${productId}`);
   };
 
-  // Sắp xếp lại trên client nếu API không sắp xếp đúng
-  const sortedProducts = [...products].sort((a, b) => 
-    new Date(b.createdAt) - new Date(a.createdAt)
-  );
-
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 bg-white">
       {/* Header */}
@@ -186,7 +188,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
       {/* Product List */}
       <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 hide-scrollbar">
         <div className="flex gap-3 md:gap-4 lg:flex-nowrap lg:overflow-x-auto lg:gap-4 xl:justify-start hide-scrollbar">
-          {sortedProducts.map((p) => {
+          {products.map((p, index) => {
             // Lọc màu unique cho mỗi sản phẩm
             const uniqueColors = getUniqueColors(p.colors);
             
@@ -215,6 +217,7 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                       NEW
                     </div>
                   )}
+
 
                   <button
                     onClick={(e) => toggleFavorite(p.id, e)}
