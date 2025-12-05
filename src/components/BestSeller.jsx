@@ -91,11 +91,6 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
           };
         });
 
-        // DEBUG: Log để kiểm tra thứ tự từ API
-        console.log("Products từ API (đã sắp xếp theo sold,desc):", 
-          mappedProducts.map(p => ({ id: p.id, name: p.name, sold: p.sold }))
-        );
-
         setProducts(mappedProducts);
       } catch (err) {
         console.error("Error fetching products:", err);

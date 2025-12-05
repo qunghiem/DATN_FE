@@ -3,10 +3,63 @@ import axios from 'axios';
 
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
+// Biến lưu trữ dispatch để interceptor có thể sử dụng
+let storeDispatch = null;
+
+// Interceptor để tự động logout khi token hết hạn
+let authInterceptor = null;
+
+const setupAuthInterceptor = (dispatch) => {
+  // Lưu dispatch để sử dụng trong interceptor
+  storeDispatch = dispatch;
+  
+  // Xóa interceptor cũ nếu có
+  if (authInterceptor !== null) {
+    axios.interceptors.request.eject(authInterceptor);
+  }
+
+  // Interceptor cho request: tự động thêm token
+  authInterceptor = axios.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    }
+  );
+
+  // Interceptor cho response: xử lý lỗi 401 toàn cục
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401) {
+        // Token hết hạn, tự động logout
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        
+        if (storeDispatch) {
+          storeDispatch(logout());
+        }
+        
+        // Redirect đến trang login nếu đang ở client side
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      }
+      return Promise.reject(error);
+    }
+  );
+};
+
 // Async thunks
 export const login = createAsyncThunk(
   'auth/login',
-  async ({ email, password, remember_me, captcha_response }, { rejectWithValue }) => {
+  async ({ email, password, remember_me, captcha_response }, { rejectWithValue, dispatch }) => {
     try {
       const response = await axios.post(`${VITE_API_URL}/api/auth/login`, {
         email,
@@ -21,6 +74,9 @@ export const login = createAsyncThunk(
         localStorage.setItem('refresh_token', response.data.result.tokens.refresh_token);
         localStorage.setItem('user', JSON.stringify(response.data.result.user));
         
+        // Thiết lập interceptor sau khi login thành công
+        setupAuthInterceptor(dispatch);
+        
         return response.data.result;
       } else {
         return rejectWithValue(response.data.message);
@@ -33,7 +89,7 @@ export const login = createAsyncThunk(
 
 export const loginWithGoogle = createAsyncThunk(
   'auth/loginWithGoogle',
-  async ({ idToken }, { rejectWithValue }) => {
+  async ({ idToken }, { rejectWithValue, dispatch }) => {
     try {
       const response = await axios.post(`${VITE_API_URL}/api/auth/login/google`, { idToken });
       
@@ -41,6 +97,9 @@ export const loginWithGoogle = createAsyncThunk(
         localStorage.setItem('access_token', response.data.data.tokens.access_token);
         localStorage.setItem('refresh_token', response.data.data.tokens.refresh_token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        
+        // Thiết lập interceptor sau khi login thành công
+        setupAuthInterceptor(dispatch);
         
         return response.data.data;
       } else {
@@ -54,7 +113,7 @@ export const loginWithGoogle = createAsyncThunk(
 
 export const register = createAsyncThunk(
   'auth/register',
-  async ({ fullName, email, password, confirmPassword, phone, captcha_token }, { rejectWithValue }) => {
+  async ({ fullName, email, password, confirmPassword, phone, captcha_token }, { rejectWithValue, dispatch }) => {
     try {
       const response = await axios.post(`${VITE_API_URL}/api/auth/register`, {
         fullName,
@@ -69,6 +128,9 @@ export const register = createAsyncThunk(
         localStorage.setItem('access_token', response.data.result.data.tokens.access_token);
         localStorage.setItem('refresh_token', response.data.result.data.tokens.refresh_token);
         localStorage.setItem('user', JSON.stringify(response.data.result.data.user));
+        
+        // Thiết lập interceptor sau khi register thành công
+        setupAuthInterceptor(dispatch);
         
         return response.data.result.data;
       } else {
@@ -92,7 +154,6 @@ export const forgotPassword = createAsyncThunk(
         return rejectWithValue(response.data.message);
       }
     } catch (error) {
-      // Xử lý lỗi từ server (code !== 1000)
       if (error.response?.data?.code) {
         return rejectWithValue(error.response.data.message);
       }
@@ -113,7 +174,6 @@ export const verifyOTP = createAsyncThunk(
         return rejectWithValue(response.data.message);
       }
     } catch (error) {
-      // Xử lý lỗi từ server (code !== 1000)
       if (error.response?.data?.code) {
         return rejectWithValue(error.response.data.message);
       }
@@ -139,7 +199,6 @@ export const resetPassword = createAsyncThunk(
         return rejectWithValue(response.data.message);
       }
     } catch (error) {
-      // Xử lý lỗi từ server (code !== 1000)
       if (error.response?.data?.code) {
         return rejectWithValue(error.response.data.message);
       }
@@ -160,32 +219,17 @@ export const fetchUserProfile = createAsyncThunk(
         return rejectWithValue('Không có token xác thực');
       }
       
-      const response = await axios.get(`${VITE_API_URL}/api/users/profile`, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await axios.get(`${VITE_API_URL}/api/users/profile`);
 
       if (response.data.code === 1000) {
         const userProfile = response.data.result;
-        // Cập nhật localStorage
         localStorage.setItem('user', JSON.stringify(userProfile));
         return userProfile;
       } else {
         return rejectWithValue(response.data.message);
       }
     } catch (error) {
-      console.error("Error fetching user profile:", error);
-      
-      if (error.response?.status === 401) {
-        // Token hết hạn, clear localStorage
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        return rejectWithValue('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
-      }
-      
+      // Interceptor global sẽ xử lý lỗi 401, ở đây chỉ cần trả về lỗi thông thường
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra khi tải thông tin người dùng!');
     }
   }
@@ -208,17 +252,10 @@ export const updateUserProfile = createAsyncThunk(
         {
           fullName,
           phone,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-            "Content-Type": "application/json",
-          },
         }
       );
 
       if (response.data.code === 1000) {
-        // Cập nhật localStorage với dữ liệu mới
         const currentUser = JSON.parse(localStorage.getItem('user')) || {};
         const updatedUser = {
           ...currentUser,
@@ -232,17 +269,44 @@ export const updateUserProfile = createAsyncThunk(
         return rejectWithValue(response.data.message);
       }
     } catch (error) {
-      console.error("Error updating user profile:", error);
+      // Interceptor global sẽ xử lý lỗi 401
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật thông tin!');
+    }
+  }
+);
+
+// Thêm async thunk để refresh token
+export const refreshToken = createAsyncThunk(
+  'auth/refreshToken',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const { auth } = getState();
+      const { refresh_token } = auth;
       
-      if (error.response?.status === 401) {
-        // Token hết hạn, clear localStorage
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        return rejectWithValue('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
+      if (!refresh_token) {
+        return rejectWithValue('Không có refresh token');
       }
       
-      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật thông tin!');
+      const response = await axios.post(`${VITE_API_URL}/api/auth/refresh-token`, {
+        refresh_token: refresh_token,
+      });
+      
+      if (response.data.code === 1000) {
+        const { access_token, refresh_token: newRefreshToken } = response.data.result.tokens;
+        
+        // Cập nhật tokens mới
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', newRefreshToken);
+        
+        return {
+          access_token,
+          refresh_token: newRefreshToken,
+        };
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Không thể làm mới token');
     }
   }
 );
@@ -269,10 +333,17 @@ const authSlice = createSlice({
       state.access_token = null;
       state.refresh_token = null;
       state.isAuthenticated = false;
-      state.resetToken = null; // Clear reset token khi logout
+      state.resetToken = null;
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
+      
+      // Xóa interceptor khi logout
+      if (authInterceptor !== null) {
+        axios.interceptors.request.eject(authInterceptor);
+        authInterceptor = null;
+        storeDispatch = null;
+      }
     },
     clearMessages: (state) => {
       state.error = null;
@@ -284,16 +355,21 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
-    // Thêm action setUser để cập nhật thông tin user
     setUser: (state, action) => {
       state.user = action.payload;
       localStorage.setItem('user', JSON.stringify(action.payload));
     },
-    // Thêm action updateUser để cập nhật một phần thông tin user
     updateUser: (state, action) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
         localStorage.setItem('user', JSON.stringify(state.user));
+      }
+    },
+    // Thêm action để thiết lập interceptor khi khởi tạo app
+    initializeAuth: (state, action) => {
+      const { dispatch } = action.payload;
+      if (state.access_token && !authInterceptor) {
+        setupAuthInterceptor(dispatch);
       }
     },
   },
@@ -303,7 +379,7 @@ const authSlice = createSlice({
       .addCase(login.pending, (state) => {
         state.isLoading = true;
         state.error = null;
-        state.success = null; // Clear success message
+        state.success = null;
       })
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -406,7 +482,7 @@ const authSlice = createSlice({
       .addCase(resetPassword.fulfilled, (state, action) => {
         state.isLoading = false;
         state.success = action.payload.message;
-        state.resetToken = null; // Clear reset token sau khi thành công
+        state.resetToken = null;
         state.error = null;
       })
       .addCase(resetPassword.rejected, (state, action) => {
@@ -429,13 +505,6 @@ const authSlice = createSlice({
       .addCase(fetchUserProfile.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
-        // Nếu token hết hạn, clear authentication state
-        if (action.payload === 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!') {
-          state.user = null;
-          state.access_token = null;
-          state.refresh_token = null;
-          state.isAuthenticated = false;
-        }
       });
 
     // Update User Profile
@@ -454,13 +523,23 @@ const authSlice = createSlice({
       .addCase(updateUserProfile.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
-        // Nếu token hết hạn, clear authentication state
-        if (action.payload === 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!') {
-          state.user = null;
-          state.access_token = null;
-          state.refresh_token = null;
-          state.isAuthenticated = false;
-        }
+      });
+
+    // Refresh Token
+    builder
+      .addCase(refreshToken.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(refreshToken.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.access_token = action.payload.access_token;
+        state.refresh_token = action.payload.refresh_token;
+        state.error = null;
+      })
+      .addCase(refreshToken.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       });
   },
 });
@@ -471,6 +550,7 @@ export const {
   setResetToken, 
   clearError, 
   setUser, 
-  updateUser 
+  updateUser,
+  initializeAuth
 } = authSlice.actions;
 export default authSlice.reducer;

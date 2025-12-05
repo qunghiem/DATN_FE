@@ -211,12 +211,10 @@ const NewArrivals = ({ savedRef, setSavedCount }) => {
                     </div>
                   )}
 
-                  {/* Hiển thị badge Hàng Mới nếu sản phẩm có label "Hàng Mới" */}
-                  {p.labels.includes("Hàng Mới") && (
+                  {/* Hiển thị badge Hàng Mới */}
                     <div className="absolute top-2 left-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
                       NEW
                     </div>
-                  )}
 
 
                   <button
