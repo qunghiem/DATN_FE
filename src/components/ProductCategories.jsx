@@ -38,11 +38,10 @@ const ProductCategories = () => {
         const transformedData = data.map((category) => ({
           id: category.id,
           name: category.name,
-          productCount: 0, // API không có field này, có thể cập nhật sau
+          productCount: category.productCount,
           image:
             category.image ||
             "//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16",
-          // FIX: Truyền cả id và name vào URL để Collection page có thể filter
           link: `/collection?categoryId=${
             category.id
           }&categoryName=${encodeURIComponent(category.name)}`,
