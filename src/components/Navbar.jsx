@@ -3,7 +3,10 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { FaRegHeart, FaBars, FaTimes } from "react-icons/fa";
 import { logout } from "../features/auth/authSlice";
-import { fetchWishlist, selectWishlistCount } from "../features/wishlist/wishlistSlice";
+import {
+  fetchWishlist,
+  selectWishlistCount,
+} from "../features/wishlist/wishlistSlice";
 import logo from "../assets/logo.png";
 import cart from "../assets/cart.png";
 import search from "../assets/search.png";
@@ -56,7 +59,10 @@ const Navbar = () => {
   const getInitials = (fullName) => {
     if (!fullName) return "";
     const parts = fullName.trim().split(" ");
-    return parts.map((p) => p.charAt(0).toUpperCase()).slice(0, 2).join("");
+    return parts
+      .map((p) => p.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join("");
   };
 
   const initials = getInitials(user?.fullName);
@@ -70,25 +76,61 @@ const Navbar = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     const q = searchValue.trim();
+
     if (q) {
+      // Nếu có từ khóa tìm kiếm
       navigate(`/collection?search=${encodeURIComponent(q)}`);
-      // KHÔNG đóng thanh tìm kiếm, KHÔNG reset giá trị
-      // setSearchOpen(false);
-      // setSearchValue("");
     } else {
-      // Nếu search rỗng thì vẫn giữ thanh tìm kiếm mở để người dùng có thể nhập
-      // Hoặc có thể đóng nếu bạn muốn
-      // setSearchOpen(false);
+      // Nếu search rỗng, chỉ điều hướng đến collection mà không có search param
+      navigate(`/collection`);
+      // Có thể đóng thanh tìm kiếm nếu muốn
+      setSearchOpen(false);
     }
   };
 
   // Hàm để đóng thanh tìm kiếm một cách tường minh
   const handleCloseSearch = () => {
     setSearchOpen(false);
-    // Tùy chọn: có thể reset searchValue khi đóng
-    // setSearchValue("");
+    setSearchValue("");
+
+    // Nếu đang ở collection page và có search param rỗng, xóa nó
+    if (location.pathname === "/collection") {
+      const params = new URLSearchParams(location.search);
+      if (params.has("search") && params.get("search") === "") {
+        params.delete("search");
+        navigate(`/collection?${params.toString()}`);
+      }
+    }
   };
 
+  // close khi ấn esc
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === "Escape" && searchOpen) {
+        setSearchOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [searchOpen]);
+
+  // Parse search query từ URL khi component mount hoặc URL thay đổi
+useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const searchQuery = params.get("search");
+  if (searchQuery) {
+    setSearchValue(searchQuery);
+    if (!searchOpen && searchQuery.trim() !== "") {
+      setSearchOpen(true);
+    }
+  } else {
+    // Reset searchValue nếu không có search param
+    setSearchValue("");
+  }
+}, [location.search]);
   return (
     <nav
       className={`bg-white shadow-md fixed w-full z-50 transition-all duration-300 ${
@@ -289,14 +331,35 @@ const Navbar = () => {
                 placeholder="Tìm kiếm sản phẩm..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                className="w-full border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 pr-10"
+                className="w-full border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 pr-20"
                 autoFocus
               />
+              {/* Nút submit */}
+              <button
+                type="submit"
+                className="absolute right-10 text-gray-500 hover:text-gray-700"
+                aria-label="Tìm kiếm"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </button>
               {/* Nút đóng (X) */}
               <button
                 type="button"
                 onClick={handleCloseSearch}
                 className="absolute right-3 text-gray-500 hover:text-gray-700"
+                aria-label="Đóng tìm kiếm"
               >
                 <FaTimes size={16} />
               </button>
