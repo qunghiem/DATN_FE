@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,12 +11,11 @@ import {
   Save,
   Shield,
   AlertCircle,
-  CheckCircle,
   ArrowLeft,
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { logout } from "../features/auth/authSlice";
+import { logout, setUser } from "../features/auth/authSlice";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -30,11 +29,12 @@ const Profile = () => {
 
   // State for personal info change
   const [infoData, setInfoData] = useState({
-    fullName: user?.fullName || "",
-    phone: user?.phone || "",
+    fullName: "",
+    phone: "",
   });
 
   const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // State for password change
   const [passwordData, setPasswordData] = useState({
@@ -50,6 +50,57 @@ const Profile = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch user profile data from API on component mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated || !access_token) {
+        navigate("/login");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await axios.get("http://localhost:8080/api/users/profile", {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.data.code === 1000) {
+          const userProfile = response.data.result;
+          
+          // Update infoData state with fetched data
+          setInfoData({
+            fullName: userProfile.fullName || "",
+            phone: userProfile.phone || "",
+          });
+          
+          // Update Redux store with fresh data
+          dispatch(setUser(userProfile));
+          
+          // Update localStorage
+          localStorage.setItem("user", JSON.stringify(userProfile));
+        } else {
+          toast.error(response.data.message || "Không thể tải thông tin người dùng!");
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
+          dispatch(logout());
+          navigate("/login");
+        } else {
+          toast.error("Có lỗi xảy ra khi tải thông tin người dùng!");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, access_token, dispatch, navigate]);
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
@@ -70,7 +121,7 @@ const Profile = () => {
     return firstInitial + lastInitial;
   };
 
-  const initials = getInitials(user?.fullName);
+  const initials = getInitials(user?.fullName || infoData.fullName);
 
   // Handle info input change
   const handleInfoChange = (e) => {
@@ -130,16 +181,24 @@ const Profile = () => {
 
       if (response.data.code === 1000) {
         toast.success("Cập nhật thông tin thành công!");
-        // Update user in localStorage
-        const updatedUser = {
-          ...user,
-          fullName: infoData.fullName,
-          phone: infoData.phone,
-        };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
+        
+        // Fetch updated user profile
+        const profileResponse = await axios.get("http://localhost:8080/api/users/profile", {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
-        // Optionally: dispatch action to update Redux store
-        // dispatch(updateUserInfo(updatedUser));
+        if (profileResponse.data.code === 1000) {
+          const updatedUserProfile = profileResponse.data.result;
+          
+          // Update Redux store
+          dispatch(setUser(updatedUserProfile));
+          
+          // Update localStorage
+          localStorage.setItem("user", JSON.stringify(updatedUserProfile));
+        }
       } else {
         toast.error(response.data.message || "Cập nhật thông tin thất bại!");
       }
@@ -268,6 +327,18 @@ const Profile = () => {
     }
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="pt-16 min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3A6FB5] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang tải thông tin...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pt-16 min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-6">
@@ -334,7 +405,7 @@ const Profile = () => {
 
                       <div>
                         <h2 className="text-xl font-bold text-gray-900">
-                          {user?.fullName}
+                          {user?.fullName || infoData.fullName}
                         </h2>
                         <p className="text-gray-600">{user?.email}</p>
                       </div>
@@ -344,18 +415,18 @@ const Profile = () => {
                     <div className="text-right">
                       <p className="text-sm text-gray-600">Điểm tích lũy</p>
                       <p className="text-2xl font-bold text-[#3A6FB5]">
-                        {user?.rewardPoints}
+                        {user?.rewardPoints || 0}
                       </p>
                     </div>
                   </div>
 
-                  {/* Progress bar */}
+                  {/* Progress bar - Giữ nguyên nhưng hiển thị từ rewardPoints */}
                   <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-yellow-400 to-yellow-600 transition-all duration-500"
                       style={{
                         width: `${Math.min(
-                          ((user?.loyaltyPoints || 0) / 1000) * 100,
+                          ((user?.rewardPoints || 0) / 1000) * 100,
                           100
                         )}%`,
                       }}
@@ -426,6 +497,7 @@ const Profile = () => {
                     <button
                       type="button"
                       onClick={() => {
+                        // Reset to current user data from Redux store
                         setInfoData({
                           fullName: user?.fullName || "",
                           phone: user?.phone || "",

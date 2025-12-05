@@ -148,6 +148,105 @@ export const resetPassword = createAsyncThunk(
   }
 );
 
+// Thêm async thunk để fetch user profile
+export const fetchUserProfile = createAsyncThunk(
+  'auth/fetchUserProfile',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const { auth } = getState();
+      const { access_token } = auth;
+      
+      if (!access_token) {
+        return rejectWithValue('Không có token xác thực');
+      }
+      
+      const response = await axios.get(`${VITE_API_URL}/api/users/profile`, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.data.code === 1000) {
+        const userProfile = response.data.result;
+        // Cập nhật localStorage
+        localStorage.setItem('user', JSON.stringify(userProfile));
+        return userProfile;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      
+      if (error.response?.status === 401) {
+        // Token hết hạn, clear localStorage
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        return rejectWithValue('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
+      }
+      
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra khi tải thông tin người dùng!');
+    }
+  }
+);
+
+// Thêm async thunk để update user profile
+export const updateUserProfile = createAsyncThunk(
+  'auth/updateUserProfile',
+  async ({ fullName, phone }, { getState, rejectWithValue }) => {
+    try {
+      const { auth } = getState();
+      const { access_token } = auth;
+      
+      if (!access_token) {
+        return rejectWithValue('Không có token xác thực');
+      }
+      
+      const response = await axios.put(
+        `${VITE_API_URL}/api/users/update-profile`,
+        {
+          fullName,
+          phone,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.code === 1000) {
+        // Cập nhật localStorage với dữ liệu mới
+        const currentUser = JSON.parse(localStorage.getItem('user')) || {};
+        const updatedUser = {
+          ...currentUser,
+          fullName,
+          phone,
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        return updatedUser;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      
+      if (error.response?.status === 401) {
+        // Token hết hạn, clear localStorage
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        return rejectWithValue('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
+      }
+      
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật thông tin!');
+    }
+  }
+);
+
 // Initial state
 const initialState = {
   user: JSON.parse(localStorage.getItem('user')) || null,
@@ -182,9 +281,20 @@ const authSlice = createSlice({
     setResetToken: (state, action) => {
       state.resetToken = action.payload;
     },
-    // Thêm action để clear error khi chuyển view
     clearError: (state) => {
       state.error = null;
+    },
+    // Thêm action setUser để cập nhật thông tin user
+    setUser: (state, action) => {
+      state.user = action.payload;
+      localStorage.setItem('user', JSON.stringify(action.payload));
+    },
+    // Thêm action updateUser để cập nhật một phần thông tin user
+    updateUser: (state, action) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+        localStorage.setItem('user', JSON.stringify(state.user));
+      }
     },
   },
   extraReducers: (builder) => {
@@ -304,8 +414,63 @@ const authSlice = createSlice({
         state.error = action.payload;
         state.success = null;
       });
+
+    // Fetch User Profile
+    builder
+      .addCase(fetchUserProfile.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchUserProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchUserProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+        // Nếu token hết hạn, clear authentication state
+        if (action.payload === 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!') {
+          state.user = null;
+          state.access_token = null;
+          state.refresh_token = null;
+          state.isAuthenticated = false;
+        }
+      });
+
+    // Update User Profile
+    builder
+      .addCase(updateUserProfile.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+        state.success = null;
+      })
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload;
+        state.success = 'Cập nhật thông tin thành công!';
+        state.error = null;
+      })
+      .addCase(updateUserProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+        // Nếu token hết hạn, clear authentication state
+        if (action.payload === 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!') {
+          state.user = null;
+          state.access_token = null;
+          state.refresh_token = null;
+          state.isAuthenticated = false;
+        }
+      });
   },
 });
 
-export const { logout, clearMessages, setResetToken, clearError } = authSlice.actions;
+export const { 
+  logout, 
+  clearMessages, 
+  setResetToken, 
+  clearError, 
+  setUser, 
+  updateUser 
+} = authSlice.actions;
 export default authSlice.reducer;
