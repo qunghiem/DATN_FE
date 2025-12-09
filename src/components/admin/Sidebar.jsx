@@ -4,6 +4,7 @@ import { NavLink } from "react-router-dom";
 const Sidebar = () => {
   const menu = [
     { name: "Thống kê", path: "/admin" },
+    { name: "Người dùng", path: "/admin/users" },
     { name: "Sản phẩm bán chạy", path: "/admin/bestseller" },
     { name: "Sản phẩm", path: "/admin/products" },
     { name: "Đơn hàng", path: "/admin/orders" },
@@ -16,7 +17,7 @@ const Sidebar = () => {
   return (
     <aside className="w-64 bg-white border-r border-gray-200 overflow-y-auto">
       <div className="p-6 font-bold text-xl border-b border-gray-200">
-        Admin
+        Quản lý
       </div>
       <nav className="mt-4 flex flex-col space-y-2 px-2">
         {menu.map((item) => (

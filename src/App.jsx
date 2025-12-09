@@ -30,6 +30,8 @@ import AdminOrders from './pages/admin/Orders';
 import AdminReviews from './pages/admin/AdminReviews';
 import AdminStatistics from './pages/admin/Statistics';
 import AdminBestsellerProducts from './pages/admin/BestsellerProducts';
+import AdminUsers from './pages/admin/AdminUsers';
+
 const App = () => {
   const location = useLocation();
   const hideLayout = location.pathname.startsWith("/admin") || location.pathname === "/employee/chat";
@@ -74,6 +76,7 @@ const App = () => {
           <Route path="vouchers" element={<AdminVoucher />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="reviews" element={<AdminReviews />} />
+          <Route path="users" element={<AdminUsers />} />
 
         </Route>
       </Routes>

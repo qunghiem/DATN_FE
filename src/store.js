@@ -3,9 +3,6 @@ import authReducer from './features/auth/authSlice';
 import productsReducer from './features/products/productsSlice';
 import cartReducer from './features/cart/cartSlice';
 import adminProductsReducer from './features/admin/adminProductsSlice';
-// import adminOrdersReducer from './features/admin/adminOrdersSlice';
-// import adminCustomersReducer from './features/admin/adminCustomersSlice';
-// import adminRevenueReducer from './features/admin/adminRevenueSlice';
 import metadataReducer from './features/admin/metadataSlice';
 import wishlistReducer from './features/wishlist/wishlistSlice';
 import adminVouchersReducer from './features/admin/adminVouchersslice';
@@ -14,6 +11,7 @@ import chatReducer from './features/chat/chatSlice';
 import adminOrdersReducer from './features/admin/adminOrdersSlice';
 import reviewsReducer from './features/reviews/reviewsSlice';
 import adminReviewsReducer from './features/admin/adminReviewsSlice';
+import adminUsers from './features/admin/adminUsersSlice';
 
 export const store = configureStore({
   reducer: {
@@ -29,6 +27,7 @@ export const store = configureStore({
     chat: chatReducer,
     reviews: reviewsReducer,
     adminReviews: adminReviewsReducer,
+    adminUsers: adminUsers,
   },
 });
 
