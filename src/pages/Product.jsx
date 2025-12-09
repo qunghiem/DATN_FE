@@ -459,7 +459,8 @@ const Product = () => {
             onClick={() => navigate("/collection")}
             className="hover:text-[#3A6FB5] cursor-pointer"
           >
-            Set đồ tập
+            {/* Set đồ tập */}
+            Bộ sưu tập
           </span>
           <span className="mx-2">/</span>
           <span className="text-gray-400">{product.name}</span>

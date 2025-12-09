@@ -23,8 +23,6 @@ export const store = configureStore({
     wishlist: wishlistReducer,
     adminProducts: adminProductsReducer,
     adminOrders: adminOrdersReducer,
-    // adminCustomers: adminCustomersReducer,
-    // adminRevenue: adminRevenueReducer,
     metadata: metadataReducer,
     adminVouchers: adminVouchersReducer,
     vouchers: voucherReducer,

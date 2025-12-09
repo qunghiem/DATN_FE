@@ -29,7 +29,7 @@ import { useSelector } from 'react-redux';
 import AdminOrders from './pages/admin/Orders';
 import AdminReviews from './pages/admin/AdminReviews';
 import AdminStatistics from './pages/admin/Statistics';
-
+import AdminBestsellerProducts from './pages/admin/BestsellerProducts';
 const App = () => {
   const location = useLocation();
   const hideLayout = location.pathname.startsWith("/admin") || location.pathname === "/employee/chat";
@@ -67,7 +67,7 @@ const App = () => {
         <Route path="/admin" element={<AdminLayout />}>
           {/* vừa vào vào ở trang thống kê đầu tiên  */}
           <Route path="" element={<AdminStatistics />} />
-
+          <Route path="bestseller" element={<AdminBestsellerProducts />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="brands" element={<AdminBrands />} />
           <Route path="categories" element={<AdminCategories />} />
