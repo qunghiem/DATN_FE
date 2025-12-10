@@ -74,7 +74,6 @@ const Orders = () => {
     { id: "CONFIRMED", name: "Đã xác nhận", icon: CheckCircle, color: "blue" },
     { id: "SHIPPED", name: "Đang giao", icon: Truck, color: "purple" },
     { id: "DELIVERED", name: "Đã giao", icon: CheckCircle, color: "green" },
-    { id: "CANCELLED", name: "Đã hủy", icon: XCircle, color: "red" },
   ];
 
   // Helper functions
@@ -218,42 +217,42 @@ const Orders = () => {
     setShowCancelModal(true);
   };
 
-  const confirmCancelOrder = async () => {
-    if (!cancelReason.trim()) {
-      toast.error("Vui lòng nhập lý do hủy đơn!");
-      return;
-    }
-    try {
-      const userId = getUserId();
-      const cancelTime = new Date().toISOString();
-      const updatedOrders = orders.map((order) => {
-        if (order.id === selectedOrder.id) {
-          return {
-            ...order,
-            status: "CANCELLED",
-            tracking: [
-              ...(order.tracking || []),
-              {
-                status: "CANCELLED",
-                time: cancelTime,
-                description: `Đơn hàng đã bị hủy. Lý do: ${cancelReason}`,
-              },
-            ],
-          };
-        }
-        return order;
-      });
-      setOrders(updatedOrders);
-      saveUserOrders(userId, updatedOrders);
-      toast.success("Đã hủy đơn hàng thành công!");
-      setShowCancelModal(false);
-      setCancelReason("");
-      setSelectedOrder(null);
-    } catch (error) {
-      console.error("Error cancelling order:", error);
-      toast.error("Không thể hủy đơn hàng. Vui lòng thử lại!");
-    }
-  };
+  // const confirmCancelOrder = async () => {
+  //   if (!cancelReason.trim()) {
+  //     toast.error("Vui lòng nhập lý do hủy đơn!");
+  //     return;
+  //   }
+  //   try {
+  //     const userId = getUserId();
+  //     const cancelTime = new Date().toISOString();
+  //     const updatedOrders = orders.map((order) => {
+  //       if (order.id === selectedOrder.id) {
+  //         return {
+  //           ...order,
+  //           status: "CANCELLED",
+  //           tracking: [
+  //             ...(order.tracking || []),
+  //             {
+  //               status: "CANCELLED",
+  //               time: cancelTime,
+  //               description: `Đơn hàng đã bị hủy. Lý do: ${cancelReason}`,
+  //             },
+  //           ],
+  //         };
+  //       }
+  //       return order;
+  //     });
+  //     setOrders(updatedOrders);
+  //     saveUserOrders(userId, updatedOrders);
+  //     toast.success("Đã hủy đơn hàng thành công!");
+  //     setShowCancelModal(false);
+  //     setCancelReason("");
+  //     setSelectedOrder(null);
+  //   } catch (error) {
+  //     console.error("Error cancelling order:", error);
+  //     toast.error("Không thể hủy đơn hàng. Vui lòng thử lại!");
+  //   }
+  // };
 
   const handleReorder = (order) => {
     toast.success("Đã thêm sản phẩm vào giỏ hàng!");
@@ -555,7 +554,7 @@ const Orders = () => {
                           Chi tiết
                         </button>
 
-                        {order.status === "PENDING" && (
+                        {/* {order.status === "PENDING" && (
                           <button
                             onClick={() => handleCancelOrder(order)}
                             className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-600 hover:text-white transition"
@@ -563,7 +562,7 @@ const Orders = () => {
                             <XCircle className="w-4 h-4" />
                             Hủy đơn
                           </button>
-                        )}
+                        )} */}
 
                         {order.status === "DELIVERED" && (
                           <button
@@ -1070,7 +1069,7 @@ const Orders = () => {
               >
                 Đóng
               </button>
-              {selectedOrder.status === "PENDING" && (
+              {/* {selectedOrder.status === "PENDING" && (
                 <button
                   onClick={() => {
                     setShowDetailModal(false);
@@ -1080,7 +1079,7 @@ const Orders = () => {
                 >
                   Hủy đơn hàng
                 </button>
-              )}
+              )} */}
             </div>
           </div>
         </div>
@@ -1096,16 +1095,16 @@ const Orders = () => {
                   <XCircle className="w-6 h-6 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">
+                  {/* <h3 className="text-lg font-bold text-gray-900">
                     Hủy đơn hàng
-                  </h3>
+                  </h3> */}
                   <p className="text-sm text-gray-600">
                     Mã đơn: {selectedOrder.id}
                   </p>
                 </div>
               </div>
 
-              <div className="mb-4">
+              {/* <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Lý do hủy đơn <span className="text-red-500">*</span>
                 </label>
@@ -1116,9 +1115,9 @@ const Orders = () => {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none resize-none"
                   placeholder="Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng..."
                 />
-              </div>
+              </div> */}
 
-              <div className="flex gap-3">
+              {/* <div className="flex gap-3">
                 <button
                   onClick={() => {
                     setShowCancelModal(false);
@@ -1134,7 +1133,7 @@ const Orders = () => {
                 >
                   Xác nhận hủy
                 </button>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

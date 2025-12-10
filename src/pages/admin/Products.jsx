@@ -25,7 +25,6 @@ import { toast } from "react-toastify";
 
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
-
 const Products = () => {
   const dispatch = useDispatch();
   const {
@@ -35,6 +34,7 @@ const Products = () => {
     isLoading,
     error,
     success,
+    pagination = {},
   } = useSelector((state) => state.adminProducts || {});
   const {
     brands = [],
@@ -84,14 +84,19 @@ const Products = () => {
 
   const [editingVariants, setEditingVariants] = useState({});
 
+  // Thêm state cho phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   useEffect(() => {
-    dispatch(fetchAllProducts());
+    dispatch(fetchAllProducts({ page: currentPage, size: pageSize }));
     dispatch(fetchBrands());
     dispatch(fetchCategories());
     dispatch(fetchLabels());
     dispatch(fetchColors());
     dispatch(fetchSizes());
-  }, [dispatch]);
+  }, [dispatch, currentPage, pageSize]);
 
   useEffect(() => {
     if (error) {
@@ -120,6 +125,47 @@ const Products = () => {
       }
     }
   }, [error, success, dispatch, currentProduct]);
+
+  // Cập nhật useEffect để lấy phân trang
+  useEffect(() => {
+    if (pagination) {
+      setCurrentPage(pagination.currentPage || 1);
+      setTotalPages(pagination.totalPages || 1);
+      setTotalItems(pagination.totalItems || 0);
+    }
+  }, [pagination]);
+
+   // Hàm xử lý chuyển trang
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  // Hàm xử lý tìm kiếm
+  const handleSearch = () => {
+    // Reset về trang 1 khi tìm kiếm
+    setCurrentPage(1);
+    dispatch(fetchAllProducts({ 
+      page: 1, 
+      size: pageSize, 
+      search: searchTerm 
+    }));
+  };
+
+  // Xử lý khi nhấn Enter trong ô tìm kiếm
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // Xử lý khi thay đổi page size
+  const handlePageSizeChange = (e) => {
+    const newSize = parseInt(e.target.value);
+    setPageSize(newSize);
+    setCurrentPage(1); // Reset về trang đầu tiên
+  };
 
   const resetForm = () => {
     setProductForm({
@@ -473,7 +519,7 @@ const Products = () => {
     try {
       if (variant.useExistingImages) {
         toast.info("Đang xử lý ảnh...", {
-          autoClose: 2000
+          autoClose: 2000,
         });
 
         const imageUrls = variant.imagePreviews;
@@ -1524,7 +1570,7 @@ const EditVariantsModal = ({
     try {
       if (editForm.useExistingImages && editForm.imagePreviews.length > 0) {
         toast.info("Đang xử lý ảnh...", {
-          autoClose: 2000
+          autoClose: 2000,
         });
 
         const filePromises = editForm.imagePreviews.map(async (url, index) => {
@@ -1696,7 +1742,7 @@ const EditVariantsModal = ({
         newVariantForm.imagePreviews.length > 0
       ) {
         toast.info("Đang xử lý ảnh...", {
-          autoClose: 2000
+          autoClose: 2000,
         });
 
         const filePromises = newVariantForm.imagePreviews.map(

@@ -10,18 +10,36 @@ const getAuthHeader = () => {
 
 // Async thunks
 export const fetchAllProducts = createAsyncThunk(
-  'adminProducts/fetchAll',
-  async (_, { rejectWithValue }) => {
+  'adminProducts/fetchAllProducts',
+  async ({ page = 1, size = 12, search = '' } = {}, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${VITE_API_URL}/api/products?active=true`, {
-        headers: getAuthHeader(), // khi có token thì trả về data private
-      });
-      return response.data.data || response.data.result || [];
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(
+        `${API_URL}/api/products/search?page=${page}&size=${size}&search=${search}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await response.json();
+      
+      if (data.code === 1000) {
+        return {
+          products: data.result.content || [],
+          totalPages: data.result.totalPages || 1,
+          currentPage: data.result.currentPage || 1,
+          totalItems: data.result.totalElements || 0,
+        };
+      } else {
+        return rejectWithValue(data.message || 'Lỗi khi tải sản phẩm');
+      }
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+      return rejectWithValue(error.message);
     }
   }
 );
+
 
 // Lấy danh sách variants của một product
 export const fetchProductVariants = createAsyncThunk(
@@ -273,6 +291,14 @@ const initialState = {
   isLoading: false,
   error: null,
   success: null,
+
+  // trường phân trang 
+   pagination: {
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    pageSize: 20,
+  },
 };
 
 const adminProductsSlice = createSlice({
