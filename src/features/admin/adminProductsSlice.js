@@ -14,23 +14,27 @@ export const fetchAllProducts = createAsyncThunk(
   async ({ page = 1, size = 12, search = '' } = {}, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(
-        `${API_URL}/api/products/search?page=${page}&size=${size}&search=${search}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await response.json();
+      const url = `${VITE_API_URL}/api/products/search?page=${page}&size=${size}&search=${search}`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       
-      if (data.code === 1000) {
-        return {
-          products: data.result.content || [],
-          totalPages: data.result.totalPages || 1,
-          currentPage: data.result.currentPage || 1,
-          totalItems: data.result.totalElements || 0,
+      console.log('📊 Response status:', response.status);
+      
+      const data = await response.json();
+      console.log('📦 Response data:', data);
+      
+      // API trả về structure: { success, data, totalPages, totalElements, currentPage }
+      if (data.success) {
+        const result = {
+          products: data.data || [],
+          totalPages: data.totalPages || 1,
+          currentPage: data.currentPage || 1,
+          totalItems: data.totalElements || 0,
         };
+        return result;
       } else {
         return rejectWithValue(data.message || 'Lỗi khi tải sản phẩm');
       }
@@ -324,9 +328,15 @@ const adminProductsSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchAllProducts.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.products = action.payload;
-      })
+  state.isLoading = false;
+  state.products = action.payload.products; // Lấy array products từ payload
+  state.pagination = {
+    currentPage: action.payload.currentPage,
+    totalPages: action.payload.totalPages,
+    totalItems: action.payload.totalItems,
+    pageSize: state.pagination.pageSize, // Giữ nguyên pageSize hiện tại
+  };
+})
       .addCase(fetchAllProducts.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
