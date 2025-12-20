@@ -14,17 +14,20 @@ export const fetchAllProducts = createAsyncThunk(
   async ({ page = 1, size = 12, search = '' } = {}, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('access_token');
-      const url = `${VITE_API_URL}/api/products/search?page=${page}&size=${size}&search=${search}`;
+      // api thật đã phân trang
+      // const url = `${VITE_API_URL}/api/products/search?page=${page}&size=${size}&search=${search}`;
+      // api chưa phân trang/ getAll
+      const url = `${VITE_API_URL}/api/products`;
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
       
-      console.log('📊 Response status:', response.status);
+      // console.log('📊 Response status:', response.status);
       
       const data = await response.json();
-      console.log('📦 Response data:', data);
+      console.log('Data trả về theo trang:', data);
       
       // API trả về structure: { success, data, totalPages, totalElements, currentPage }
       if (data.success) {
