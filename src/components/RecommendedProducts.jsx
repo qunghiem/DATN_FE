@@ -70,9 +70,9 @@ const RecommendedProducts = ({ userId, savedRef, setSavedCount }) => {
       console.log("🔄 Fetching recommendations for userId:", userId);
       
       const recResponse = await axios.get(
-        `${RECOMMENDATION_API_URL}/api/recommendations/user/${userId}`,
+        `${RECOMMENDATION_API_URL}/api/recommendations/content-based/user/${userId}`,
         { 
-          params: { limit: 12, type: recommendationType },
+          params: { limit: 12 },
           // ✅ FIX 4: Add cache busting
           headers: { 'Cache-Control': 'no-cache' }
         }
@@ -137,7 +137,7 @@ const RecommendedProducts = ({ userId, savedRef, setSavedCount }) => {
               sold: p.sold || 0,
               rating: p.rating || 0,
               score: rec.score || 0,
-              reason: rec.reason || "",
+              reason: "",
             };
           } catch (err) {
             console.error(`Error fetching product ${rec.product_id}:`, err);
@@ -173,45 +173,6 @@ const RecommendedProducts = ({ userId, savedRef, setSavedCount }) => {
     }
   };
 
-  const toggleFavorite = (id, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
-    );
-
-    if (savedRef?.current) {
-      const tymRect = e.target.getBoundingClientRect();
-      const savedRect = savedRef.current.getBoundingClientRect();
-
-      const flyEl = document.createElement("div");
-      flyEl.innerText = "+1";
-      flyEl.style.position = "fixed";
-      flyEl.style.left = `${tymRect.left + tymRect.width / 2}px`;
-      flyEl.style.top = `${tymRect.top}px`;
-      flyEl.style.fontWeight = "bold";
-      flyEl.style.color = "red";
-      flyEl.style.transition = "all 0.7s ease-in-out";
-      flyEl.style.zIndex = 1000;
-
-      document.body.appendChild(flyEl);
-
-      requestAnimationFrame(() => {
-        flyEl.style.left = `${savedRect.left + savedRect.width / 2}px`;
-        flyEl.style.top = `${savedRect.top}px`;
-        flyEl.style.transform = "scale(0.5)";
-        flyEl.style.opacity = 0;
-      });
-
-      flyEl.addEventListener("transitionend", () => {
-        document.body.removeChild(flyEl);
-        if (setSavedCount) {
-          setSavedCount((prev) => prev + 1);
-        }
-      });
-    }
-  };
 
   const handleImageChange = (id, imgUrl) => {
     setSelectedImages((prev) => ({ ...prev, [id]: imgUrl }));
@@ -254,55 +215,9 @@ const RecommendedProducts = ({ userId, savedRef, setSavedCount }) => {
             GỢI Ý CHO BẠN
           </h2>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex gap-2">
-            {[
-              { value: "hybrid", label: "Kết hợp" },
-              { value: "content", label: "Sở thích" },
-              { value: "collaborative", label: "Phổ biến" }
-            ].map((type) => (
-              <button
-                key={type.value}
-                onClick={() => setRecommendationType(type.value)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  recommendationType === type.value
-                    ? "bg-[#3A6FB5] text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {type.label}
-              </button>
-            ))}
-          </div>
-          
-          <Link
-            to="/collection"
-            className="flex items-center gap-1 text-[#3A6FB5] hover:text-[#2E5C99] text-sm font-medium transition"
-          >
-            Xem tất cả <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
+       
       </div>
 
-      <div className="flex sm:hidden gap-2 mb-4 overflow-x-auto hide-scrollbar">
-        {[
-          { value: "hybrid", label: "Kết hợp" },
-          { value: "content", label: "Sở thích" },
-          { value: "collaborative", label: "Phổ biến" }
-        ].map((type) => (
-          <button
-            key={type.value}
-            onClick={() => setRecommendationType(type.value)}
-            className={`flex-none px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-              recommendationType === type.value
-                ? "bg-[#3A6FB5] text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            {type.label}
-          </button>
-        ))}
-      </div>
 
       <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4 hide-scrollbar">
         <div className="flex gap-3 md:gap-4 lg:flex-nowrap lg:overflow-x-auto lg:gap-4 xl:justify-start hide-scrollbar">
@@ -328,12 +243,6 @@ const RecommendedProducts = ({ userId, savedRef, setSavedCount }) => {
                     </div>
                   )}
 
-                  {p.score > 0 && (
-                    <div className="absolute top-2 left-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-md shadow-md">
-                      {Math.round(p.score * 100)}% phù hợp
-                    </div>
-                  )}
-
                   <button
                     onClick={(e) => toggleFavorite(p.id, e)}
                     className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition z-10 ${
@@ -349,7 +258,7 @@ const RecommendedProducts = ({ userId, savedRef, setSavedCount }) => {
                   </button>
 
                   <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
-                    {p.labels.map((label, idx) => {
+                    {p.labels?.map((label, idx) => {
                       const isFreeship =
                         label.toLowerCase().includes("freeship") ||
                         label.toLowerCase().includes("free ship");
