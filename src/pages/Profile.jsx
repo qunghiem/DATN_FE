@@ -248,8 +248,8 @@ const Profile = () => {
       return false;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      toast.error("Mật khẩu mới phải có ít nhất 6 ký tự!");
+    if (passwordData.newPassword.length < 8) {
+      toast.error("Mật khẩu mới phải có ít nhất 8 ký tự!");
       return false;
     }
 
@@ -606,7 +606,7 @@ const Profile = () => {
                       className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition"
                       placeholder="Nhập mật khẩu mới"
                       required
-                      minLength="6"
+                      minLength="8"
                     />
                     <button
                       type="button"
@@ -621,7 +621,7 @@ const Profile = () => {
                     </button>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Mật khẩu phải có ít nhất 6 ký tự
+                    Mật khẩu phải có ít nhất 8 ký tự
                   </p>
                 </div>
 

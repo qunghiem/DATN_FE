@@ -157,7 +157,6 @@ const BestSeller = ({ savedRef, setSavedCount }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="text-gray-500 text-xs mb-1">NỮ</p>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
             BÁN CHẠY NHẤT
           </h2>

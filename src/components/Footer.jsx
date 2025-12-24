@@ -63,24 +63,13 @@ const Footer = () => {
                 </a>
               </div>
             </div>
-            <p className="pt-2 text-xs text-gray-300">
-              © Bản quyền <span className="text-blue-300 font-semibold">EGANY</span> | Cung cấp bởi{" "}
-              <a
-                href="https://haravan.com"
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-300 hover:text-white"
-              >
-                Haravan
-              </a>
-            </p>
           </div>
 
           {/* Customer Support */}
           <div>
             <h3 className="text-sm sm:text-base font-semibold mb-3">HỖ TRỢ</h3>
             <ul className="space-y-1.5 text-sm">
-              {["Tìm kiếm", "Giới thiệu", "Liên hệ", "Cửa hàng"].map((t, i) => (
+              {["Tìm kiếm", "Giới thiệu", "Liên hệ"].map((t, i) => (
                 <li key={i}>
                   <Link
                     to="/"
@@ -154,31 +143,6 @@ const Footer = () => {
                 </a>
               ))}
             </div>
-          </div>
-        </div>
-
-        {/* Payment + Certification */}
-        <div className="mt-6 pt-4 border-t border-white/20 flex flex-wrap justify-center gap-3">
-          <img
-            src="http://online.gov.vn/Content/EndUser/LogoCCDVSaleNoti/logoSaleNoti.png"
-            alt="Bộ Công Thương"
-            className="h-8"
-          />
-          <img
-            src="https://images.dmca.com/Badges/dmca_protected_sml_120m.png"
-            alt="DMCA"
-            className="h-8"
-          />
-          <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-md">
-            {[
-              "https://cdn-icons-png.flaticon.com/512/349/349221.png",
-              "https://cdn-icons-png.flaticon.com/512/349/349228.png",
-              "https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-MoMo-Square.png",
-              "https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-ZaloPay-Square.png",
-              "https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-VNPAY-QR-1.png",
-            ].map((src, i) => (
-              <img key={i} src={src} alt="Payment" className="h-5" />
-            ))}
           </div>
         </div>
       </div>

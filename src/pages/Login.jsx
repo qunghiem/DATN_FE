@@ -585,7 +585,7 @@ const Login = () => {
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-xs text-blue-800">
-                    <strong>Lưu ý:</strong> Mật khẩu phải có ít nhất 6 ký tự
+                    <strong>Lưu ý:</strong> Mật khẩu phải có ít nhất 8 ký tự
                   </p>
                 </div>
 
@@ -607,10 +607,6 @@ const Login = () => {
             </>
           )}
         </div>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          © 2025 EGA Sportswear. All rights reserved.
-        </p>
       </div>
     </div>
   );
