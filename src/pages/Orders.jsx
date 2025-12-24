@@ -833,11 +833,11 @@ const Orders = () => {
                                 >
                                   {track.description}
                                 </p>
-                                {track.time && (
+                                {/* {track.time && (
                                   <p className="text-sm text-gray-600 mt-1">
                                     {formatDate(track.time)}
                                   </p>
-                                )}
+                                )} */}
                               </div>
                             </div>
                           ))}
