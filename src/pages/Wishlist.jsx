@@ -1,33 +1,39 @@
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   fetchWishlist,
   toggleWishlist,
   clearMessages,
   selectWishlistItems,
   selectWishlistCount,
-} from '../features/wishlist/wishlistSlice';
-import { addToCartAPI } from '../features/cart/cartSlice';
-import { Heart, ShoppingCart, Trash2, Loader2, Package } from 'lucide-react';
-import { toast } from 'react-toastify';
+} from "../features/wishlist/wishlistSlice";
+import { addToCartAPI } from "../features/cart/cartSlice";
+import { Heart, ShoppingCart, Trash2, Loader2, Package } from "lucide-react";
+import { toast } from "react-toastify";
+import RecommendedProducts from "../components/RecommendedProducts";
+import React, { useState, useRef } from "react";
 
 const Wishlist = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
+
+  const savedRef = useRef(null);
+  const [savedCount, setSavedCount] = useState(0);
+
   const { isAuthenticated } = useSelector((state) => state.auth);
   const wishlistItems = useSelector(selectWishlistItems);
   const wishlistCount = useSelector(selectWishlistCount);
   const { isLoading, error, success } = useSelector((state) => state.wishlist);
+  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      toast.error('Vui lòng đăng nhập để xem danh sách yêu thích');
-      navigate('/login');
+      toast.error("Vui lòng đăng nhập để xem danh sách yêu thích");
+      navigate("/login");
       return;
     }
-    
+
     dispatch(fetchWishlist());
   }, [dispatch, isAuthenticated, navigate]);
 
@@ -55,15 +61,15 @@ const Wishlist = () => {
       variantId: `${product.productId}-default`, // Tạm thời
       name: product.name,
       price: product.price?.discountPrice || product.price?.price || 0,
-      image: product.images?.[0] || '',
-      color: 'Default',
-      size: 'Default',
+      image: product.images?.[0] || "",
+      color: "Default",
+      size: "Default",
       quantity: 1,
       stock: 100, // Default stock
     };
 
     dispatch(addToCartAPI(cartItem));
-    toast.success('Đã thêm vào giỏ hàng!');
+    toast.success("Đã thêm vào giỏ hàng!");
   };
 
   const handleProductClick = (productId) => {
@@ -71,7 +77,7 @@ const Wishlist = () => {
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
+    return new Intl.NumberFormat("vi-VN").format(price) + "đ";
   };
 
   if (!isAuthenticated) {
@@ -86,9 +92,7 @@ const Wishlist = () => {
           <h1 className="text-3xl font-bold text-gray-900">
             Sản phẩm yêu thích
           </h1>
-          <p className="text-gray-600 mt-2">
-            {wishlistCount} sản phẩm
-          </p>
+          <p className="text-gray-600 mt-2">{wishlistCount} sản phẩm</p>
         </div>
 
         {/* Loading State */}
@@ -107,7 +111,7 @@ const Wishlist = () => {
               Hãy thêm sản phẩm vào danh sách yêu thích để xem lại sau!
             </p>
             <button
-              onClick={() => navigate('/collection')}
+              onClick={() => navigate("/collection")}
               className="px-6 py-3 bg-[#3A6FB5] text-white rounded-lg hover:bg-[#2E5C99] transition"
             >
               Khám phá sản phẩm
@@ -130,24 +134,30 @@ const Wishlist = () => {
                     <img
                       src={(() => {
                         const firstImage = product.images[0];
-                        
+
                         // Nếu là string đơn giản
-                        if (typeof firstImage === 'string') {
+                        if (typeof firstImage === "string") {
                           return firstImage;
                         }
-                        
+
                         // Nếu là object với image_url hoặc imageUrl
-                        if (typeof firstImage === 'object') {
-                          return firstImage.image_url || firstImage.imageUrl || firstImage.url || '';
+                        if (typeof firstImage === "object") {
+                          return (
+                            firstImage.image_url ||
+                            firstImage.imageUrl ||
+                            firstImage.url ||
+                            ""
+                          );
                         }
-                        
-                        return '';
+
+                        return "";
                       })()}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect width="400" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                        e.target.src =
+                          'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect width="400" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
                       }}
                     />
                   ) : (
@@ -180,7 +190,7 @@ const Wishlist = () => {
                 <div className="p-4">
                   {/* Brand */}
                   <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                    {product.brand || 'Unknown'}
+                    {product.brand || "Unknown"}
                   </p>
 
                   {/* Product Name */}
@@ -194,17 +204,20 @@ const Wishlist = () => {
                   {/* Price */}
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-lg font-bold text-red-600">
-                      {formatPrice(product.price?.discountPrice || product.price?.price || 0)}
+                      {formatPrice(
+                        product.price?.discountPrice ||
+                          product.price?.price ||
+                          0
+                      )}
                     </span>
-                    {product.price?.price && product.price.discountPrice && product.price.price > product.price.discountPrice && (
-                      <span className="text-sm text-gray-400 line-through">
-                        {formatPrice(product.price.price)}
-                      </span>
-                    )}
+                    {product.price?.price &&
+                      product.price.discountPrice &&
+                      product.price.price > product.price.discountPrice && (
+                        <span className="text-sm text-gray-400 line-through">
+                          {formatPrice(product.price.price)}
+                        </span>
+                      )}
                   </div>
-
-                  
-                  
 
                   {/* Stats */}
                   <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
@@ -230,6 +243,13 @@ const Wishlist = () => {
               </div>
             ))}
           </div>
+        )}
+        {isAuthenticated && user?.id && (
+          <RecommendedProducts
+            userId={user.id}
+            savedRef={savedRef}
+            setSavedCount={setSavedCount}
+          />
         )}
       </div>
     </div>
