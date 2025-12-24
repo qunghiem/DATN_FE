@@ -20,6 +20,9 @@ import { clearSelectedItems } from "../features/cart/cartSlice";
 import { toast } from "react-toastify";
 import axios from "axios";
 
+// Import file JSON từ local
+import provinceData from "../assets/province.json";
+
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 const PlaceOrder = () => {
@@ -50,7 +53,7 @@ const PlaceOrder = () => {
     return total + (item.itemTotalPrice || item.price * item.quantity || 0);
   }, 0);
 
-  // Form state
+  // Form state - bỏ district và districtCode
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -58,19 +61,15 @@ const PlaceOrder = () => {
     address: "",
     ward: "",
     wardCode: "",
-    district: "",
-    districtCode: "",
     city: "",
     cityCode: "",
     note: "",
     paymentMethod: "COD",
   });
 
-  // Address data state
+  // Address data state - chỉ cần provinces và wards
   const [provinces, setProvinces] = useState([]);
-  const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
-  const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
 
   // Payment state
@@ -90,72 +89,44 @@ const PlaceOrder = () => {
     }
   }, [cartItems, navigate]);
 
-  // Load provinces on component mount
+  // Load provinces từ file JSON khi component mount
   useEffect(() => {
-    const fetchProvinces = async () => {
-      try {
-        const response = await axios.get(
-          "https://provinces.open-api.vn/api/p/"
-        );
-        setProvinces(response.data);
-      } catch (error) {
-        console.error("Error fetching provinces:", error);
-        toast.error("Không thể tải danh sách tỉnh/thành phố");
+    try {
+      // Sử dụng dữ liệu từ file JSON đã import
+      if (provinceData && Array.isArray(provinceData)) {
+        setProvinces(provinceData);
+        console.log("Loaded provinces from JSON:", provinceData.length);
+      } else {
+        console.error("Invalid province data format");
+        toast.error("Không thể tải dữ liệu địa chỉ từ file nội bộ");
       }
-    };
-
-    fetchProvinces();
+    } catch (error) {
+      console.error("Error loading provinces from JSON:", error);
+      toast.error("Không thể tải dữ liệu địa chỉ từ file nội bộ");
+    }
   }, []);
 
-  // Load districts when province changes
+  // Load wards khi province thay đổi
   useEffect(() => {
-    const fetchDistricts = async () => {
+    const loadWards = () => {
       if (!formData.cityCode) {
-        setDistricts([]);
-        setWards([]);
-        return;
-      }
-
-      setLoadingDistricts(true);
-      try {
-        const response = await axios.get(
-          `https://provinces.open-api.vn/api/p/${formData.cityCode}?depth=2`
-        );
-        setDistricts(response.data.districts || []);
-        setWards([]);
-
-        setFormData((prev) => ({
-          ...prev,
-          district: "",
-          districtCode: "",
-          ward: "",
-          wardCode: "",
-        }));
-      } catch (error) {
-        console.error("Error fetching districts:", error);
-        toast.error("Không thể tải danh sách quận/huyện");
-      } finally {
-        setLoadingDistricts(false);
-      }
-    };
-
-    fetchDistricts();
-  }, [formData.cityCode]);
-
-  // Load wards when district changes
-  useEffect(() => {
-    const fetchWards = async () => {
-      if (!formData.districtCode) {
         setWards([]);
         return;
       }
 
       setLoadingWards(true);
       try {
-        const response = await axios.get(
-          `https://provinces.open-api.vn/api/d/${formData.districtCode}?depth=2`
+        // Tìm province theo Code
+        const selectedProvince = provinces.find(
+          (p) => p.Code === formData.cityCode
         );
-        setWards(response.data.wards || []);
+        
+        if (selectedProvince && selectedProvince.Wards) {
+          // Lấy danh sách wards từ province
+          setWards(selectedProvince.Wards || []);
+        } else {
+          setWards([]);
+        }
 
         setFormData((prev) => ({
           ...prev,
@@ -163,15 +134,15 @@ const PlaceOrder = () => {
           wardCode: "",
         }));
       } catch (error) {
-        console.error("Error fetching wards:", error);
+        console.error("Error loading wards:", error);
         toast.error("Không thể tải danh sách phường/xã");
       } finally {
         setLoadingWards(false);
       }
     };
 
-    fetchWards();
-  }, [formData.districtCode]);
+    loadWards();
+  }, [formData.cityCode, provinces]);
 
   // Load user data if authenticated
   useEffect(() => {
@@ -227,15 +198,13 @@ const PlaceOrder = () => {
   const handleProvinceChange = (e) => {
     const selectedCode = e.target.value;
     const selectedProvince = provinces.find(
-      (p) => p.code.toString() === selectedCode
+      (p) => p.Code === selectedCode
     );
 
     setFormData((prev) => ({
       ...prev,
       cityCode: selectedCode,
-      city: selectedProvince ? selectedProvince.name : "",
-      districtCode: "",
-      district: "",
+      city: selectedProvince ? selectedProvince.FullName : "",
       wardCode: "",
       ward: "",
     }));
@@ -245,35 +214,15 @@ const PlaceOrder = () => {
     }
   };
 
-  // Handle district change
-  const handleDistrictChange = (e) => {
-    const selectedCode = e.target.value;
-    const selectedDistrict = districts.find(
-      (d) => d.code.toString() === selectedCode
-    );
-
-    setFormData((prev) => ({
-      ...prev,
-      districtCode: selectedCode,
-      district: selectedDistrict ? selectedDistrict.name : "",
-      wardCode: "",
-      ward: "",
-    }));
-
-    if (errors.district) {
-      setErrors((prev) => ({ ...prev, district: "" }));
-    }
-  };
-
   // Handle ward change
   const handleWardChange = (e) => {
     const selectedCode = e.target.value;
-    const selectedWard = wards.find((w) => w.code.toString() === selectedCode);
+    const selectedWard = wards.find((w) => w.Code === selectedCode);
 
     setFormData((prev) => ({
       ...prev,
       wardCode: selectedCode,
-      ward: selectedWard ? selectedWard.name : "",
+      ward: selectedWard ? selectedWard.FullName : "",
     }));
 
     if (errors.ward) {
@@ -281,7 +230,7 @@ const PlaceOrder = () => {
     }
   };
 
-  // Validate form
+  // Validate form - bỏ validation cho district
   const validateForm = () => {
     const newErrors = {};
 
@@ -307,10 +256,6 @@ const PlaceOrder = () => {
 
     if (!formData.ward.trim()) {
       newErrors.ward = "Vui lòng chọn phường/xã";
-    }
-
-    if (!formData.district.trim()) {
-      newErrors.district = "Vui lòng chọn quận/huyện";
     }
 
     if (!formData.city.trim()) {
@@ -387,8 +332,8 @@ const PlaceOrder = () => {
     setIsSubmitting(true);
 
     try {
-      // Build full address string
-      const fullAddress = `${formData.address}, ${formData.ward}, ${formData.district}, ${formData.city}`;
+      // Build full address string - không có district
+      const fullAddress = `${formData.address}, ${formData.ward}, ${formData.city}`;
 
       // Validate address
       if (fullAddress.length > 500) {
@@ -412,7 +357,6 @@ const PlaceOrder = () => {
         address: fullAddress,
         fullName: formData.fullName.trim(),
         phone: formData.phone.trim(),
-        // rewardPointsToUse: isUsingPoints && pointsToUse ? pointsToUse : 0,
         rewardPointsToUse: (pointsToUse && typeof pointsToUse === 'number' && pointsToUse > 0) ? Math.floor(pointsToUse) : 0,
         cartItemIds: cartItems
           .map((item) => {
@@ -704,7 +648,7 @@ const PlaceOrder = () => {
                 </h2>
 
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Tỉnh/Thành phố <span className="text-red-500">*</span>
@@ -719,8 +663,8 @@ const PlaceOrder = () => {
                       >
                         <option value="">Chọn Tỉnh/TP</option>
                         {provinces.map((province) => (
-                          <option key={province.code} value={province.code}>
-                            {province.name}
+                          <option key={province.Code} value={province.Code}>
+                            {province.FullName}
                           </option>
                         ))}
                       </select>
@@ -734,43 +678,13 @@ const PlaceOrder = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Quận/Huyện <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        name="districtCode"
-                        value={formData.districtCode}
-                        onChange={handleDistrictChange}
-                        disabled={!formData.cityCode || loadingDistricts}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                          errors.district ? "border-red-500" : "border-gray-300"
-                        }`}
-                      >
-                        <option value="">
-                          {loadingDistricts ? "Đang tải..." : "Chọn Quận/Huyện"}
-                        </option>
-                        {districts.map((district) => (
-                          <option key={district.code} value={district.code}>
-                            {district.name}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.district && (
-                        <p className="text-red-500 text-xs mt-1 flex items-center">
-                          <AlertCircle className="w-3 h-3 mr-1" />
-                          {errors.district}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Phường/Xã <span className="text-red-500">*</span>
                       </label>
                       <select
                         name="wardCode"
                         value={formData.wardCode}
                         onChange={handleWardChange}
-                        disabled={!formData.districtCode || loadingWards}
+                        disabled={!formData.cityCode || loadingWards}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed ${
                           errors.ward ? "border-red-500" : "border-gray-300"
                         }`}
@@ -779,8 +693,8 @@ const PlaceOrder = () => {
                           {loadingWards ? "Đang tải..." : "Chọn Phường/Xã"}
                         </option>
                         {wards.map((ward) => (
-                          <option key={ward.code} value={ward.code}>
-                            {ward.name}
+                          <option key={ward.Code} value={ward.Code}>
+                            {ward.FullName}
                           </option>
                         ))}
                       </select>
