@@ -15,9 +15,10 @@ export const fetchAllProducts = createAsyncThunk(
     try {
       const token = localStorage.getItem('access_token');
       // api thật đã phân trang
-      // const url = `${VITE_API_URL}/api/products/search?page=${page}&size=${size}&search=${search}`;
+      const url = `${VITE_API_URL}/api/products/search?page=${page}&size=${size}&search=${search}`;
+      
       // api chưa phân trang/ getAll
-      const url = `${VITE_API_URL}/api/products`;
+      // const url = `${VITE_API_URL}/api/products`;
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
