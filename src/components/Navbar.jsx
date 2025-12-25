@@ -151,7 +151,7 @@ useEffect(() => {
             <NavLink
               to="/"
               className={({ isActive }) =>
-                `font-medium uppercase text-gray-700 hover:text-sky-600 transition ${
+                `font-medium uppercase text-gray-900 hover:text-sky-600 transition ${
                   isActive ? "text-sky-600" : ""
                 }`
               }
@@ -161,7 +161,7 @@ useEffect(() => {
             <NavLink
               to="/collection"
               className={({ isActive }) =>
-                `font-medium uppercase text-gray-700 hover:text-sky-600 transition ${
+                `font-medium uppercase text-gray-900 hover:text-sky-600 transition ${
                   isActive ? "text-sky-600" : ""
                 }`
               }
@@ -171,7 +171,7 @@ useEffect(() => {
             <NavLink
               to="/about"
               className={({ isActive }) =>
-                `font-medium uppercase text-gray-700 hover:text-sky-600 transition ${
+                `font-medium uppercase text-gray-900 hover:text-sky-600 transition ${
                   isActive ? "text-sky-600" : ""
                 }`
               }
@@ -181,7 +181,7 @@ useEffect(() => {
             <NavLink
               to="/contact"
               className={({ isActive }) =>
-                `font-medium uppercase text-gray-700 hover:text-sky-600 transition ${
+                `font-medium uppercase text-gray-900 hover:text-sky-600 transition ${
                   isActive ? "text-sky-600" : ""
                 }`
               }
@@ -192,7 +192,7 @@ useEffect(() => {
               <NavLink
                 to="/orders"
                 className={({ isActive }) =>
-                  `font-medium uppercase text-gray-700 hover:text-sky-600 transition ${
+                  `font-medium uppercase text-gray-900 hover:text-sky-600 transition ${
                     isActive ? "text-sky-600" : ""
                   }`
                 }
@@ -373,28 +373,28 @@ useEffect(() => {
         <div className="md:hidden bg-white shadow-md border-t border-gray-200">
           <NavLink
             to="/"
-            className="block px-4 py-3 font-medium uppercase text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+            className="block px-4 py-3 font-medium uppercase text-gray-900 hover:bg-sky-50 hover:text-sky-600 transition"
             onClick={() => setMobileMenu(false)}
           >
             TRANG CHỦ
           </NavLink>
           <NavLink
             to="/collection"
-            className="block px-4 py-3 font-medium uppercase text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+            className="block px-4 py-3 font-medium uppercase text-gray-900 hover:bg-sky-50 hover:text-sky-600 transition"
             onClick={() => setMobileMenu(false)}
           >
             SẢN PHẨM
           </NavLink>
           <NavLink
             to="/about"
-            className="block px-4 py-3 font-medium uppercase text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+            className="block px-4 py-3 font-medium uppercase text-gray-900 hover:bg-sky-50 hover:text-sky-600 transition"
             onClick={() => setMobileMenu(false)}
           >
             GIỚI THIỆU
           </NavLink>
           <NavLink
             to="/contact"
-            className="block px-4 py-3 font-medium uppercase text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+            className="block px-4 py-3 font-medium uppercase text-gray-900 hover:bg-sky-50 hover:text-sky-600 transition"
             onClick={() => setMobileMenu(false)}
           >
             LIÊN HỆ
@@ -403,14 +403,14 @@ useEffect(() => {
             <>
               <NavLink
                 to="/orders"
-                className="block px-4 py-3 font-medium uppercase text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+                className="block px-4 py-3 font-medium uppercase text-gray-900 hover:bg-sky-50 hover:text-sky-600 transition"
                 onClick={() => setMobileMenu(false)}
               >
                 ĐƠN HÀNG
               </NavLink>
               <NavLink
                 to="/wishlist"
-                className="block px-4 py-3 font-medium uppercase text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition"
+                className="block px-4 py-3 font-medium uppercase text-gray-900 hover:bg-sky-50 hover:text-sky-600 transition"
                 onClick={() => setMobileMenu(false)}
               >
                 YÊU THÍCH
