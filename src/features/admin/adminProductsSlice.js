@@ -11,11 +11,11 @@ const getAuthHeader = () => {
 // Async thunks
 export const fetchAllProducts = createAsyncThunk(
   'adminProducts/fetchAllProducts',
-  async ({ page = 1, size = 12, search = '' } = {}, { rejectWithValue }) => {
+  async ({ page = 1, size = 20, search = '' } = {}, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('access_token');
       // api thật đã phân trang
-      const url = `${VITE_API_URL}/api/products/search?page=${page}&size=${size}&search=${search}`;
+      const url = `${VITE_API_URL}/api/products/search?page=${page}&size=${size}&search=${search}&active=true`;
       
       // api chưa phân trang/ getAll
       // const url = `${VITE_API_URL}/api/products`;

@@ -86,7 +86,7 @@ const Products = () => {
 
   // Thêm state cho phân trang
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   useEffect(() => {
@@ -135,7 +135,7 @@ const Products = () => {
     }
   }, [pagination]);
 
-   // Hàm xử lý chuyển trang
+  // Hàm xử lý chuyển trang
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
@@ -146,16 +146,18 @@ const Products = () => {
   const handleSearch = () => {
     // Reset về trang 1 khi tìm kiếm
     setCurrentPage(1);
-    dispatch(fetchAllProducts({ 
-      page: 1, 
-      size: pageSize, 
-      search: searchTerm 
-    }));
+    dispatch(
+      fetchAllProducts({
+        page: 1,
+        size: pageSize,
+        search: searchTerm,
+      })
+    );
   };
 
   // Xử lý khi nhấn Enter trong ô tìm kiếm
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSearch();
     }
   };
@@ -759,6 +761,89 @@ const Products = () => {
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between bg-white rounded-lg shadow-md p-4">
+          <div className="text-sm text-gray-600">
+            Hiển thị <span className="font-semibold">{products.length}</span>{" "}
+            trong tổng số <span className="font-semibold">{totalItems}</span>{" "}
+            sản phẩm
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Nút Previous */}
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              ← Trước
+            </button>
+
+            {/* Số trang */}
+            <div className="flex gap-1">
+              {/* Trang đầu */}
+              {currentPage > 3 && (
+                <>
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    1
+                  </button>
+                  {currentPage > 4 && (
+                    <span className="px-3 py-2 text-gray-500">...</span>
+                  )}
+                </>
+              )}
+
+              {/* Các trang xung quanh trang hiện tại */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => {
+                  // Hiển thị 2 trang trước và sau trang hiện tại
+                  return page >= currentPage - 2 && page <= currentPage + 2;
+                })
+                .map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`px-3 py-2 border rounded-lg transition ${
+                      currentPage === page
+                        ? "bg-sky-500 text-white border-sky-500"
+                        : "border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+              {/* Trang cuối */}
+              {currentPage < totalPages - 2 && (
+                <>
+                  {currentPage < totalPages - 3 && (
+                    <span className="px-3 py-2 text-gray-500">...</span>
+                  )}
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Nút Next */}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              Sau →
+            </button>
+          </div>
+        </div>
+      )}
 
       {showModal && modalStep === 1 && (
         <ProductFormModal
