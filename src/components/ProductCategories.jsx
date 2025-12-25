@@ -42,9 +42,7 @@ const ProductCategories = () => {
           image:
             category.image ||
             "//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16",
-          link: `/collection?categoryId=${
-            category.id
-          }&categoryName=${encodeURIComponent(category.name)}`,
+          link: `/collection?categoryName=${encodeURIComponent(category.name)}`,
           description: category.description,
         }));
 

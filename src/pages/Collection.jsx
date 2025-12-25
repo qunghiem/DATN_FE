@@ -1,6 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Heart, Menu, X, ChevronDown, Info, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Heart,
+  Menu,
+  X,
+  ChevronDown,
+  Info,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import axios from "axios";
 import Vouchers from "../components/Vouchers";
 import FilterSection from "../components/FilterSection";
@@ -40,7 +48,7 @@ const Collection = () => {
     currentPage: 1,
     pageSize: 12,
     totalPages: 1,
-    totalElements: 0
+    totalElements: 0,
   });
 
   // custom price range
@@ -49,8 +57,8 @@ const Collection = () => {
 
   // Sex options
   const sexOptions = [
-    { value: 'MALE', label: 'Nam' },
-    { value: 'FEMALE', label: 'Nữ' },
+    { value: "MALE", label: "Nam" },
+    { value: "FEMALE", label: "Nữ" },
   ];
 
   const getUniqueColors = (colors) => {
@@ -104,9 +112,7 @@ const Collection = () => {
         setBrands([...brandNames]);
 
         // Fetch categories
-        const categoriesRes = await axios.get(
-          `${VITE_API_URL}/api/categories`
-        );
+        const categoriesRes = await axios.get(`${VITE_API_URL}/api/categories`);
         const categoriesData =
           categoriesRes.data?.result || categoriesRes.data?.data || [];
         const categoryNames = categoriesData.map((c) => c.name);
@@ -127,65 +133,76 @@ const Collection = () => {
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
-        
+
         // Build query params
         const params = new URLSearchParams();
-        
+
         // Search query
         const urlSearch = searchParams.get("search");
         if (urlSearch) {
           params.append("search", urlSearch);
         }
-        
+
         // Brand filter (multiple)
-        selectedBrand.forEach(brand => {
+        selectedBrand.forEach((brand) => {
           params.append("brand", brand);
         });
-        
+
         // Sex filter (multiple)
-        selectedSex.forEach(sex => {
+        selectedSex.forEach((sex) => {
           params.append("sex", sex);
         });
-        
+
         // Category filter (multiple)
-        selectedCategory.forEach(cat => {
-          params.append("category", cat);
-        });
-        
+        // Lấy categoryName từ URL nếu có
+        const urlCategoryName = searchParams.get("categoryName");
+
+        // Ưu tiên dùng category từ URL trước
+        if (urlCategoryName) {
+          params.append("category", urlCategoryName);
+        } else {
+          // Nếu không có từ URL thì dùng từ filter
+          selectedCategory.forEach((cat) => {
+            params.append("category", cat);
+          });
+        }
+
         // Price range filter
         let minPrice = customMinPrice ? Number(customMinPrice) : null;
         let maxPrice = customMaxPrice ? Number(customMaxPrice) : null;
-        
+
         // If predefined ranges are selected, calculate min/max
         if (selectedPriceRange.length > 0) {
           const mins = [];
           const maxs = [];
-          
-          selectedPriceRange.forEach(range => {
-            const parts = range.split('-');
+
+          selectedPriceRange.forEach((range) => {
+            const parts = range.split("-");
             mins.push(Number(parts[0]));
-            if (parts[1] && parts[1] !== 'above') {
+            if (parts[1] && parts[1] !== "above") {
               maxs.push(Number(parts[1]));
             }
           });
-          
+
           if (!minPrice) minPrice = Math.min(...mins);
           if (!maxPrice && maxs.length > 0) maxPrice = Math.max(...maxs);
         }
-        
+
         if (minPrice) params.append("priceMin", minPrice);
         if (maxPrice) params.append("priceMax", maxPrice);
-        
+
         // Sort
-        if (sortBy && sortBy !== 'default') {
+        if (sortBy && sortBy !== "default") {
           params.append("sort", sortBy);
         }
-        
+
         // Pagination
         params.append("page", pagination.currentPage.toString());
         params.append("size", pagination.pageSize.toString());
-        
-        const res = await axios.get(`${VITE_API_URL}/api/products/search?${params.toString()}`);
+
+        const res = await axios.get(
+          `${VITE_API_URL}/api/products/search?${params.toString()}`
+        );
 
         const data = Array.isArray(res.data?.result)
           ? res.data.result
@@ -265,13 +282,13 @@ const Collection = () => {
         });
 
         setProducts(mappedProducts);
-        
+
         // Update pagination info from API response
-        setPagination(prev => ({
+        setPagination((prev) => ({
           ...prev,
           totalPages: res.data?.totalPages || 1,
           totalElements: res.data?.totalElements || 0,
-          currentPage: res.data?.currentPage || prev.currentPage
+          currentPage: res.data?.currentPage || prev.currentPage,
         }));
       } catch (err) {
         console.error("Error fetching products:", err);
@@ -292,14 +309,14 @@ const Collection = () => {
     customMaxPrice,
     sortBy,
     pagination.currentPage, // Thêm dependency này
-    pagination.pageSize,    // Thêm dependency này
+    pagination.pageSize, // Thêm dependency này
   ]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
-    setPagination(prev => ({
+    setPagination((prev) => ({
       ...prev,
-      currentPage: 1
+      currentPage: 1,
     }));
   }, [
     searchParams,
@@ -356,20 +373,20 @@ const Collection = () => {
   // Pagination handlers
   const handlePageChange = (page) => {
     if (page >= 1 && page <= pagination.totalPages) {
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
-        currentPage: page
+        currentPage: page,
       }));
       // Scroll to top when page changes
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handlePageSizeChange = (size) => {
-    setPagination(prev => ({
+    setPagination((prev) => ({
       ...prev,
       pageSize: size,
-      currentPage: 1 // Reset về trang 1 khi thay đổi số lượng mỗi trang
+      currentPage: 1, // Reset về trang 1 khi thay đổi số lượng mỗi trang
     }));
   };
 
@@ -378,38 +395,38 @@ const Collection = () => {
     const pages = [];
     const totalPages = pagination.totalPages;
     const currentPage = pagination.currentPage;
-    
+
     // Always show first page
     if (totalPages > 0) {
       pages.push(1);
     }
-    
+
     // Calculate range around current page
     let startPage = Math.max(2, currentPage - 1);
     let endPage = Math.min(totalPages - 1, currentPage + 1);
-    
+
     // Add ellipsis if needed
     if (startPage > 2) {
-      pages.push('...');
+      pages.push("...");
     }
-    
+
     // Add middle pages
     for (let i = startPage; i <= endPage; i++) {
       if (i > 1 && i < totalPages) {
         pages.push(i);
       }
     }
-    
+
     // Add ellipsis if needed
     if (endPage < totalPages - 1) {
-      pages.push('...');
+      pages.push("...");
     }
-    
+
     // Always show last page if there is more than 1 page
     if (totalPages > 1) {
       pages.push(totalPages);
     }
-    
+
     return pages;
   };
 
@@ -596,7 +613,8 @@ const Collection = () => {
                     )}
                   </span>
                   <p className="text-xs text-gray-500 mt-1">
-                    Trang {pagination.currentPage} / {pagination.totalPages} • Hiển thị {products.length} sản phẩm
+                    Trang {pagination.currentPage} / {pagination.totalPages} •
+                    Hiển thị {products.length} sản phẩm
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -605,7 +623,9 @@ const Collection = () => {
                     <span className="text-sm text-gray-600">Hiển thị:</span>
                     <select
                       value={pagination.pageSize}
-                      onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                      onChange={(e) =>
+                        handlePageSizeChange(Number(e.target.value))
+                      }
                       className="bg-white border border-gray-300 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none"
                     >
                       <option value={12}>12</option>
@@ -614,7 +634,7 @@ const Collection = () => {
                       <option value={48}>48</option>
                     </select>
                   </div>
-                  
+
                   {/* Sort selector */}
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">Sắp xếp:</span>
@@ -707,7 +727,9 @@ const Collection = () => {
                             <Heart
                               className="w-4 h-4"
                               fill={
-                                favorites.includes(p.id) ? "currentColor" : "none"
+                                favorites.includes(p.id)
+                                  ? "currentColor"
+                                  : "none"
                               }
                             />
                           </button>
@@ -838,13 +860,21 @@ const Collection = () => {
                 {pagination.totalPages > 1 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 mb-4">
                     <div className="text-sm text-gray-600">
-                      Hiển thị {((pagination.currentPage - 1) * pagination.pageSize) + 1} - {Math.min(pagination.currentPage * pagination.pageSize, pagination.totalElements)} trong tổng số {pagination.totalElements} sản phẩm
+                      Hiển thị{" "}
+                      {(pagination.currentPage - 1) * pagination.pageSize + 1} -{" "}
+                      {Math.min(
+                        pagination.currentPage * pagination.pageSize,
+                        pagination.totalElements
+                      )}{" "}
+                      trong tổng số {pagination.totalElements} sản phẩm
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       {/* Previous button */}
                       <button
-                        onClick={() => handlePageChange(pagination.currentPage - 1)}
+                        onClick={() =>
+                          handlePageChange(pagination.currentPage - 1)
+                        }
                         disabled={pagination.currentPage === 1}
                         className={`flex items-center justify-center w-10 h-10 rounded-lg border ${
                           pagination.currentPage === 1
@@ -857,9 +887,12 @@ const Collection = () => {
 
                       {/* Page numbers */}
                       <div className="flex items-center gap-1">
-                        {generatePageNumbers().map((page, index) => (
-                          page === '...' ? (
-                            <span key={`ellipsis-${index}`} className="px-3 py-2 text-gray-500">
+                        {generatePageNumbers().map((page, index) =>
+                          page === "..." ? (
+                            <span
+                              key={`ellipsis-${index}`}
+                              className="px-3 py-2 text-gray-500"
+                            >
                               ...
                             </span>
                           ) : (
@@ -875,13 +908,17 @@ const Collection = () => {
                               {page}
                             </button>
                           )
-                        ))}
+                        )}
                       </div>
 
                       {/* Next button */}
                       <button
-                        onClick={() => handlePageChange(pagination.currentPage + 1)}
-                        disabled={pagination.currentPage === pagination.totalPages}
+                        onClick={() =>
+                          handlePageChange(pagination.currentPage + 1)
+                        }
+                        disabled={
+                          pagination.currentPage === pagination.totalPages
+                        }
                         className={`flex items-center justify-center w-10 h-10 rounded-lg border ${
                           pagination.currentPage === pagination.totalPages
                             ? "border-gray-300 text-gray-400 cursor-not-allowed"
@@ -891,7 +928,7 @@ const Collection = () => {
                         <ChevronRight className="w-5 h-5" />
                       </button>
                     </div>
-                    
+
                     {/* Quick jump */}
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-gray-600">Đi đến trang:</span>
@@ -903,12 +940,16 @@ const Collection = () => {
                         onChange={(e) => {
                           const page = parseInt(e.target.value);
                           if (!isNaN(page)) {
-                            handlePageChange(Math.min(Math.max(1, page), pagination.totalPages));
+                            handlePageChange(
+                              Math.min(Math.max(1, page), pagination.totalPages)
+                            );
                           }
                         }}
                         className="w-16 px-2 py-1.5 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[#3A6FB5] focus:border-transparent outline-none"
                       />
-                      <span className="text-gray-500">/ {pagination.totalPages}</span>
+                      <span className="text-gray-500">
+                        / {pagination.totalPages}
+                      </span>
                     </div>
                   </div>
                 )}

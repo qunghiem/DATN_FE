@@ -20,9 +20,12 @@ export default function Vouchers() {
       const response = await fetch(`${VITE_API_URL}/api/vouchers`);
       const data = await response.json();
       
-      if (data.code === 0) {
+       if (data.code === 0) {
+        // chỉ lấy voucher active
+        const activeVouchers = data.result.filter(v => v.isActive === true);
+        
         // Transform API data to component format
-        const transformedVouchers = data.result.map((v) => ({
+        const transformedVouchers = activeVouchers.map((v) => ({
           id: v.id,
           code: v.code,
           discountType: v.discountType,
@@ -31,6 +34,7 @@ export default function Vouchers() {
           maxDiscountValue: v.maxDiscountValue,
           endDate: v.endDate,
           remainingUses: v.remainingUses,
+          isActive: v.isActive, // Giữ lại thông tin isActive nếu cần
           icon: getIcon(v.discountType),
           title: getTitle(v),
           desc: getDescription(v),
