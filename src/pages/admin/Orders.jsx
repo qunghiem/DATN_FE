@@ -111,65 +111,115 @@ const AdminOrders = () => {
   }, [dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm, fromDate, toDate]);
 
   // Fetch stats separately for each status
-  useEffect(() => {
-    const fetchStats = async () => {
-      const token = localStorage.getItem("access_token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  // useEffect(() => {
+  //   const fetchStats = async () => {
+  //     const token = localStorage.getItem("access_token");
+  //     const headers = token ? { Authorization: `Bearer ${token}` } : {};
       
-      try {
-        // Fetch count for each status (including total without status filter)
-        const statuses = [null, "PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
+  //     try {
+  //       // Fetch count for each status (including total without status filter)
+  //       const statuses = [null, "PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
         
-        const statsPromises = statuses.map(async (status) => {
-          const params = new URLSearchParams();
-          params.append("page", 0);
-          params.append("size", 1); // Chỉ cần totalElements, không cần data
+  //       const statsPromises = statuses.map(async (status) => {
+  //         const params = new URLSearchParams();
+  //         params.append("page", 0);
+  //         params.append("size", 1); // Chỉ cần totalElements, không cần data
           
-          if (status) {
-            params.append("status", status);
-          }
-          if (debouncedSearchTerm && debouncedSearchTerm.trim() !== "") {
-            params.append("keyword", debouncedSearchTerm.trim());
-          }
-          if (fromDate) {
-            params.append("fromDate", fromDate);
-          }
-          if (toDate) {
-            params.append("toDate", toDate);
-          }
+  //         if (status) {
+  //           params.append("status", status);
+  //         }
+  //         if (debouncedSearchTerm && debouncedSearchTerm.trim() !== "") {
+  //           params.append("keyword", debouncedSearchTerm.trim());
+  //         }
+  //         if (fromDate) {
+  //           params.append("fromDate", fromDate);
+  //         }
+  //         if (toDate) {
+  //           params.append("toDate", toDate);
+  //         }
           
-          const res = await fetch(
-            `${VITE_API_URL}/api/orders/search?${params.toString()}`,
-            { headers }
-          );
-          const data = await res.json();
+  //         const res = await fetch(
+  //           `${VITE_API_URL}/api/orders/search?${params.toString()}`,
+  //           { headers }
+  //         );
+  //         const data = await res.json();
           
-          console.log(`Stats for ${status || 'ALL'}:`, data.result?.totalElements);
+  //         console.log(`Stats for ${status || 'ALL'}:`, data.result?.totalElements);
           
-          return { 
-            status: status || 'total', 
-            count: data.result?.totalElements || 0 
-          };
-        });
+  //         return { 
+  //           status: status || 'total', 
+  //           count: data.result?.totalElements || 0 
+  //         };
+  //       });
         
-        const statsResults = await Promise.all(statsPromises);
+  //       const statsResults = await Promise.all(statsPromises);
         
-        setOrderStats({
-          total: statsResults.find(s => s.status === "total")?.count || 0,
-          pending: statsResults.find(s => s.status === "PENDING")?.count || 0,
-          confirmed: statsResults.find(s => s.status === "CONFIRMED")?.count || 0,
-          shipped: statsResults.find(s => s.status === "SHIPPED")?.count || 0,
-          delivered: statsResults.find(s => s.status === "DELIVERED")?.count || 0,
-          cancelled: statsResults.find(s => s.status === "CANCELLED")?.count || 0,
-        });
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      }
-    };
+  //       setOrderStats({
+  //         total: statsResults.find(s => s.status === "total")?.count || 0,
+  //         pending: statsResults.find(s => s.status === "PENDING")?.count || 0,
+  //         confirmed: statsResults.find(s => s.status === "CONFIRMED")?.count || 0,
+  //         shipped: statsResults.find(s => s.status === "SHIPPED")?.count || 0,
+  //         delivered: statsResults.find(s => s.status === "DELIVERED")?.count || 0,
+  //         cancelled: statsResults.find(s => s.status === "CANCELLED")?.count || 0,
+  //       });
+  //     } catch (error) {
+  //       console.error("Error fetching stats:", error);
+  //     }
+  //   };
     
-    fetchStats();
-  }, [debouncedSearchTerm, fromDate, toDate]);
+  //   fetchStats();
+  // }, [debouncedSearchTerm, fromDate, toDate]);
 
+  useEffect(() => {
+  const fetchStats = async () => {
+    const token = localStorage.getItem("access_token");
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    
+    try {
+      // Chỉ fetch cho status đang được chọn
+      const statusToFetch = statusFilter || null; // null = tất cả
+      
+      const params = new URLSearchParams();
+      params.append("page", 0);
+      params.append("size", 1);
+      
+      if (statusToFetch) {
+        params.append("status", statusToFetch);
+      }
+      if (debouncedSearchTerm && debouncedSearchTerm.trim() !== "") {
+        params.append("keyword", debouncedSearchTerm.trim());
+      }
+      if (fromDate) {
+        params.append("fromDate", fromDate);
+      }
+      if (toDate) {
+        params.append("toDate", toDate);
+      }
+      
+      const res = await fetch(
+        `${VITE_API_URL}/api/orders/search?${params.toString()}`,
+        { headers }
+      );
+      const data = await res.json();
+      
+      // Cập nhật stats tương ứng
+      setOrderStats(prev => {
+        if (statusToFetch === null) {
+          return { ...prev, total: data.result?.totalElements || 0 };
+        } else {
+          return { 
+            ...prev, 
+            [statusToFetch.toLowerCase()]: data.result?.totalElements || 0 
+          };
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+  
+  fetchStats();
+}, [statusFilter, debouncedSearchTerm, fromDate, toDate]);
   // Handle messages
   useEffect(() => {
     if (error) {
