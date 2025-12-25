@@ -81,99 +81,105 @@ const Orders = () => {
     return user?.id || user?.email || "guest";
   };
 
-  const enrichOrderItems = async (orders) => {
-    console.log("🔄 Enriching order items with productId and images...");
-    const enrichedOrders = await Promise.all(
-      orders.map(async (order) => {
-        const enrichedItems = await Promise.all(
-          order.items.map(async (item) => {
-            if (
-              item.productId &&
-              item.image &&
-              !item.image.includes("placeholder")
-            ) {
-              return item;
-            }
-            try {
-              const response = await axios.get(
-                `${VITE_API_URL}/api/product-variants/${item.variantId}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem(
-                      "access_token"
-                    )}`,
-                  },
-                }
-              );
-              if (response.data.code === 1000) {
-                const variant = response.data.result;
-                return {
-                  ...item,
-                  productId: variant.productId,
-                  image: variant.imageUrl || variant.image || item.image,
-                };
-              }
-            } catch (error) {
-              console.warn(
-                `⚠️ Could not fetch variant ${item.variantId}:`,
-                error.message
-              );
-            }
-            return item;
-          })
-        );
-        return { ...order, items: enrichedItems };
-      })
-    );
-    console.log("✅ Order items enriched");
+  // const enrichOrderItems = async (orders) => {
+  //   console.log("🔄 Enriching order items with productId and images...");
+  //   const enrichedOrders = await Promise.all(
+  //     orders.map(async (order) => {
+  //       const enrichedItems = await Promise.all(
+  //         order.items.map(async (item) => {
+  //           if (
+  //             item.productId &&
+  //             item.image &&
+  //             !item.image.includes("placeholder")
+  //           ) {
+  //             return item;
+  //           }
+  //           try {
+  //             const response = await axios.get(
+  //               `${VITE_API_URL}/api/product-variants/${item.variantId}`,
+  //               {
+  //                 headers: {
+  //                   Authorization: `Bearer ${localStorage.getItem(
+  //                     "access_token"
+  //                   )}`,
+  //                 },
+  //               }
+  //             );
+  //             if (response.data.code === 1000) {
+  //               const variant = response.data.result;
+  //               return {
+  //                 ...item,
+  //                 productId: variant.productId,
+  //                 image: variant.imageUrl || variant.image || item.image,
+  //               };
+  //             }
+  //           } catch (error) {
+  //             console.warn(
+  //               `⚠️ Could not fetch variant ${item.variantId}:`,
+  //               error.message
+  //             );
+  //           }
+  //           return item;
+  //         })
+  //       );
+  //       return { ...order, items: enrichedItems };
+  //     })
+  //   );
+  //   console.log("✅ Order items enriched");
 
-    return enrichedOrders;
+  //   return enrichedOrders;
 
-  };
+  // };
 
   const getTrackingTimeline = (order) => {
-    const timeline = [];
-    const statuses = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"];
+  const timeline = [];
+  const statuses = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"];
+  
+  // Sử dụng updatedAt cho các status updates
+  const statusUpdateTime = order.updatedAt || order.createdAt;
 
-    if (order.status === "CANCELLED") {
-      return [
-        {
-          status: "PENDING",
-          time: order.orderDate || order.createdAt,
-          description: "Đơn hàng đã được đặt",
-          completed: true,
-        },
-        {
-          status: "CANCELLED",
-          time: order.updatedAt || order.orderDate || order.createdAt,
-          description: order.cancelReason
-            ? `Đơn hàng đã bị hủy. Lý do: ${order.cancelReason}`
-            : "Đơn hàng đã bị hủy",
-          completed: true,
-        },
-      ];
-    }
+  if (order.status === "CANCELLED") {
+    return [
+      {
+        status: "PENDING",
+        time: order.createdAt,
+        description: "Đơn hàng đã được đặt",
+        completed: true,
+      },
+      {
+        status: "CANCELLED",
+        time: statusUpdateTime,
+        description: order.cancelReason
+          ? `Đơn hàng đã bị hủy. Lý do: ${order.cancelReason}`
+          : "Đơn hàng đã bị hủy",
+        completed: true,
+      },
+    ];
+  }
 
-    const currentStatusIndex = statuses.indexOf(order.status);
-    statuses.forEach((status, index) => {
-      const statusLabels = {
-        PENDING: "Đơn hàng đã được đặt",
-        CONFIRMED: "Đơn hàng đã được xác nhận",
-        SHIPPED: "Đơn hàng đang được giao",
-        DELIVERED: "Đơn hàng đã được giao thành công",
-      };
-      timeline.push({
-        status: status,
-        time:
-          index <= currentStatusIndex
-            ? order.orderDate || order.createdAt
-            : null,
-        description: statusLabels[status],
-        completed: index <= currentStatusIndex,
-      });
+  const currentStatusIndex = statuses.indexOf(order.status);
+  statuses.forEach((status, index) => {
+    const statusLabels = {
+      PENDING: "Đơn hàng đã được đặt",
+      CONFIRMED: "Đơn hàng đã được xác nhận",
+      SHIPPED: "Đơn hàng đang được giao",
+      DELIVERED: "Đơn hàng đã được giao thành công",
+    };
+    
+    timeline.push({
+      status: status,
+      time: index <= currentStatusIndex ? statusUpdateTime : null,
+      description: statusLabels[status],
+      completed: index <= currentStatusIndex,
+      // Nếu có payment status, thêm thông tin thanh toán
+      paymentStatus: index === 0 && order.payment?.status === "PAID" 
+        ? "Đã thanh toán" 
+        : null
     });
-    return timeline;
-  };
+  });
+  
+  return timeline;
+};
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN").format(price) + "₫";
@@ -296,102 +302,108 @@ const Orders = () => {
 
   // useEffect #2: Fetch orders
   useEffect(() => {
-    const fetchOrders = async () => {
-      if (!isAuthenticated || !user) {
-        navigate("/login");
-        return;
-      }
+  const fetchOrders = async () => {
+    if (!isAuthenticated || !user) {
+      navigate("/login");
+      return;
+    }
 
+    try {
+      setIsLoading(true);
+      const userId = getUserId();
+
+      // Thử lấy từ API trước
       try {
-        setIsLoading(true);
-        const userId = getUserId();
-
-        try {
-          const response = await axios.get(
-            `${VITE_API_URL}/api/orders/me`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-              },
-            }
-          );
-
-          if (response.data.code === 1000 && response.data.result) {
-            const ordersData = response.data.result;
-
-            const transformedOrders = ordersData.map((order) => ({
-              id: order.id,
-              orderDate: order.createdAt,
-              status: order.status,
-              items: order.items.map((item) => ({
-                id: item.id,
-                productId: null,
-                variantId: item.productVariantId,
-                name: item.productName,
-                color: item.color,
-                size: item.size,
-                quantity: item.quantity,
-                image: item.imageUrl, 
-                price: item.unitPrice,
-              })),
-              shipping: {
-                fullName: order.fullName,
-                phone: order.phone,
-                email: user.email,
-                address: order.address,
-              },
-              payment: {
-                method: order.paymentMethod,
-                subtotal: order.subtotal,
-                shippingFee: order.shippingFee,
-                discount: order.discountAmount,
-                total: order.totalAmount,
-                status:
-                  order.payment?.status ||
-                  (order.paymentMethod === "COD" ? "UNPAID" : "PENDING"),
-              },
-              vouchers: order.vouchers || [],
-              note: order.note || "",
-              tracking: order.tracking || [],
-              cancelReason: order.cancelReason || "",
-            }));
-
-            const enrichedOrders = await enrichOrderItems(transformedOrders);
-            setOrders(enrichedOrders);
-            setFilteredOrders(enrichedOrders);
-            saveUserOrders(userId, enrichedOrders);
-
-            if (enrichedOrders.length > 0) {
-              toast.success(`Đã tải ${enrichedOrders.length} đơn hàng`);
-            }
-            return;
+        const response = await axios.get(
+          `${VITE_API_URL}/api/orders/me`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
           }
-        } catch (apiError) {
-          console.error(
-            "❌ API error:",
-            apiError.response?.status,
-            apiError.message
-          );
-          if (apiError.response?.status === 401) {
-            toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
-            navigate("/login");
-            return;
+        );
+
+        if (response.data.code === 1000 && response.data.result) {
+          const ordersData = response.data.result;
+
+          const transformedOrders = ordersData.map((order) => ({
+            id: order.id,
+            orderDate: order.createdAt,
+            updatedAt: order.updatedAt, // Thêm updatedAt
+            status: order.status,
+            items: order.items.map((item) => ({
+              id: item.id,
+              productId: item.productId,
+              variantId: item.productVariantId,
+              name: item.productName,
+              color: item.color,
+              size: item.size,
+              quantity: item.quantity,
+              image: item.imageUrl,
+              price: item.unitPrice,
+              sku: item.productSku,
+              reviewed: item.reviewed || false, // Thêm trạng thái reviewed từ API
+            })),
+            shipping: {
+              fullName: order.fullName,
+              phone: order.phone,
+              email: user.email,
+              address: order.address,
+            },
+            payment: {
+              method: order.paymentMethod,
+              subtotal: order.subtotal,
+              shippingFee: order.shippingFee,
+              shippingDiscount: order.shippingDiscount,
+              shippingFeeOriginal: order.shippingFeeOriginal,
+              discount: order.discountAmount,
+              total: order.totalAmount,
+              status: order.payment?.status || "PAID",
+            },
+            note: order.note || "",
+            tracking: [],
+            cancelReason: order.cancelReason || "",
+            rewardPoints: {
+              used: order.rewardPointsUsed,
+              earned: order.rewardPointsEarned,
+              userRemaining: order.userRemainingRewardPoints,
+            },
+          }));
+
+          setOrders(transformedOrders);
+          setFilteredOrders(transformedOrders);
+          saveUserOrders(userId, transformedOrders);
+
+          if (transformedOrders.length > 0) {
+            toast.success(`Đã tải ${transformedOrders.length} đơn hàng`);
           }
+          return;
         }
-
-        const localOrders = getUserOrders(userId);
-        setOrders(localOrders);
-        setFilteredOrders(localOrders);
-      } catch (error) {
-        console.error("❌ Error fetching orders:", error);
-        toast.error("Không thể tải danh sách đơn hàng");
-      } finally {
-        setIsLoading(false);
+      } catch (apiError) {
+        console.error("❌ API error:", apiError.message);
+        if (apiError.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
+          navigate("/login");
+          return;
+        }
+        // Fallback to local storage nếu API fail
+        console.log("Falling back to local storage data");
       }
-    };
 
-    fetchOrders();
-  }, [isAuthenticated, user, navigate]);
+      // Fallback: lấy từ local storage
+      const localOrders = getUserOrders(userId);
+      setOrders(localOrders);
+      setFilteredOrders(localOrders);
+    } catch (error) {
+      console.error("❌ Error fetching orders:", error);
+      toast.error("Không thể tải danh sách đơn hàng");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchOrders();
+}, [isAuthenticated, user, navigate]);
 
   // useEffect #3: Filter orders
   useEffect(() => {
@@ -1018,6 +1030,19 @@ const Orders = () => {
                       {formatPrice(selectedOrder.payment?.subtotal || 0)}
                     </span>
                   </div>
+
+                  {/* Hiển thị phí vận chuyển gốc nếu có giảm */}
+                  {selectedOrder.payment?.shippingDiscount > 0 && (
+                    <div className="flex justify-between text-gray-600">
+                      <span>Phí vận chuyển gốc:</span>
+                      <span className="line-through">
+                        {formatPrice(
+                          selectedOrder.payment?.shippingFeeOriginal || 0
+                        )}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between text-gray-600">
                     <span>Phí vận chuyển:</span>
                     <span className="font-medium">
@@ -1028,14 +1053,37 @@ const Orders = () => {
                       )}
                     </span>
                   </div>
+
+                  {/* Hiển thị giảm giá shipping */}
+                  {selectedOrder.payment?.shippingDiscount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Giảm giá phí vận chuyển:</span>
+                      <span className="font-medium">
+                        -{formatPrice(selectedOrder.payment?.shippingDiscount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Hiển thị giảm giá sản phẩm */}
                   {selectedOrder.payment?.discount > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Giảm giá</span>
+                      <span>Giảm giá sản phẩm</span>
                       <span className="font-medium">
                         -{formatPrice(selectedOrder.payment?.discount)}
                       </span>
                     </div>
                   )}
+
+                  {/* Hiển thị điểm thưởng nếu có */}
+                  {selectedOrder.rewardPoints?.used > 0 && (
+                    <div className="flex justify-between text-blue-600">
+                      <span>Điểm thưởng sử dụng:</span>
+                      <span className="font-medium">
+                        -{selectedOrder.rewardPoints.used} điểm
+                      </span>
+                    </div>
+                  )}
+
                   <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-900">
                       Tổng cộng:
@@ -1044,6 +1092,19 @@ const Orders = () => {
                       {formatPrice(selectedOrder.payment?.total || 0)}
                     </span>
                   </div>
+
+                  {/* Hiển thị điểm thưởng nhận được */}
+                  {selectedOrder.rewardPoints?.earned > 0 && (
+                    <div className="pt-2 flex justify-between items-center">
+                      <span className="text-sm text-gray-600">
+                        Điểm thưởng nhận được:
+                      </span>
+                      <span className="text-sm font-medium text-green-600">
+                        +{selectedOrder.rewardPoints.earned} điểm
+                      </span>
+                    </div>
+                  )}
+
                   <div className="pt-2">
                     <span
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
@@ -1054,8 +1115,23 @@ const Orders = () => {
                     >
                       {selectedOrder.payment?.method === "COD"
                         ? "Thanh toán khi nhận hàng"
-                        : "Chuyển khoản ngân hàng"}
+                        : selectedOrder.payment?.method === "BANK_TRANSFER"
+                        ? "Chuyển khoản ngân hàng"
+                        : selectedOrder.payment?.method}
                     </span>
+                    {selectedOrder.payment?.status && (
+                      <span
+                        className={`ml-2 px-2 py-1 rounded text-xs ${
+                          selectedOrder.payment.status === "PAID"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {selectedOrder.payment.status === "PAID"
+                          ? "Đã thanh toán"
+                          : "Chưa thanh toán"}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

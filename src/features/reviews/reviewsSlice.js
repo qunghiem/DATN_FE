@@ -33,7 +33,7 @@ export const createReview = createAsyncThunk(
 
 export const fetchProductReviews = createAsyncThunk(
   'reviews/fetchByProduct',
-  async ({ productId, rating, page = 0, size = 10 }, { rejectWithValue }) => {
+  async ({ productId, rating, page = 0, size = 5 }, { rejectWithValue }) => {
     try {
       const params = new URLSearchParams({ page, size });
       if (rating) params.append('rating', rating);

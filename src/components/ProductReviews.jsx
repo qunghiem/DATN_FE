@@ -20,7 +20,7 @@ const ProductReviews = ({ productId }) => {
   // Fetch all reviews for summary when component mounts
   useEffect(() => {
     if (productId) {
-      dispatch(fetchProductReviews({ productId, rating: null, page: 0, size: 1000 }))
+      dispatch(fetchProductReviews({ productId, rating: null, page: 0, size: 5 }))
         .unwrap()
         .then((result) => {
           setAllReviews(result.data || []);
