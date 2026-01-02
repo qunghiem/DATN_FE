@@ -576,7 +576,7 @@ const Orders = () => {
                           </button>
                         )} */}
 
-                        {order.status === "DELIVERED" && (
+                        {/* {order.status === "DELIVERED" && (
                           <button
                             onClick={() => handleReorder(order)}
                             className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
@@ -584,7 +584,7 @@ const Orders = () => {
                             <RotateCcw className="w-4 h-4" />
                             Mua lại
                           </button>
-                        )}
+                        )} */}
                       </div>
                     </div>
                   </div>

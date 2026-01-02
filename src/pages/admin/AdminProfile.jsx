@@ -23,10 +23,7 @@ const AdminProfile = () => {
     (state) => state.auth
   );
 
-  // State for active tab
-  const [activeTab, setActiveTab] = useState("info"); // 'info' or 'password'
-
-  // State for personal info change
+  const [activeTab, setActiveTab] = useState("info");
   const [infoData, setInfoData] = useState({
     fullName: "",
     phone: "",
@@ -35,7 +32,6 @@ const AdminProfile = () => {
   const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // State for password change
   const [passwordData, setPasswordData] = useState({
     oldPassword: "",
     newPassword: "",
@@ -53,14 +49,13 @@ const AdminProfile = () => {
   // Fetch user profile data from API on component mount
   useEffect(() => {
     const fetchUserProfile = async () => {
-      // KHÔNG check auth ở đây
       try {
         setLoading(true);
         const response = await axios.get(
           "http://localhost:8080/api/users/profile",
           {
             headers: {
-              Authorization: `Bearer ${access_token}`, // API sẽ trả 401 nếu token invalid
+              Authorization: `Bearer ${access_token}`,
               "Content-Type": "application/json",
             },
           }
@@ -72,35 +67,24 @@ const AdminProfile = () => {
             fullName: userData.fullName || "",
             phone: userData.phone || "",
           });
-          // ... process data
         }
       } catch (error) {
         console.error("Error fetching user profile:", error);
         if (error.response?.status === 401) {
           toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
           dispatch(logout());
-          // navigate("/login"); // ← XÓA dòng này
-          // Thay bằng:
-          window.location.href = "/login"; // ← Hard redirect, tránh React lifecycle
+          window.location.href = "/login";
         }
       } finally {
         setLoading(false);
       }
     };
 
-    // Chỉ fetch nếu có token
     if (access_token) {
       fetchUserProfile();
     }
   }, [access_token, dispatch]);
 
-  // Redirect if not authenticated
-  //   if (!isAuthenticated) {
-  //     navigate("/login");
-  //     return null;
-  //   }
-
-  // Get initials from full name
   const getInitials = (fullName) => {
     if (!fullName) return "";
     const parts = fullName.trim().split(" ");
@@ -114,7 +98,6 @@ const AdminProfile = () => {
 
   const initials = getInitials(user?.fullName || infoData.fullName);
 
-  // Handle info input change
   const handleInfoChange = (e) => {
     const { name, value } = e.target;
     setInfoData((prev) => ({
@@ -123,7 +106,6 @@ const AdminProfile = () => {
     }));
   };
 
-  // Validate info form
   const validateInfoForm = () => {
     if (!infoData.fullName.trim()) {
       toast.error("Vui lòng nhập họ tên!");
@@ -135,7 +117,6 @@ const AdminProfile = () => {
       return false;
     }
 
-    // Validate phone number (Vietnamese format)
     const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
     if (!phoneRegex.test(infoData.phone)) {
       toast.error("Số điện thoại không hợp lệ!");
@@ -145,7 +126,7 @@ const AdminProfile = () => {
     return true;
   };
 
-  // Handle info update submit
+  // FIXED: Handle info update submit
   const handleInfoSubmit = async (e) => {
     e.preventDefault();
 
@@ -157,7 +138,7 @@ const AdminProfile = () => {
 
     try {
       const response = await axios.put(
-        "/api/users/update-profile",
+        "http://localhost:8080/api/users/update-profile",
         {
           fullName: infoData.fullName,
           phone: infoData.phone,
@@ -187,11 +168,16 @@ const AdminProfile = () => {
         if (profileResponse.data.code === 1000) {
           const updatedUserProfile = profileResponse.data.result;
 
-          // Update Redux store
+          // CRITICAL FIX: Phải đảm bảo cập nhật đúng cấu trúc
+          // 1. Update Redux store với user mới
           dispatch(setUser(updatedUserProfile));
 
-          // Update localStorage
+          // 2. Update localStorage - CHỈ CẬP NHẬT user, GIỮ NGUYÊN tokens
+          // Vì authSlice của bạn lưu riêng: access_token, refresh_token, user
           localStorage.setItem("user", JSON.stringify(updatedUserProfile));
+          
+          // Không được xóa hoặc thay đổi access_token và refresh_token!
+          // authSlice đã tự động xử lý việc lưu tokens riêng biệt
         }
       } else {
         toast.error(response.data.message || "Cập nhật thông tin thất bại!");
@@ -204,7 +190,6 @@ const AdminProfile = () => {
       } else if (error.response?.status === 401) {
         toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
         dispatch(logout());
-        // navigate("/login");
         window.location.href = "/login";
       } else {
         toast.error("Có lỗi xảy ra. Vui lòng thử lại sau!");
@@ -214,7 +199,6 @@ const AdminProfile = () => {
     }
   };
 
-  // Handle password input change
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordData((prev) => ({
@@ -223,7 +207,6 @@ const AdminProfile = () => {
     }));
   };
 
-  // Toggle password visibility
   const togglePasswordVisibility = (field) => {
     setShowPasswords((prev) => ({
       ...prev,
@@ -231,7 +214,6 @@ const AdminProfile = () => {
     }));
   };
 
-  // Validate password form
   const validatePasswordForm = () => {
     if (!passwordData.oldPassword.trim()) {
       toast.error("Vui lòng nhập mật khẩu cũ!");
@@ -261,7 +243,6 @@ const AdminProfile = () => {
     return true;
   };
 
-  // Handle password change submit
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
 
@@ -273,7 +254,7 @@ const AdminProfile = () => {
 
     try {
       const response = await axios.post(
-        "/api/users/change-password",
+        "http://localhost:8080/api/users/change-password",
         {
           oldPassword: passwordData.oldPassword,
           newPassword: passwordData.newPassword,
@@ -290,17 +271,14 @@ const AdminProfile = () => {
       if (response.data.code === 1000) {
         toast.success("Đổi mật khẩu thành công! Vui lòng đăng nhập lại.");
 
-        // Clear form
         setPasswordData({
           oldPassword: "",
           newPassword: "",
           confirmPassword: "",
         });
 
-        // Logout and redirect to login after 2 seconds
         setTimeout(() => {
           dispatch(logout());
-          //   navigate("/login");
           window.location.href = "/login";
         }, 2000);
       } else {
@@ -314,7 +292,6 @@ const AdminProfile = () => {
       } else if (error.response?.status === 401) {
         toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
         dispatch(logout());
-        // navigate("/login");
         window.location.href = "/login";
       } else {
         toast.error("Có lỗi xảy ra. Vui lòng thử lại sau!");
@@ -324,7 +301,6 @@ const AdminProfile = () => {
     }
   };
 
-  // Get role label
   const getRoleLabel = (role) => {
     switch (role) {
       case "ADMIN":
@@ -338,7 +314,6 @@ const AdminProfile = () => {
     }
   };
 
-  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
