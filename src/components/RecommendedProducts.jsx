@@ -72,7 +72,7 @@ const RecommendedProducts = ({ userId, savedRef, setSavedCount }) => {
       const recResponse = await axios.get(
         `${RECOMMENDATION_API_URL}/api/recommendations/content-based/user/${userId}`,
         { 
-          params: { limit: 12 },
+          params: { limit: 6 },
           // ✅ FIX 4: Add cache busting
           headers: { 'Cache-Control': 'no-cache' }
         }

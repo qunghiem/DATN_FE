@@ -16,7 +16,7 @@ export const fetchAllProducts = createAsyncThunk(
       const token = localStorage.getItem('access_token');
       // api thật đã phân trang
       const url = `${VITE_API_URL}/api/products/search?page=${page}&size=${size}&search=${search}&active=true`;
-      
+      // const url =  `${VITE_API_URL}/api/products/search?${params.toString()}`
       // api chưa phân trang/ getAll
       // const url = `${VITE_API_URL}/api/products`;
       const response = await fetch(url, {
