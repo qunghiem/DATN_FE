@@ -11,7 +11,13 @@ const getAuthHeader = () => {
 // Async thunks
 export const fetchAllProducts = createAsyncThunk(
   'adminProducts/fetchAllProducts',
-  async ({ page = 1, size = 20, search = '', categories = [], brands = [] } = {}, { rejectWithValue }) => {
+  async ({ 
+    page = 1, 
+    size = 20, 
+    search = '', 
+    category = [], // Đổi từ categories thành category
+    brand = []     // Đổi từ brands thành brand
+  } = {}, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('access_token');
       
@@ -25,18 +31,22 @@ export const fetchAllProducts = createAsyncThunk(
         params.append('search', search);
       }
       
-      // Thêm multiple category params
-      categories.forEach(cat => {
-        params.append('category', cat);
+      // Sửa: Dùng đúng tên tham số
+      category.forEach(cat => {
+        if (cat) {
+          params.append('category', cat);
+        }
       });
       
-      // Thêm multiple brand params  
-      brands.forEach(brand => {
-        params.append('brand', brand);
+      brand.forEach(brandName => {
+        if (brandName) {
+          params.append('brand', brandName);
+        }
       });
       
       const url = `${VITE_API_URL}/api/products/search?${params.toString()}`;
       console.log('🔍 Fetching URL:', url);
+      console.log('📊 Params:', { page, size, search, category, brand });
 
       const response = await fetch(url, {
         headers: {
@@ -59,11 +69,11 @@ export const fetchAllProducts = createAsyncThunk(
         return rejectWithValue(data.message || 'Lỗi khi tải sản phẩm');
       }
     } catch (error) {
+      console.error('❌ Error fetching products:', error);
       return rejectWithValue(error.message);
     }
   }
 );
-
 
 // Lấy danh sách variants của một product
 export const fetchProductVariants = createAsyncThunk(

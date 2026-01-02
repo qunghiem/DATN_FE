@@ -98,16 +98,24 @@ const Products = () => {
   const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
-    // Fetch products với searchParams đầy đủ
-    dispatch(fetchAllProducts(searchParams));
-
-    // Fetch metadata
-    dispatch(fetchBrands());
-    dispatch(fetchCategories());
-    dispatch(fetchLabels());
-    dispatch(fetchColors());
-    dispatch(fetchSizes());
-  }, [dispatch, searchParams]);
+  console.log("🔄 searchParams changed:", searchParams);
+  
+  // Fetch products với searchParams đầy đủ
+  dispatch(fetchAllProducts({
+    page: searchParams.page,
+    size: searchParams.size,
+    search: searchParams.search,
+    category: searchParams.category, // Truyền đúng tên
+    brand: searchParams.brand,       // Truyền đúng tên
+  }));
+  
+  // Fetch metadata
+  dispatch(fetchBrands());
+  dispatch(fetchCategories());
+  dispatch(fetchLabels());
+  dispatch(fetchColors());
+  dispatch(fetchSizes());
+}, [dispatch, searchParams]);
 
   useEffect(() => {
     if (error) {
@@ -751,17 +759,23 @@ const Products = () => {
               <select
                 value={searchParams.category[0] || ""}
                 onChange={(e) => {
-                  const selected = e.target.value ? [e.target.value] : [];
-                  setSearchParams({
+                  const selectedValue = e.target.value;
+                  console.log("🎯 Category selected:", selectedValue);
+
+                  // Sửa: Truyền đúng tên tham số mà slice mong đợi
+                  const newParams = {
                     ...searchParams,
-                    category: selected,
+                    category: selectedValue ? [selectedValue] : [],
                     page: 1,
-                  });
+                  };
+
+                  console.log("📤 New searchParams before fetch:", newParams);
+                  setSearchParams(newParams);
                 }}
                 className="w-full px-4 py-2.5 bg-white border-2 border-gray-300 rounded-lg 
-                     focus:ring-2 focus:ring-sky-500 focus:border-sky-500 
-                     hover:border-gray-400 outline-none transition-all
-                     appearance-none cursor-pointer text-gray-700"
+   focus:ring-2 focus:ring-sky-500 focus:border-sky-500 
+   hover:border-gray-400 outline-none transition-all
+   appearance-none cursor-pointer text-gray-700"
               >
                 <option value="">Tất cả danh mục</option>
                 {categories.map((cat) => (
@@ -797,17 +811,23 @@ const Products = () => {
               <select
                 value={searchParams.brand[0] || ""}
                 onChange={(e) => {
-                  const selected = e.target.value ? [e.target.value] : [];
-                  setSearchParams({
+                  const selectedValue = e.target.value;
+                  console.log("🎯 Brand selected:", selectedValue); // Debug log
+
+                  const selected = selectedValue ? [selectedValue] : [];
+                  const newParams = {
                     ...searchParams,
                     brand: selected,
                     page: 1,
-                  });
+                  };
+
+                  console.log("📤 New searchParams:", newParams); // Debug log
+                  setSearchParams(newParams);
                 }}
                 className="w-full px-4 py-2.5 bg-white border-2 border-gray-300 rounded-lg 
-                     focus:ring-2 focus:ring-sky-500 focus:border-sky-500 
-                     hover:border-gray-400 outline-none transition-all
-                     appearance-none cursor-pointer text-gray-700"
+               focus:ring-2 focus:ring-sky-500 focus:border-sky-500 
+               hover:border-gray-400 outline-none transition-all
+               appearance-none cursor-pointer text-gray-700"
               >
                 <option value="">Tất cả thương hiệu</option>
                 {brands.map((brand) => (
@@ -840,6 +860,7 @@ const Products = () => {
               searchParams.brand.length > 0) && (
               <button
                 onClick={() => {
+                  console.log("🧹 Clearing filters"); // Debug log
                   setSearchParams({
                     ...searchParams,
                     category: [],
@@ -848,10 +869,10 @@ const Products = () => {
                   });
                 }}
                 className="px-5 py-2.5 bg-white text-red-600 font-medium
-                     hover:bg-red-50 active:bg-red-100
-                     border-2 border-red-300 hover:border-red-400 
-                     rounded-lg transition-all duration-200
-                     flex items-center gap-2 shadow-sm hover:shadow"
+               hover:bg-red-50 active:bg-red-100
+               border-2 border-red-300 hover:border-red-400 
+               rounded-lg transition-all duration-200
+               flex items-center gap-2 shadow-sm hover:shadow"
               >
                 <svg
                   className="w-4 h-4"
@@ -871,72 +892,6 @@ const Products = () => {
             )}
           </div>
         </div>
-
-        {/* Hiển thị các filter đang active */}
-        {(searchParams.category.length > 0 ||
-          searchParams.brand.length > 0) && (
-          <div className="mt-4 pt-4 border-t border-gray-300">
-            {/* <div className="flex flex-wrap gap-2">
-              <span className="text-sm text-gray-600 font-medium">
-                Đang lọc:
-              </span>
-              {searchParams.category[0] && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-100 text-sky-700 rounded-full text-sm font-medium">
-                  📂 {searchParams.category[0]}
-                  <button
-                    onClick={() =>
-                      setSearchParams({
-                        ...searchParams,
-                        category: [],
-                        page: 1,
-                      })
-                    }
-                    className="hover:bg-sky-200 rounded-full p-0.5 transition"
-                  >
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </span>
-              )}
-              {searchParams.brand[0] && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                  🏷️ {searchParams.brand[0]}
-                  <button
-                    onClick={() =>
-                      setSearchParams({ ...searchParams, brand: [], page: 1 })
-                    }
-                    className="hover:bg-purple-200 rounded-full p-0.5 transition"
-                  >
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </span>
-              )}
-            </div> */}
-          </div>
-        )}
       </div>
 
       {/* Hiển thị các tag đã chọn */}
