@@ -53,6 +53,13 @@ const Products = () => {
   const [modalStep, setModalStep] = useState(1);
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Thêm state cho search params
+  const [searchParams, setSearchParams] = useState({
+    search: "",
+    page: 1,
+    size: 20,
+  });
+
   // Product Form Data
   const [productForm, setProductForm] = useState({
     name: "",
@@ -84,19 +91,18 @@ const Products = () => {
 
   const [editingVariants, setEditingVariants] = useState({});
 
-  // Thêm state cho phân trang
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  // State cho phân trang (chỉ để hiển thị)
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+
   useEffect(() => {
-    dispatch(fetchAllProducts({ page: currentPage, size: pageSize }));
+    dispatch(fetchAllProducts(searchParams));
     dispatch(fetchBrands());
     dispatch(fetchCategories());
     dispatch(fetchLabels());
     dispatch(fetchColors());
     dispatch(fetchSizes());
-  }, [dispatch, currentPage, pageSize]);
+  }, [dispatch, searchParams]);
 
   useEffect(() => {
     if (error) {
@@ -129,7 +135,6 @@ const Products = () => {
   // Cập nhật useEffect để lấy phân trang
   useEffect(() => {
     if (pagination) {
-      setCurrentPage(pagination.currentPage || 1);
       setTotalPages(pagination.totalPages || 1);
       setTotalItems(pagination.totalItems || 0);
     }
@@ -138,21 +143,30 @@ const Products = () => {
   // Hàm xử lý chuyển trang
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+      setSearchParams({
+        ...searchParams,
+        page: page,
+      });
     }
   };
 
   // Hàm xử lý tìm kiếm
   const handleSearch = () => {
-    // Reset về trang 1 khi tìm kiếm
-    setCurrentPage(1);
-    dispatch(
-      fetchAllProducts({
-        page: 1,
-        size: pageSize,
-        search: searchTerm,
-      })
-    );
+    setSearchParams({
+      ...searchParams,
+      search: searchTerm.trim(),
+      page: 1, // Reset về trang 1 khi tìm kiếm mới
+    });
+  };
+
+  // Hàm xử lý xóa tìm kiếm
+  const handleClearSearch = () => {
+    setSearchTerm("");
+    setSearchParams({
+      ...searchParams,
+      search: "",
+      page: 1,
+    });
   };
 
   // Xử lý khi nhấn Enter trong ô tìm kiếm
@@ -165,8 +179,11 @@ const Products = () => {
   // Xử lý khi thay đổi page size
   const handlePageSizeChange = (e) => {
     const newSize = parseInt(e.target.value);
-    setPageSize(newSize);
-    setCurrentPage(1); // Reset về trang đầu tiên
+    setSearchParams({
+      ...searchParams,
+      size: newSize,
+      page: 1, // Reset về trang đầu tiên
+    });
   };
 
   const resetForm = () => {
@@ -394,7 +411,8 @@ const Products = () => {
         () => {
           setShowModal(false);
           resetForm();
-          dispatch(fetchAllProducts());
+          // Refresh danh sách sản phẩm với params hiện tại
+          dispatch(fetchAllProducts(searchParams));
         }
       );
     }
@@ -616,12 +634,10 @@ const Products = () => {
     toast.success("Hoàn tất thêm sản phẩm!");
     setShowModal(false);
     resetForm();
-    dispatch(fetchAllProducts());
+    dispatch(fetchAllProducts(searchParams));
   };
 
-  const filteredProducts = products.filter((product) =>
-    product.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const displayProducts = products;
 
   return (
     <div>
@@ -643,16 +659,40 @@ const Products = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm kiếm sản phẩm..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"
-          />
+        <div className="relative flex gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Tìm kiếm sản phẩm..."
+              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"
+            />
+            {searchTerm && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                title="Xóa tìm kiếm"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+          <button
+            onClick={handleSearch}
+            className="px-6 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition flex items-center gap-2"
+          >
+            <Search className="w-5 h-5" />
+            Tìm
+          </button>
         </div>
+        {searchTerm && (
+          <p className="text-sm text-gray-600 mt-2">
+            Đang tìm kiếm: <span className="font-semibold">"{searchTerm}"</span>
+          </p>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -688,17 +728,19 @@ const Products = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.length === 0 ? (
+                {displayProducts.length === 0 ? (
                   <tr>
                     <td
                       colSpan={isOwner ? "6" : "5"}
                       className="text-center py-12 text-gray-500"
                     >
-                      Không tìm thấy sản phẩm nào
+                      {searchParams.search
+                        ? `Không tìm thấy sản phẩm nào với từ khóa "${searchParams.search}"`
+                        : "Không có sản phẩm nào"}
                     </td>
                   </tr>
                 ) : (
-                  filteredProducts.map((product) => {
+                  displayProducts.map((product) => {
                     const price = product.price?.price || 0;
                     const costPrice = product.price?.cost_price || 0;
 
@@ -765,16 +807,30 @@ const Products = () => {
       {totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between bg-white rounded-lg shadow-md p-4">
           <div className="text-sm text-gray-600">
-            Hiển thị <span className="font-semibold">{products.length}</span>{" "}
-            trong tổng số <span className="font-semibold">{totalItems}</span>{" "}
-            sản phẩm
+            {searchParams.search ? (
+              <>
+                Tìm thấy <span className="font-semibold">{totalItems}</span> sản
+                phẩm với từ khóa "
+                <span className="font-semibold">{searchParams.search}</span>"
+                {products.length > 0 && (
+                  <> (hiển thị {products.length} sản phẩm)</>
+                )}
+              </>
+            ) : (
+              <>
+                Hiển thị{" "}
+                <span className="font-semibold">{products.length}</span> trong
+                tổng số <span className="font-semibold">{totalItems}</span> sản
+                phẩm
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             {/* Nút Previous */}
             <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
+              onClick={() => handlePageChange(searchParams.page - 1)}
+              disabled={searchParams.page === 1}
               className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               ← Trước
@@ -783,7 +839,7 @@ const Products = () => {
             {/* Số trang */}
             <div className="flex gap-1">
               {/* Trang đầu */}
-              {currentPage > 3 && (
+              {searchParams.page > 3 && (
                 <>
                   <button
                     onClick={() => handlePageChange(1)}
@@ -791,7 +847,7 @@ const Products = () => {
                   >
                     1
                   </button>
-                  {currentPage > 4 && (
+                  {searchParams.page > 4 && (
                     <span className="px-3 py-2 text-gray-500">...</span>
                   )}
                 </>
@@ -801,14 +857,17 @@ const Products = () => {
               {Array.from({ length: totalPages }, (_, i) => i + 1)
                 .filter((page) => {
                   // Hiển thị 2 trang trước và sau trang hiện tại
-                  return page >= currentPage - 2 && page <= currentPage + 2;
+                  return (
+                    page >= searchParams.page - 2 &&
+                    page <= searchParams.page + 2
+                  );
                 })
                 .map((page) => (
                   <button
                     key={page}
                     onClick={() => handlePageChange(page)}
                     className={`px-3 py-2 border rounded-lg transition ${
-                      currentPage === page
+                      searchParams.page === page
                         ? "bg-sky-500 text-white border-sky-500"
                         : "border-gray-300 hover:bg-gray-50"
                     }`}
@@ -818,9 +877,9 @@ const Products = () => {
                 ))}
 
               {/* Trang cuối */}
-              {currentPage < totalPages - 2 && (
+              {searchParams.page < totalPages - 2 && (
                 <>
-                  {currentPage < totalPages - 3 && (
+                  {searchParams.page < totalPages - 3 && (
                     <span className="px-3 py-2 text-gray-500">...</span>
                   )}
                   <button
@@ -835,8 +894,8 @@ const Products = () => {
 
             {/* Nút Next */}
             <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(searchParams.page + 1)}
+              disabled={searchParams.page === totalPages}
               className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               Sau →
