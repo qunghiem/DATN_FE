@@ -23,7 +23,10 @@ const AdminProfile = () => {
     (state) => state.auth
   );
 
+  // State for active tab
   const [activeTab, setActiveTab] = useState("info");
+
+  // State for personal info change
   const [infoData, setInfoData] = useState({
     fullName: "",
     phone: "",
@@ -32,6 +35,7 @@ const AdminProfile = () => {
   const [isSubmittingInfo, setIsSubmittingInfo] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // State for password change
   const [passwordData, setPasswordData] = useState({
     oldPassword: "",
     newPassword: "",
@@ -45,21 +49,48 @@ const AdminProfile = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // log kiểm tra debug
+  useEffect(() => {
+    console.log("=== ADMIN PROFILE DEBUG ===");
+    console.log("Redux user:", user);
+    console.log("Redux isAuthenticated:", isAuthenticated);
+    console.log("Redux access_token:", access_token);
+    console.log(
+      "LocalStorage user:",
+      JSON.parse(localStorage.getItem("user") || "null")
+    );
+    console.log(
+      "LocalStorage access_token:",
+      localStorage.getItem("access_token")
+    );
+    console.log("==========================");
+  }, [user, isAuthenticated, access_token]);
+
+  useEffect(() => {
+    console.log("🔍 AdminProfile mounted - Auth state:", {
+      user,
+      isAuthenticated,
+      access_token: access_token ? "exists" : "missing",
+    });
+
+    // Log khi component unmount (bị redirect)
+    return () => {
+      console.log("⚠️ AdminProfile UNMOUNTING - Possible redirect");
+      console.log("Current URL will be:", window.location.href);
+    };
+  }, []);
 
   // Fetch user profile data from API on component mount
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          "http://localhost:8080/api/users/profile",
-          {
-            headers: {
-              Authorization: `Bearer ${access_token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await axios.get("/api/users/profile", {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         if (response.data.code === 1000) {
           const userData = response.data.result;
@@ -85,6 +116,7 @@ const AdminProfile = () => {
     }
   }, [access_token, dispatch]);
 
+  // Get initials from full name
   const getInitials = (fullName) => {
     if (!fullName) return "";
     const parts = fullName.trim().split(" ");
@@ -98,6 +130,7 @@ const AdminProfile = () => {
 
   const initials = getInitials(user?.fullName || infoData.fullName);
 
+  // Handle info input change
   const handleInfoChange = (e) => {
     const { name, value } = e.target;
     setInfoData((prev) => ({
@@ -106,6 +139,7 @@ const AdminProfile = () => {
     }));
   };
 
+  // Validate info form
   const validateInfoForm = () => {
     if (!infoData.fullName.trim()) {
       toast.error("Vui lòng nhập họ tên!");
@@ -126,7 +160,7 @@ const AdminProfile = () => {
     return true;
   };
 
-  // FIXED: Handle info update submit
+  // Handle info update submit - FIXED VERSION
   const handleInfoSubmit = async (e) => {
     e.preventDefault();
 
@@ -138,7 +172,7 @@ const AdminProfile = () => {
 
     try {
       const response = await axios.put(
-        "http://localhost:8080/api/users/update-profile",
+        "/api/users/update-profile",
         {
           fullName: infoData.fullName,
           phone: infoData.phone,
@@ -155,29 +189,31 @@ const AdminProfile = () => {
         toast.success("Cập nhật thông tin thành công!");
 
         // Fetch updated user profile
-        const profileResponse = await axios.get(
-          "http://localhost:8080/api/users/profile",
-          {
-            headers: {
-              Authorization: `Bearer ${access_token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const profileResponse = await axios.get("/api/users/profile", {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         if (profileResponse.data.code === 1000) {
           const updatedUserProfile = profileResponse.data.result;
 
-          // CRITICAL FIX: Phải đảm bảo cập nhật đúng cấu trúc
-          // 1. Update Redux store với user mới
-          dispatch(setUser(updatedUserProfile));
+          console.log("🔄 API Response user:", updatedUserProfile);
+          console.log("📋 Current Redux user before update:", user);
 
-          // 2. Update localStorage - CHỈ CẬP NHẬT user, GIỮ NGUYÊN tokens
-          // Vì authSlice của bạn lưu riêng: access_token, refresh_token, user
-          localStorage.setItem("user", JSON.stringify(updatedUserProfile));
-          
-          // Không được xóa hoặc thay đổi access_token và refresh_token!
-          // authSlice đã tự động xử lý việc lưu tokens riêng biệt
+          // FIX CRITICAL: MERGE thay vì REPLACE
+          const mergedUser = {
+            ...user, // Giữ TẤT CẢ field cũ
+            ...updatedUserProfile, // Cập nhật/chỉ thay đổi 4 field từ API
+          };
+
+          console.log("✅ Merged user after update:", mergedUser);
+
+          dispatch(setUser(mergedUser));
+
+          // Đồng bộ localStorage
+          localStorage.setItem("user", JSON.stringify(mergedUser));
         }
       } else {
         toast.error(response.data.message || "Cập nhật thông tin thất bại!");
@@ -199,6 +235,7 @@ const AdminProfile = () => {
     }
   };
 
+  // Handle password input change
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordData((prev) => ({
@@ -207,6 +244,7 @@ const AdminProfile = () => {
     }));
   };
 
+  // Toggle password visibility
   const togglePasswordVisibility = (field) => {
     setShowPasswords((prev) => ({
       ...prev,
@@ -214,6 +252,7 @@ const AdminProfile = () => {
     }));
   };
 
+  // Validate password form
   const validatePasswordForm = () => {
     if (!passwordData.oldPassword.trim()) {
       toast.error("Vui lòng nhập mật khẩu cũ!");
@@ -243,6 +282,7 @@ const AdminProfile = () => {
     return true;
   };
 
+  // Handle password change submit
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
 
@@ -254,7 +294,7 @@ const AdminProfile = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/users/change-password",
+        "/api/users/change-password",
         {
           oldPassword: passwordData.oldPassword,
           newPassword: passwordData.newPassword,
@@ -301,6 +341,7 @@ const AdminProfile = () => {
     }
   };
 
+  // Get role label
   const getRoleLabel = (role) => {
     switch (role) {
       case "ADMIN":
@@ -314,6 +355,7 @@ const AdminProfile = () => {
     }
   };
 
+  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
