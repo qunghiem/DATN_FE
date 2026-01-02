@@ -11,26 +11,42 @@ const getAuthHeader = () => {
 // Async thunks
 export const fetchAllProducts = createAsyncThunk(
   'adminProducts/fetchAllProducts',
-  async ({ page = 1, size = 20, search = '' } = {}, { rejectWithValue }) => {
+  async ({ page = 1, size = 20, search = '', categories = [], brands = [] } = {}, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('access_token');
-      // api thật đã phân trang
-      const url = `${VITE_API_URL}/api/products/search?page=${page}&size=${size}&search=${search}&active=true`;
-      // const url =  `${VITE_API_URL}/api/products/search?${params.toString()}`
-      // api chưa phân trang/ getAll
-      // const url = `${VITE_API_URL}/api/products`;
+      
+      // Build URL với multiple category và brand params
+      const params = new URLSearchParams();
+      params.append('page', page);
+      params.append('size', size);
+      params.append('active', 'true');
+      
+      if (search) {
+        params.append('search', search);
+      }
+      
+      // Thêm multiple category params
+      categories.forEach(cat => {
+        params.append('category', cat);
+      });
+      
+      // Thêm multiple brand params  
+      brands.forEach(brand => {
+        params.append('brand', brand);
+      });
+      
+      const url = `${VITE_API_URL}/api/products/search?${params.toString()}`;
+      console.log('🔍 Fetching URL:', url);
+
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
       
-      // console.log('📊 Response status:', response.status);
-      
       const data = await response.json();
-      console.log('Data trả về theo trang:', data);
+      console.log('📊 Data trả về:', data);
       
-      // API trả về structure: { success, data, totalPages, totalElements, currentPage }
       if (data.success) {
         const result = {
           products: data.data || [],
