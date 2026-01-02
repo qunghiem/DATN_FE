@@ -31,6 +31,7 @@ import AdminReviews from './pages/admin/AdminReviews';
 import AdminStatistics from './pages/admin/Statistics';
 import AdminBestsellerProducts from './pages/admin/BestsellerProducts';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminProfile from './pages/admin/AdminProfile';
 
 const App = () => {
   const location = useLocation();
@@ -77,7 +78,7 @@ const App = () => {
           <Route path="orders" element={<AdminOrders />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="users" element={<AdminUsers />} />
-
+          <Route path="profile" element={<AdminProfile />} />
         </Route>
       </Routes>
       {!hideLayout && <Footer />}
