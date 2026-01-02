@@ -25,22 +25,41 @@ import { toast } from "react-toastify";
 
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
-
 // Debounce hook
 const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
-
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
-
     return () => {
       clearTimeout(handler);
     };
   }, [value, delay]);
-
   return debouncedValue;
+};
+
+// Hàm fetch chi tiết đơn hàng
+const fetchOrderDetail = async (orderId) => {
+  const token = localStorage.getItem("access_token");
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  
+  try {
+    const response = await fetch(
+      `${VITE_API_URL}/api/orders/${orderId}`,
+      { headers }
+    );
+    const data = await response.json();
+    
+    if (data.code === 1000) {
+      return data.result;
+    } else {
+      throw new Error(data.message || "Có lỗi xảy ra");
+    }
+  } catch (error) {
+    console.error("Error fetching order detail:", error);
+    throw error;
+  }
 };
 
 const AdminOrders = () => {
@@ -61,6 +80,7 @@ const AdminOrders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -110,116 +130,54 @@ const AdminOrders = () => {
     );
   }, [dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm, fromDate, toDate]);
 
-  // Fetch stats separately for each status
-  // useEffect(() => {
-  //   const fetchStats = async () => {
-  //     const token = localStorage.getItem("access_token");
-  //     const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      
-  //     try {
-  //       // Fetch count for each status (including total without status filter)
-  //       const statuses = [null, "PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
-        
-  //       const statsPromises = statuses.map(async (status) => {
-  //         const params = new URLSearchParams();
-  //         params.append("page", 0);
-  //         params.append("size", 1); // Chỉ cần totalElements, không cần data
-          
-  //         if (status) {
-  //           params.append("status", status);
-  //         }
-  //         if (debouncedSearchTerm && debouncedSearchTerm.trim() !== "") {
-  //           params.append("keyword", debouncedSearchTerm.trim());
-  //         }
-  //         if (fromDate) {
-  //           params.append("fromDate", fromDate);
-  //         }
-  //         if (toDate) {
-  //           params.append("toDate", toDate);
-  //         }
-          
-  //         const res = await fetch(
-  //           `${VITE_API_URL}/api/orders/search?${params.toString()}`,
-  //           { headers }
-  //         );
-  //         const data = await res.json();
-          
-  //         console.log(`Stats for ${status || 'ALL'}:`, data.result?.totalElements);
-          
-  //         return { 
-  //           status: status || 'total', 
-  //           count: data.result?.totalElements || 0 
-  //         };
-  //       });
-        
-  //       const statsResults = await Promise.all(statsPromises);
-        
-  //       setOrderStats({
-  //         total: statsResults.find(s => s.status === "total")?.count || 0,
-  //         pending: statsResults.find(s => s.status === "PENDING")?.count || 0,
-  //         confirmed: statsResults.find(s => s.status === "CONFIRMED")?.count || 0,
-  //         shipped: statsResults.find(s => s.status === "SHIPPED")?.count || 0,
-  //         delivered: statsResults.find(s => s.status === "DELIVERED")?.count || 0,
-  //         cancelled: statsResults.find(s => s.status === "CANCELLED")?.count || 0,
-  //       });
-  //     } catch (error) {
-  //       console.error("Error fetching stats:", error);
-  //     }
-  //   };
-    
-  //   fetchStats();
-  // }, [debouncedSearchTerm, fromDate, toDate]);
-
   useEffect(() => {
-  const fetchStats = async () => {
-    const token = localStorage.getItem("access_token");
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    
-    try {
-      // Chỉ fetch cho status đang được chọn
-      const statusToFetch = statusFilter || null; // null = tất cả
+    const fetchStats = async () => {
+      const token = localStorage.getItem("access_token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       
-      const params = new URLSearchParams();
-      params.append("page", 0);
-      params.append("size", 1);
-      
-      if (statusToFetch) {
-        params.append("status", statusToFetch);
-      }
-      if (debouncedSearchTerm && debouncedSearchTerm.trim() !== "") {
-        params.append("keyword", debouncedSearchTerm.trim());
-      }
-      if (fromDate) {
-        params.append("fromDate", fromDate);
-      }
-      if (toDate) {
-        params.append("toDate", toDate);
-      }
-      
-      const res = await fetch(
-        `${VITE_API_URL}/api/orders/search?${params.toString()}`,
-        { headers }
-      );
-      const data = await res.json();
-      
-      // Cập nhật stats tương ứng
-      setOrderStats(prev => {
-        if (statusToFetch === null) {
-          return { ...prev, total: data.result?.totalElements || 0 };
-        } else {
-          return { 
-            ...prev, 
-            [statusToFetch.toLowerCase()]: data.result?.totalElements || 0 
-          };
+      try {
+        const statusToFetch = statusFilter || null;
+        const params = new URLSearchParams();
+        params.append("page", 0);
+        params.append("size", 1);
+        
+        if (statusToFetch) {
+          params.append("status", statusToFetch);
         }
-      });
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    }
-  };
-  
-  fetchStats();
-}, [statusFilter, debouncedSearchTerm, fromDate, toDate]);
+        if (debouncedSearchTerm && debouncedSearchTerm.trim() !== "") {
+          params.append("keyword", debouncedSearchTerm.trim());
+        }
+        if (fromDate) {
+          params.append("fromDate", fromDate);
+        }
+        if (toDate) {
+          params.append("toDate", toDate);
+        }
+        
+        const res = await fetch(
+          `${VITE_API_URL}/api/orders/search?${params.toString()}`,
+          { headers }
+        );
+        const data = await res.json();
+        
+        setOrderStats(prev => {
+          if (statusToFetch === null) {
+            return { ...prev, total: data.result?.totalElements || 0 };
+          } else {
+            return { 
+              ...prev, 
+              [statusToFetch.toLowerCase()]: data.result?.totalElements || 0 
+            };
+          }
+        });
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+    
+    fetchStats();
+  }, [statusFilter, debouncedSearchTerm, fromDate, toDate]);
+
   // Handle messages
   useEffect(() => {
     if (error) {
@@ -242,6 +200,20 @@ const AdminOrders = () => {
       );
     }
   }, [error, success, dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm, fromDate, toDate]);
+
+  // Hàm xem chi tiết đơn hàng
+  const handleViewOrderDetail = async (orderId) => {
+    setIsLoadingDetail(true);
+    try {
+      const orderDetail = await fetchOrderDetail(orderId);
+      setSelectedOrder(orderDetail);
+      setShowDetailModal(true);
+    } catch (error) {
+      toast.error("Không thể tải chi tiết đơn hàng: " + error.message);
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
 
   const handleStatusChange = (orderId, newStatus) => {
     if (
@@ -661,13 +633,15 @@ const AdminOrders = () => {
                         </td>
                         <td className="py-3 px-4">
                           <button
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setShowDetailModal(true);
-                            }}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                            onClick={() => handleViewOrderDetail(order.id)}
+                            disabled={isLoadingDetail}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <Eye className="w-5 h-5" />
+                            {isLoadingDetail && selectedOrder?.id === order.id ? (
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                            ) : (
+                              <Eye className="w-5 h-5" />
+                            )}
                           </button>
                         </td>
                       </tr>
@@ -713,7 +687,10 @@ const AdminOrders = () => {
                   Chi tiết đơn hàng #{selectedOrder.id}
                 </h2>
                 <button
-                  onClick={() => setShowDetailModal(false)}
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedOrder(null);
+                  }}
                   className="text-gray-400 hover:text-gray-600 text-2xl"
                 >
                   <X className="w-6 h-6" />
@@ -776,7 +753,7 @@ const AdminOrders = () => {
                     >
                       <div className="flex items-center space-x-4">
                         <img
-                          src={`${VITE_API_URL}/${item.imageUrl}`}
+                          src={item.imageUrl}
                           alt={item.productName}
                           className="w-16 h-16 object-cover rounded"
                           onError={(e) => {
@@ -789,11 +766,19 @@ const AdminOrders = () => {
                           <p className="text-sm text-gray-600">
                             {item.color} / {item.size} - x{item.quantity}
                           </p>
+                          <p className="text-sm text-gray-500">
+                            SKU: {item.productSku}
+                          </p>
                         </div>
                       </div>
-                      <span className="font-medium">
-                        {formatPrice(item.totalPrice)}
-                      </span>
+                      <div className="text-right">
+                        <div className="font-medium">
+                          {formatPrice(item.unitPrice)} x {item.quantity}
+                        </div>
+                        <div className="font-bold text-lg">
+                          {formatPrice(item.totalPrice)}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -815,7 +800,7 @@ const AdminOrders = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Phí vận chuyển:</span>
-                    <span>{formatPrice(selectedOrder.shippingFee)}</span>
+                    <span>{formatPrice(selectedOrder.shippingFeeOriginal)}</span>
                   </div>
                   {selectedOrder.shippingDiscount > 0 && (
                     <div className="flex justify-between text-green-600">
@@ -866,6 +851,52 @@ const AdminOrders = () => {
                       {selectedOrder.payment.transactionId}
                     </p>
                   )}
+                </div>
+              </div>
+
+              {/* Reward Points */}
+              {(selectedOrder.rewardPointsUsed !== null || selectedOrder.rewardPointsEarned !== null) && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">
+                    Điểm thưởng
+                  </h3>
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    {selectedOrder.rewardPointsUsed !== null && (
+                      <div className="flex justify-between">
+                        <span>Điểm đã sử dụng:</span>
+                        <span className="text-red-600">-{selectedOrder.rewardPointsUsed} điểm</span>
+                      </div>
+                    )}
+                    {selectedOrder.rewardPointsEarned !== null && (
+                      <div className="flex justify-between">
+                        <span>Điểm tích lũy từ đơn:</span>
+                        <span className="text-green-600">+{selectedOrder.rewardPointsEarned} điểm</span>
+                      </div>
+                    )}
+                    {selectedOrder.userRemainingRewardPoints !== null && (
+                      <div className="flex justify-between font-medium">
+                        <span>Điểm còn lại của khách hàng:</span>
+                        <span>{selectedOrder.userRemainingRewardPoints} điểm</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Dates */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">
+                  Thời gian
+                </h3>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <p>
+                    <span className="font-medium">Thời gian đặt:</span>{" "}
+                    {formatDate(selectedOrder.createdAt)}
+                  </p>
+                  <p>
+                    <span className="font-medium">Cập nhật lần cuối:</span>{" "}
+                    {formatDate(selectedOrder.updatedAt)}
+                  </p>
                 </div>
               </div>
             </div>
