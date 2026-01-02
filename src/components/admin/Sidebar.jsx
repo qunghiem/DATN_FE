@@ -12,6 +12,7 @@ import {
   ChatBubbleLeftRightIcon,
   ChevronRightIcon,
 } from "@heroicons/react/24/outline";
+import { ShieldCheckIcon, UserCircleIcon, CogIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 
 const Sidebar = () => {
   const menuItems = [
@@ -32,7 +33,10 @@ const Sidebar = () => {
       <div className="p-6 border-b border-gray-700">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-            <span className="font-bold text-lg">QM</span>
+            {/* Chọn 1 trong các icon dưới đây */}
+            <ShieldCheckIcon className="w-6 h-6 text-white" />
+            {/* <CogIcon className="w-6 h-6 text-white" /> */}
+            {/* <LockClosedIcon className="w-6 h-6 text-white" /> */}
           </div>
           <div>
             <h1 className="font-bold text-xl bg-gradient-to-r from-blue-400 to-purple-300 bg-clip-text text-transparent">
@@ -60,7 +64,11 @@ const Sidebar = () => {
               }
             >
               <div className="flex items-center space-x-3">
-                <div className={`p-2 rounded-lg ${item.path === "/admin" ? "bg-blue-500/20" : "bg-gray-800/50"}`}>
+                <div
+                  className={`p-2 rounded-lg ${
+                    item.path === "/admin" ? "bg-gray-800/50" : "bg-gray-800/50"
+                  }`}
+                >
                   <item.icon className="w-5 h-5" />
                 </div>
                 <span className="font-medium">{item.name}</span>
