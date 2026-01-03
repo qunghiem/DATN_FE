@@ -636,11 +636,11 @@ const Cart = () => {
 
   // Lọc voucher theo loại
   const productVouchers = activeVouchers.filter(
-    (v) => v.discountType !== "FREESHIP"
-  );
-  const shippingVouchers = activeVouchers.filter(
-    (v) => v.discountType === "FREESHIP"
-  );
+  (v) => v.discountType !== "FREESHIP" && v.remainingUses > 0
+);
+const shippingVouchers = activeVouchers.filter(
+  (v) => v.discountType === "FREESHIP" && v.remainingUses > 0
+);
 
   if (isLoading && cartItems.length === 0) {
     return (
