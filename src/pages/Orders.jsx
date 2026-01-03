@@ -415,7 +415,8 @@ const Orders = () => {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (order) =>
-          order.id?.toLowerCase().includes(query) ||
+          // order.id?.toLowerCase().includes(query) ||
+        order.id?.toString().toLowerCase().includes(query) ||
           (order.items &&
             order.items.length > 0 &&
             order.items.some((item) =>
@@ -595,9 +596,7 @@ const Orders = () => {
                       {order.items && order.items.length > 0 ? (
                         order.items.map((item, index) => (
                           <div
-                            key={`${order.id}-${item.productId}-${
-                              item.variantId || index
-                            }`}
+                             key={item.id || `${order.id}-${item.productId}-${item.variantId}-${Math.random()}`}
                             className="flex gap-4 pb-3 border-b border-gray-100 last:border-0"
                           >
                             <div
