@@ -43,14 +43,13 @@ const useDebounce = (value, delay) => {
 const fetchOrderDetail = async (orderId) => {
   const token = localStorage.getItem("access_token");
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  
+
   try {
-    const response = await fetch(
-      `${VITE_API_URL}/api/orders/${orderId}`,
-      { headers }
-    );
+    const response = await fetch(`${VITE_API_URL}/api/orders/${orderId}`, {
+      headers,
+    });
     const data = await response.json();
-    
+
     if (data.code === 1000) {
       return data.result;
     } else {
@@ -91,7 +90,6 @@ const AdminOrders = () => {
     confirmed: 0,
     shipped: 0,
     delivered: 0,
-    cancelled: 0,
   });
 
   // Debounce search term
@@ -104,16 +102,16 @@ const AdminOrders = () => {
     { id: "CONFIRMED", name: "Xác nhận", icon: CheckCircle, color: "blue" },
     { id: "SHIPPED", name: "Đang giao", icon: Truck, color: "purple" },
     { id: "DELIVERED", name: "Đã giao", icon: CheckCircle, color: "green" },
-    { id: "CANCELLED", name: "Hủy", icon: XCircle, color: "red" },
+    // { id: "CANCELLED", name: "Hủy", icon: XCircle, color: "red" },
   ];
 
   // Valid status transitions
   const validTransitions = {
-    PENDING: ["CONFIRMED", "CANCELLED"],
-    CONFIRMED: ["SHIPPED", "CANCELLED"],
+    PENDING: ["CONFIRMED"],
+    CONFIRMED: ["SHIPPED"],
     SHIPPED: ["DELIVERED"],
     DELIVERED: [],
-    CANCELLED: [],
+    // CANCELLED: [],
   };
 
   // Fetch orders khi component mount hoặc khi filter/search thay đổi
@@ -128,55 +126,43 @@ const AdminOrders = () => {
         toDate: toDate || null,
       })
     );
-  }, [dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm, fromDate, toDate]);
+  }, [
+    dispatch,
+    currentPage,
+    pageSize,
+    statusFilter,
+    debouncedSearchTerm,
+    fromDate,
+    toDate,
+  ]);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const token = localStorage.getItem("access_token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const fetchStats = async () => {
+    try {
+      const stats = await fetchOrderStats({
+        from: fromDate ? `${fromDate}T00:00:00` : null,
+        to: toDate ? `${toDate}T23:59:59` : null
+      });
       
-      try {
-        const statusToFetch = statusFilter || null;
-        const params = new URLSearchParams();
-        params.append("page", 0);
-        params.append("size", 1);
-        
-        if (statusToFetch) {
-          params.append("status", statusToFetch);
-        }
-        if (debouncedSearchTerm && debouncedSearchTerm.trim() !== "") {
-          params.append("keyword", debouncedSearchTerm.trim());
-        }
-        if (fromDate) {
-          params.append("fromDate", fromDate);
-        }
-        if (toDate) {
-          params.append("toDate", toDate);
-        }
-        
-        const res = await fetch(
-          `${VITE_API_URL}/api/orders/search?${params.toString()}`,
-          { headers }
-        );
-        const data = await res.json();
-        
-        setOrderStats(prev => {
-          if (statusToFetch === null) {
-            return { ...prev, total: data.result?.totalElements || 0 };
-          } else {
-            return { 
-              ...prev, 
-              [statusToFetch.toLowerCase()]: data.result?.totalElements || 0 
-            };
-          }
+      // Cập nhật state với dữ liệu từ API
+      if (stats) {
+        setOrderStats({
+          total: stats.total || 0,
+          pending: stats.pending || 0,
+          confirmed: stats.confirmed || 0,
+          shipped: stats.shipped || 0,
+          delivered: stats.delivered || 0,
+          // cancelled: stats.cancelled || 0
         });
-      } catch (error) {
-        console.error("Error fetching stats:", error);
       }
-    };
-    
-    fetchStats();
-  }, [statusFilter, debouncedSearchTerm, fromDate, toDate]);
+    } catch (error) {
+      console.error("Error fetching order stats:", error);
+      toast.error("Không thể tải thống kê đơn hàng");
+    }
+  };
+  
+  fetchStats();
+}, [statusFilter, fromDate, toDate]); // Có thể bỏ debouncedSearchTerm nếu API không hỗ trợ search
 
   // Handle messages
   useEffect(() => {
@@ -199,7 +185,17 @@ const AdminOrders = () => {
         })
       );
     }
-  }, [error, success, dispatch, currentPage, pageSize, statusFilter, debouncedSearchTerm, fromDate, toDate]);
+  }, [
+    error,
+    success,
+    dispatch,
+    currentPage,
+    pageSize,
+    statusFilter,
+    debouncedSearchTerm,
+    fromDate,
+    toDate,
+  ]);
 
   // Hàm xem chi tiết đơn hàng
   const handleViewOrderDetail = async (orderId) => {
@@ -229,9 +225,9 @@ const AdminOrders = () => {
 
   const handlePageChange = (newPage) => {
     dispatch(
-      fetchAllOrders({ 
-        page: newPage, 
-        size: pageSize, 
+      fetchAllOrders({
+        page: newPage,
+        size: pageSize,
         status: statusFilter || null,
         keyword: debouncedSearchTerm,
         fromDate: fromDate || null,
@@ -244,9 +240,9 @@ const AdminOrders = () => {
     setStatusFilter(status);
     dispatch(setFilterStatus(status));
     dispatch(
-      fetchAllOrders({ 
-        page: 0, 
-        size: pageSize, 
+      fetchAllOrders({
+        page: 0,
+        size: pageSize,
         status: status || null,
         keyword: debouncedSearchTerm,
         fromDate: fromDate || null,
@@ -267,9 +263,9 @@ const AdminOrders = () => {
       return;
     }
     dispatch(
-      fetchAllOrders({ 
-        page: 0, 
-        size: pageSize, 
+      fetchAllOrders({
+        page: 0,
+        size: pageSize,
         status: statusFilter || null,
         keyword: debouncedSearchTerm,
         fromDate: fromDate || null,
@@ -282,9 +278,9 @@ const AdminOrders = () => {
     setFromDate("");
     setToDate("");
     dispatch(
-      fetchAllOrders({ 
-        page: 0, 
-        size: pageSize, 
+      fetchAllOrders({
+        page: 0,
+        size: pageSize,
         status: statusFilter || null,
         keyword: debouncedSearchTerm,
         fromDate: null,
@@ -299,7 +295,7 @@ const AdminOrders = () => {
       CONFIRMED: "bg-blue-100 text-blue-700 border-blue-200",
       SHIPPED: "bg-purple-100 text-purple-700 border-purple-200",
       DELIVERED: "bg-green-100 text-green-700 border-green-200",
-      CANCELLED: "bg-red-100 text-red-700 border-red-200",
+      // CANCELLED: "bg-red-100 text-red-700 border-red-200",
     };
     return colors[status] || "bg-gray-100 text-gray-700 border-gray-200";
   };
@@ -323,6 +319,43 @@ const AdminOrders = () => {
     const minutes = date.getMinutes().toString().padStart(2, "0");
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
+// lấy ra số lượng đơn hàng tương ứng với mỗi trạng thái
+  const fetchOrderStats = async (params = {}) => {
+    const token = localStorage.getItem("access_token");
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+    try {
+      const queryParams = new URLSearchParams();
+
+      // Thêm tham số ngày tháng nếu có
+      if (params.from) {
+        queryParams.append("from", params.from);
+      }
+      if (params.to) {
+        queryParams.append("to", params.to);
+      }
+
+      const response = await fetch(
+        `${VITE_API_URL}/api/orders/dashboard-stats?${queryParams.toString()}`,
+        { headers }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.code === 1000) {
+        return data.result;
+      } else {
+        throw new Error(data.message || "Có lỗi xảy ra khi lấy thống kê");
+      }
+    } catch (error) {
+      console.error("Error fetching order stats:", error);
+      throw error;
+    }
+  };
 
   return (
     <div>
@@ -332,71 +365,60 @@ const AdminOrders = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Tổng đơn</p>
-              <p className="text-2xl font-bold text-gray-800">{orderStats.total}</p>
-            </div>
-            <Package className="w-8 h-8 text-gray-400" />
-          </div>
-        </div>
-        <div className="bg-yellow-50 rounded-lg shadow-md p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Chờ xác nhận</p>
-              <p className="text-2xl font-bold text-yellow-700">
-                {orderStats.pending}
-              </p>
-            </div>
-            <Clock className="w-8 h-8 text-yellow-500" />
-          </div>
-        </div>
-        <div className="bg-blue-50 rounded-lg shadow-md p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Đã xác nhận</p>
-              <p className="text-2xl font-bold text-blue-700">
-                {orderStats.confirmed}
-              </p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-blue-500" />
-          </div>
-        </div>
-        <div className="bg-purple-50 rounded-lg shadow-md p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Đang giao</p>
-              <p className="text-2xl font-bold text-purple-700">
-                {orderStats.shipped}
-              </p>
-            </div>
-            <Truck className="w-8 h-8 text-purple-500" />
-          </div>
-        </div>
-        <div className="bg-green-50 rounded-lg shadow-md p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Đã giao</p>
-              <p className="text-2xl font-bold text-green-700">
-                {orderStats.delivered}
-              </p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-green-500" />
-          </div>
-        </div>
-        <div className="bg-red-50 rounded-lg shadow-md p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Đã hủy</p>
-              <p className="text-2xl font-bold text-red-700">
-                {orderStats.cancelled}
-              </p>
-            </div>
-            <XCircle className="w-8 h-8 text-red-500" />
-          </div>
-        </div>
+  <div className="bg-white rounded-lg shadow-md p-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-gray-600 text-sm">Tổng đơn</p>
+        <p className="text-2xl font-bold text-gray-800">{orderStats.total}</p>
       </div>
+      <Package className="w-8 h-8 text-gray-400" />
+    </div>
+  </div>
+  <div className="bg-yellow-50 rounded-lg shadow-md p-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-gray-600 text-sm">Chờ xác nhận</p>
+        <p className="text-2xl font-bold text-yellow-700">
+          {orderStats.pending}
+        </p>
+      </div>
+      <Clock className="w-8 h-8 text-yellow-500" />
+    </div>
+  </div>
+  <div className="bg-blue-50 rounded-lg shadow-md p-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-gray-600 text-sm">Đã xác nhận</p>
+        <p className="text-2xl font-bold text-blue-700">
+          {orderStats.confirmed}
+        </p>
+      </div>
+      <CheckCircle className="w-8 h-8 text-blue-500" />
+    </div>
+  </div>
+  <div className="bg-purple-50 rounded-lg shadow-md p-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-gray-600 text-sm">Đang giao</p>
+        <p className="text-2xl font-bold text-purple-700">
+          {orderStats.shipped}
+        </p>
+      </div>
+      <Truck className="w-8 h-8 text-purple-500" />
+    </div>
+  </div>
+  <div className="bg-green-50 rounded-lg shadow-md p-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-gray-600 text-sm">Đã giao</p>
+        <p className="text-2xl font-bold text-green-700">
+          {orderStats.delivered}
+        </p>
+      </div>
+      <CheckCircle className="w-8 h-8 text-green-500" />
+    </div>
+  </div>
+</div>
 
       {/* Filter and Search */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -447,7 +469,11 @@ const AdminOrders = () => {
             >
               <Calendar className="w-5 h-5" />
               <span>Lọc theo ngày</span>
-              <ChevronRight className={`w-4 h-4 transition-transform ${showDateFilter ? 'rotate-90' : ''}`} />
+              <ChevronRight
+                className={`w-4 h-4 transition-transform ${
+                  showDateFilter ? "rotate-90" : ""
+                }`}
+              />
             </button>
             {(fromDate || toDate) && (
               <button
@@ -458,7 +484,7 @@ const AdminOrders = () => {
               </button>
             )}
           </div>
-          
+
           {showDateFilter && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
               <div>
@@ -506,12 +532,12 @@ const AdminOrders = () => {
             )}
             {fromDate && (
               <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                Từ: {new Date(fromDate).toLocaleDateString('vi-VN')}
+                Từ: {new Date(fromDate).toLocaleDateString("vi-VN")}
               </span>
             )}
             {toDate && (
               <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                Đến: {new Date(toDate).toLocaleDateString('vi-VN')}
+                Đến: {new Date(toDate).toLocaleDateString("vi-VN")}
               </span>
             )}
           </div>
@@ -560,9 +586,9 @@ const AdminOrders = () => {
                         colSpan="7"
                         className="text-center py-12 text-gray-500"
                       >
-                        {searchTerm || fromDate || toDate ? 
-                          "Không tìm thấy đơn hàng nào với bộ lọc đã chọn" : 
-                          "Không có đơn hàng nào"}
+                        {searchTerm || fromDate || toDate
+                          ? "Không tìm thấy đơn hàng nào với bộ lọc đã chọn"
+                          : "Không có đơn hàng nào"}
                       </td>
                     </tr>
                   ) : (
@@ -591,7 +617,9 @@ const AdminOrders = () => {
                                 : "bg-yellow-100 text-yellow-700"
                             }`}
                           >
-                            {order.paymentMethod === "COD" ? "COD" : "Đã thanh toán"}
+                            {order.paymentMethod === "COD"
+                              ? "COD"
+                              : "Đã thanh toán"}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -609,23 +637,28 @@ const AdminOrders = () => {
                                 value=""
                                 onChange={(e) => {
                                   if (e.target.value) {
-                                    handleStatusChange(order.id, e.target.value);
+                                    handleStatusChange(
+                                      order.id,
+                                      e.target.value
+                                    );
                                     e.target.value = "";
                                   }
                                 }}
                                 className={`px-3 py-1 rounded-full text-xs font-medium border outline-none cursor-pointer appearance-none ${getStatusColor(
                                   order.status
                                 )}`}
-                                style={{ paddingRight: '24px' }}
+                                style={{ paddingRight: "24px" }}
                               >
                                 <option value="" hidden>
                                   {getStatusLabel(order.status)}
                                 </option>
-                                {validTransitions[order.status]?.map((status) => (
-                                  <option key={status} value={status}>
-                                    {getStatusLabel(status)}
-                                  </option>
-                                ))}
+                                {validTransitions[order.status]?.map(
+                                  (status) => (
+                                    <option key={status} value={status}>
+                                      {getStatusLabel(status)}
+                                    </option>
+                                  )
+                                )}
                               </select>
                               <ChevronRight className="w-3 h-3 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none rotate-90" />
                             </div>
@@ -637,7 +670,8 @@ const AdminOrders = () => {
                             disabled={isLoadingDetail}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {isLoadingDetail && selectedOrder?.id === order.id ? (
+                            {isLoadingDetail &&
+                            selectedOrder?.id === order.id ? (
                               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                             ) : (
                               <Eye className="w-5 h-5" />
@@ -654,7 +688,8 @@ const AdminOrders = () => {
             {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 border-t">
               <div className="text-sm text-gray-600">
-                Trang {currentPage + 1} / {totalPages} - Hiển thị {orders.length} / {totalElements} đơn hàng
+                Trang {currentPage + 1} / {totalPages} - Hiển thị{" "}
+                {orders.length} / {totalElements} đơn hàng
               </div>
               <div className="flex gap-2">
                 <button
@@ -800,7 +835,9 @@ const AdminOrders = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Phí vận chuyển:</span>
-                    <span>{formatPrice(selectedOrder.shippingFeeOriginal)}</span>
+                    <span>
+                      {formatPrice(selectedOrder.shippingFeeOriginal)}
+                    </span>
                   </div>
                   {selectedOrder.shippingDiscount > 0 && (
                     <div className="flex justify-between text-green-600">
@@ -855,28 +892,33 @@ const AdminOrders = () => {
               </div>
 
               {/* Reward Points */}
-              {(selectedOrder.rewardPointsUsed !== null || selectedOrder.rewardPointsEarned !== null) && (
+              {(selectedOrder.rewardPointsUsed !== null ||
+                selectedOrder.rewardPointsEarned !== null) && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">
-                    Điểm thưởng
-                  </h3>
+                  <h3 className="text-lg font-semibold mb-3">Điểm thưởng</h3>
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                     {selectedOrder.rewardPointsUsed !== null && (
                       <div className="flex justify-between">
                         <span>Điểm đã sử dụng:</span>
-                        <span className="text-red-600">-{selectedOrder.rewardPointsUsed} điểm</span>
+                        <span className="text-red-600">
+                          -{selectedOrder.rewardPointsUsed} điểm
+                        </span>
                       </div>
                     )}
                     {selectedOrder.rewardPointsEarned !== null && (
                       <div className="flex justify-between">
                         <span>Điểm tích lũy từ đơn:</span>
-                        <span className="text-green-600">+{selectedOrder.rewardPointsEarned} điểm</span>
+                        <span className="text-green-600">
+                          +{selectedOrder.rewardPointsEarned} điểm
+                        </span>
                       </div>
                     )}
                     {selectedOrder.userRemainingRewardPoints !== null && (
                       <div className="flex justify-between font-medium">
                         <span>Điểm còn lại của khách hàng:</span>
-                        <span>{selectedOrder.userRemainingRewardPoints} điểm</span>
+                        <span>
+                          {selectedOrder.userRemainingRewardPoints} điểm
+                        </span>
                       </div>
                     )}
                   </div>
@@ -885,9 +927,7 @@ const AdminOrders = () => {
 
               {/* Dates */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">
-                  Thời gian
-                </h3>
+                <h3 className="text-lg font-semibold mb-3">Thời gian</h3>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   <p>
                     <span className="font-medium">Thời gian đặt:</span>{" "}
