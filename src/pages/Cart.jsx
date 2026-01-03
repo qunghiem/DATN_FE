@@ -52,7 +52,9 @@ const Cart = () => {
   const selectedItems = useSelector(selectSelectedItems);
   const subtotal = useSelector(selectCartSubtotal);
   const { error, isLoading } = useSelector((state) => state.cart);
-  const { isAuthenticated, user, accessToken } = useSelector((state) => state.auth);
+  const { isAuthenticated, user, accessToken } = useSelector(
+    (state) => state.auth
+  );
 
   // Voucher state
   const activeVouchers = useSelector(selectActiveVouchers);
@@ -74,7 +76,8 @@ const Cart = () => {
   const [productVoucherCode, setProductVoucherCode] = useState("");
   const [shippingVoucherCode, setShippingVoucherCode] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [showRemoveSelectedConfirm, setShowRemoveSelectedConfirm] = useState(false);
+  const [showRemoveSelectedConfirm, setShowRemoveSelectedConfirm] =
+    useState(false);
   const [showProductVoucherList, setShowProductVoucherList] = useState(false);
   const [showShippingVoucherList, setShowShippingVoucherList] = useState(false);
 
@@ -86,14 +89,15 @@ const Cart = () => {
       if (isAuthenticated) {
         try {
           // Ưu tiên lấy từ Redux state, sau đó mới tìm trong localStorage
-          let token = accessToken || 
-                      localStorage.getItem("access_token") ||
-                      localStorage.getItem("accessToken") || 
-                      localStorage.getItem("token") ||
-                      sessionStorage.getItem("access_token") ||
-                      sessionStorage.getItem("accessToken") ||
-                      sessionStorage.getItem("token");
-          
+          let token =
+            accessToken ||
+            localStorage.getItem("access_token") ||
+            localStorage.getItem("accessToken") ||
+            localStorage.getItem("token") ||
+            sessionStorage.getItem("access_token") ||
+            sessionStorage.getItem("accessToken") ||
+            sessionStorage.getItem("token");
+
           console.log("Token found:", token ? "Yes" : "No");
           console.log("Token source:", accessToken ? "Redux" : "Storage");
 
@@ -381,15 +385,19 @@ const Cart = () => {
 
       if (response.data.code === 0) {
         const voucher = response.data.result;
-        
+
         if (voucher.discountType === "FREESHIP") {
-          toast.error("Đây là mã giảm ship, vui lòng nhập vào ô phí vận chuyển!");
+          toast.error(
+            "Đây là mã giảm ship, vui lòng nhập vào ô phí vận chuyển!"
+          );
           return;
         }
 
         if (subtotal < voucher.minOrderValue) {
           toast.error(
-            `Đơn hàng tối thiểu ${formatPrice(voucher.minOrderValue)} để sử dụng mã này!`
+            `Đơn hàng tối thiểu ${formatPrice(
+              voucher.minOrderValue
+            )} để sử dụng mã này!`
           );
           return;
         }
@@ -423,7 +431,7 @@ const Cart = () => {
 
       if (response.data.code === 0) {
         const voucher = response.data.result;
-        
+
         if (voucher.discountType !== "FREESHIP") {
           toast.error("Mã này không phải là mã giảm ship!");
           return;
@@ -431,7 +439,9 @@ const Cart = () => {
 
         if (subtotal < voucher.minOrderValue) {
           toast.error(
-            `Đơn hàng tối thiểu ${formatPrice(voucher.minOrderValue)} để sử dụng mã này!`
+            `Đơn hàng tối thiểu ${formatPrice(
+              voucher.minOrderValue
+            )} để sử dụng mã này!`
           );
           return;
         }
@@ -442,7 +452,9 @@ const Cart = () => {
         toast.success("Đã áp dụng mã giảm ship!");
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Mã giảm ship không hợp lệ!");
+      toast.error(
+        error.response?.data?.message || "Mã giảm ship không hợp lệ!"
+      );
     }
   };
 
@@ -459,11 +471,11 @@ const Cart = () => {
     }
 
     setIsUsingPoints(!isUsingPoints);
-    
+
     if (!isUsingPoints) {
       const afterVoucherDiscount = subtotal - productDiscount;
       const maxPointsCanUse = Math.min(userRewardPoints, afterVoucherDiscount);
-      
+
       if (maxPointsCanUse > 0) {
         toast.success(`Đang sử dụng ${maxPointsCanUse.toLocaleString()} điểm!`);
       } else {
@@ -489,7 +501,9 @@ const Cart = () => {
 
     if (subtotal < voucher.minOrderValue) {
       toast.error(
-        `Đơn hàng tối thiểu ${formatPrice(voucher.minOrderValue)} để sử dụng mã này!`
+        `Đơn hàng tối thiểu ${formatPrice(
+          voucher.minOrderValue
+        )} để sử dụng mã này!`
       );
       return;
     }
@@ -512,7 +526,9 @@ const Cart = () => {
 
     if (subtotal < voucher.minOrderValue) {
       toast.error(
-        `Đơn hàng tối thiểu ${formatPrice(voucher.minOrderValue)} để sử dụng mã này!`
+        `Đơn hàng tối thiểu ${formatPrice(
+          voucher.minOrderValue
+        )} để sử dụng mã này!`
       );
       return;
     }
@@ -610,7 +626,9 @@ const Cart = () => {
       case "FIXED_AMOUNT":
         return `Giảm ${formatPrice(voucher.discountValue)}`;
       case "FREESHIP":
-        return `Miễn phí vận chuyển tối đa ${formatPrice(voucher.discountValue)}`;
+        return `Miễn phí vận chuyển tối đa ${formatPrice(
+          voucher.discountValue
+        )}`;
       default:
         return "";
     }
@@ -660,7 +678,8 @@ const Cart = () => {
 
   const shippingFee = 30000;
   const finalShipping = shippingFee - shippingDiscount;
-  const finalTotal = subtotal - productDiscount - pointsDiscount + finalShipping;
+  const finalTotal =
+    subtotal - productDiscount - pointsDiscount + finalShipping;
   const totalSavings = productDiscount + shippingDiscount + pointsDiscount;
 
   return (
@@ -787,9 +806,33 @@ const Cart = () => {
                           >
                             <Minus className="w-4 h-4" />
                           </button>
-                          <span className="px-4 py-1 font-medium min-w-[40px] text-center">
+                          {/* <span className="px-4 py-1 font-medium min-w-[40px] text-center">
                             {item.quantity}
-                          </span>
+                          </span> */}
+                          <input
+                            key={`quantity-${item.id}-${item.quantity}`} // Thêm key này
+                            type="number"
+                            defaultValue={item.quantity}
+                            onBlur={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              if (value !== item.quantity) {
+                                handleQuantityChange(
+                                  item.id,
+                                  Math.max(1, value)
+                                );
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.target.blur();
+                              }
+                            }}
+                            className="w-12 px-2 py-1 text-center border-0 focus:outline-none focus:ring-1 focus:ring-blue-500
+              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none 
+              [&::-webkit-inner-spin-button]:appearance-none"
+                            min="1"
+                            disabled={isLoading}
+                          />
                           <button
                             onClick={() =>
                               handleQuantityChange(item.id, item.quantity + 1)
@@ -865,7 +908,8 @@ const Cart = () => {
                       <button
                         onClick={handleApplyProductVoucher}
                         disabled={
-                          !productVoucherCode.trim() || selectedItems.length === 0
+                          !productVoucherCode.trim() ||
+                          selectedItems.length === 0
                         }
                         className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
                       >
@@ -875,7 +919,9 @@ const Cart = () => {
 
                     {productVouchers.length > 0 && (
                       <button
-                        onClick={() => setShowProductVoucherList(!showProductVoucherList)}
+                        onClick={() =>
+                          setShowProductVoucherList(!showProductVoucherList)
+                        }
                         className="mt-2 text-sm text-[#3A6FB5] hover:text-[#2E5C99] flex items-center gap-1"
                       >
                         <Gift className="w-4 h-4" />
@@ -963,7 +1009,8 @@ const Cart = () => {
                       <button
                         onClick={handleApplyShippingVoucher}
                         disabled={
-                          !shippingVoucherCode.trim() || selectedItems.length === 0
+                          !shippingVoucherCode.trim() ||
+                          selectedItems.length === 0
                         }
                         className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
                       >
@@ -973,7 +1020,9 @@ const Cart = () => {
 
                     {shippingVouchers.length > 0 && (
                       <button
-                        onClick={() => setShowShippingVoucherList(!showShippingVoucherList)}
+                        onClick={() =>
+                          setShowShippingVoucherList(!showShippingVoucherList)
+                        }
                         className="mt-2 text-sm text-[#3A6FB5] hover:text-[#2E5C99] flex items-center gap-1"
                       >
                         <Gift className="w-4 h-4" />
@@ -1051,11 +1100,11 @@ const Cart = () => {
                   </span>
                 </label>
 
-                <div 
+                <div
                   onClick={handleTogglePoints}
                   className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    isUsingPoints 
-                      ? "bg-blue-50 border-blue-500" 
+                    isUsingPoints
+                      ? "bg-blue-50 border-blue-500"
                       : "bg-gray-50 border-gray-200 hover:border-gray-300"
                   } ${
                     selectedItems.length === 0 || userRewardPoints === 0
@@ -1064,31 +1113,38 @@ const Cart = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`relative w-12 h-6 rounded-full transition-colors ${
-                      isUsingPoints ? "bg-blue-500" : "bg-gray-300"
-                    }`}>
-                      <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                        isUsingPoints ? "translate-x-6" : "translate-x-0"
-                      }`}></div>
+                    <div
+                      className={`relative w-12 h-6 rounded-full transition-colors ${
+                        isUsingPoints ? "bg-blue-500" : "bg-gray-300"
+                      }`}
+                    >
+                      <div
+                        className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                          isUsingPoints ? "translate-x-6" : "translate-x-0"
+                        }`}
+                      ></div>
                     </div>
                     <div>
-                      <p className={`text-sm font-medium ${
-                        isUsingPoints ? "text-blue-700" : "text-gray-700"
-                      }`}>
-                        {isUsingPoints ? "Đang sử dụng điểm" : "Sử dụng điểm tích lũy"}
+                      <p
+                        className={`text-sm font-medium ${
+                          isUsingPoints ? "text-blue-700" : "text-gray-700"
+                        }`}
+                      >
+                        {isUsingPoints
+                          ? "Đang sử dụng điểm"
+                          : "Sử dụng điểm tích lũy"}
                       </p>
                       {isUsingPoints && pointsToUse > 0 && (
                         <p className="text-xs text-blue-600 mt-1">
-                          {pointsToUse.toLocaleString()} điểm = -{formatPrice(pointsDiscount)}
+                          {pointsToUse.toLocaleString()} điểm = -
+                          {formatPrice(pointsDiscount)}
                         </p>
                       )}
                     </div>
                   </div>
-                  
+
                   {!isUsingPoints && (
-                    <span className="text-xs text-gray-500">
-                      Nhấn để bật
-                    </span>
+                    <span className="text-xs text-gray-500">Nhấn để bật</span>
                   )}
                 </div>
 
@@ -1100,7 +1156,9 @@ const Cart = () => {
 
                 {isUsingPoints && userRewardPoints > pointsToUse && (
                   <p className="text-xs text-amber-600 mt-2">
-                    ⚠️ Chỉ dùng được {pointsToUse.toLocaleString()}/{userRewardPoints.toLocaleString()} điểm (giới hạn bởi giá trị đơn hàng)
+                    ⚠️ Chỉ dùng được {pointsToUse.toLocaleString()}/
+                    {userRewardPoints.toLocaleString()} điểm (giới hạn bởi giá
+                    trị đơn hàng)
                   </p>
                 )}
               </div>
@@ -1145,7 +1203,9 @@ const Cart = () => {
                         </div>
                       </>
                     ) : (
-                      <span className="font-medium">{formatPrice(shippingFee)}</span>
+                      <span className="font-medium">
+                        {formatPrice(shippingFee)}
+                      </span>
                     )}
                   </div>
                 </div>
