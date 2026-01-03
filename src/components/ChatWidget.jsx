@@ -170,7 +170,7 @@ const ChatWidget = () => {
       {/* Chat Button - Fixed ở góc phải */}
       <button
         onClick={toggleChat}
-        className="fixed bottom-18 right-5 w-14 h-14 bg-sky-500 hover:bg-sky-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all z-50"
+        className="fixed bottom-18 right-5 w-14 h-14 bg-sky-500 hover:bg-sky-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all z-50 sm:w-14 sm:h-14"
       >
         {isOpen ? (
           <X className="w-6 h-6" />
@@ -188,7 +188,7 @@ const ChatWidget = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-32 right-6 w-96 h-[500px] bg-white rounded-lg shadow-2xl flex flex-col z-50 border border-gray-200">
+        <div className="fixed bottom-32 right-6 w-80 h-[450px] bg-white rounded-lg shadow-2xl flex flex-col z-50 border border-gray-200">
           {/* Header */}
           <div className="bg-sky-500 text-white p-4 rounded-t-lg flex items-center justify-between">
             <div className="flex items-center space-x-2">
