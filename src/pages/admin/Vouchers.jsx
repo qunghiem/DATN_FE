@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   fetchAllVouchers,
   createVoucher,
@@ -8,7 +8,7 @@ import {
   validateVoucher,
   updateExpiredVouchers,
   clearMessages,
-} from '../../features/admin/adminVouchersSlice';
+} from "../../features/admin/adminVouchersSlice";
 import {
   Plus,
   Edit,
@@ -22,32 +22,35 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-} from 'lucide-react';
-import { toast } from 'react-toastify';
+} from "lucide-react";
+import { toast } from "react-toastify";
 
 const Vouchers = () => {
   const dispatch = useDispatch();
-  const { vouchers = [], isLoading, error, success } = useSelector(
-    (state) => state.adminVouchers || {}
-  );
+  const {
+    vouchers = [],
+    isLoading,
+    error,
+    success,
+  } = useSelector((state) => state.adminVouchers || {});
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all'); // all, PERCENTAGE, FIXED_AMOUNT, FREESHIP
-  const [filterStatus, setFilterStatus] = useState('all'); // all, ACTIVE, INACTIVE
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all"); // all, PERCENTAGE, FIXED_AMOUNT, FREESHIP
+  const [filterStatus, setFilterStatus] = useState("all"); // all, ACTIVE, INACTIVE
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentVoucher, setCurrentVoucher] = useState(null);
   const [formData, setFormData] = useState({
-    code: '',
-    discountType: 'FIXED_AMOUNT',
-    discountValue: '',
-    maxDiscountValue: '',
-    minOrderValue: '',
-    usageLimit: '',
-    startDate: '',
-    endDate: '',
-    status: 'ACTIVE',
-    description: '',
+    code: "",
+    discountType: "FIXED_AMOUNT",
+    discountValue: "",
+    maxDiscountValue: "",
+    minOrderValue: "",
+    usageLimit: "",
+    startDate: "",
+    endDate: "",
+    status: "ACTIVE",
+    description: "",
   });
 
   useEffect(() => {
@@ -67,16 +70,16 @@ const Vouchers = () => {
 
   const resetForm = () => {
     setFormData({
-      code: '',
-      discountType: 'FIXED_AMOUNT',
-      discountValue: '',
-      maxDiscountValue: '',
-      minOrderValue: '',
-      usageLimit: '',
-      startDate: '',
-      endDate: '',
-      status: 'ACTIVE',
-      description: '',
+      code: "",
+      discountType: "FIXED_AMOUNT",
+      discountValue: "",
+      maxDiscountValue: "",
+      minOrderValue: "",
+      usageLimit: "",
+      startDate: "",
+      endDate: "",
+      status: "ACTIVE",
+      description: "",
     });
     setEditMode(false);
     setCurrentVoucher(null);
@@ -86,22 +89,22 @@ const Vouchers = () => {
     setEditMode(true);
     setCurrentVoucher(voucher);
     setFormData({
-      code: voucher.code || '',
-      discountType: voucher.discountType || 'FIXED_AMOUNT',
-      discountValue: voucher.discountValue || '',
-      maxDiscountValue: voucher.maxDiscountValue || '',
-      minOrderValue: voucher.minOrderValue || '',
-      usageLimit: voucher.usageLimit || '',
-      startDate: voucher.startDate ? voucher.startDate.split('T')[0] : '',
-      endDate: voucher.endDate ? voucher.endDate.split('T')[0] : '',
-      status: voucher.status || 'ACTIVE',
-      description: voucher.description || '',
+      code: voucher.code || "",
+      discountType: voucher.discountType || "FIXED_AMOUNT",
+      discountValue: voucher.discountValue || "",
+      maxDiscountValue: voucher.maxDiscountValue || "",
+      minOrderValue: voucher.minOrderValue || "",
+      usageLimit: voucher.usageLimit || "",
+      startDate: voucher.startDate ? voucher.startDate.split("T")[0] : "",
+      endDate: voucher.endDate ? voucher.endDate.split("T")[0] : "",
+      status: voucher.status || "ACTIVE",
+      description: voucher.description || "",
     });
     setShowModal(true);
   };
 
   const handleDelete = (id) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa voucher này?')) {
+    if (window.confirm("Bạn có chắc chắn muốn xóa voucher này?")) {
       dispatch(deleteVoucher(id));
     }
   };
@@ -111,23 +114,23 @@ const Vouchers = () => {
 
     // Validate
     if (!formData.code.trim()) {
-      toast.error('Vui lòng nhập mã voucher');
+      toast.error("Vui lòng nhập mã voucher");
       return;
     }
     if (!formData.discountValue || formData.discountValue <= 0) {
-      toast.error('Giá trị giảm giá phải lớn hơn 0');
+      toast.error("Giá trị giảm giá phải lớn hơn 0");
       return;
     }
     if (!formData.usageLimit || formData.usageLimit < 1) {
-      toast.error('Số lần sử dụng phải lớn hơn hoặc bằng 1');
+      toast.error("Số lần sử dụng phải lớn hơn hoặc bằng 1");
       return;
     }
     if (!formData.startDate || !formData.endDate) {
-      toast.error('Vui lòng chọn ngày bắt đầu và kết thúc');
+      toast.error("Vui lòng chọn ngày bắt đầu và kết thúc");
       return;
     }
     if (new Date(formData.endDate) <= new Date(formData.startDate)) {
-      toast.error('Ngày kết thúc phải sau ngày bắt đầu');
+      toast.error("Ngày kết thúc phải sau ngày bắt đầu");
       return;
     }
 
@@ -176,7 +179,7 @@ const Vouchers = () => {
   };
 
   const handleUpdateExpired = () => {
-    if (window.confirm('Cập nhật trạng thái các voucher đã hết hạn?')) {
+    if (window.confirm("Cập nhật trạng thái các voucher đã hết hạn?")) {
       dispatch(updateExpiredVouchers()).then(() => {
         dispatch(fetchAllVouchers());
       });
@@ -185,12 +188,12 @@ const Vouchers = () => {
 
   const getDiscountTypeLabel = (type) => {
     switch (type) {
-      case 'PERCENTAGE':
-        return 'Phần trăm';
-      case 'FIXED_AMOUNT':
-        return 'Số tiền cố định';
-      case 'FREESHIP':
-        return 'Miễn phí ship';
+      case "PERCENTAGE":
+        return "Phần trăm";
+      case "FIXED_AMOUNT":
+        return "Số tiền cố định";
+      case "FREESHIP":
+        return "Miễn phí ship";
       default:
         return type;
     }
@@ -198,18 +201,18 @@ const Vouchers = () => {
 
   const getDiscountDisplay = (voucher) => {
     switch (voucher.discountType) {
-      case 'PERCENTAGE':
+      case "PERCENTAGE":
         return `${voucher.discountValue}%${
           voucher.maxDiscountValue
             ? ` (tối đa ${voucher.maxDiscountValue.toLocaleString()}₫)`
-            : ''
+            : ""
         }`;
-      case 'FIXED_AMOUNT':
+      case "FIXED_AMOUNT":
         return `${voucher.discountValue.toLocaleString()}₫`;
-      case 'FREESHIP':
+      case "FREESHIP":
         return `Miễn phí ship (${voucher.discountValue.toLocaleString()}₫)`;
       default:
-        return 'N/A';
+        return "N/A";
     }
   };
 
@@ -218,9 +221,9 @@ const Vouchers = () => {
       voucher.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       voucher.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchType =
-      filterType === 'all' || voucher.discountType === filterType;
+      filterType === "all" || voucher.discountType === filterType;
     const matchStatus =
-      filterStatus === 'all' || voucher.status === filterStatus;
+      filterStatus === "all" || voucher.status === filterStatus;
     return matchSearch && matchType && matchStatus;
   });
 
@@ -276,7 +279,9 @@ const Vouchers = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 text-sm">Đang hoạt động</p>
-              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+              <p className="text-2xl font-bold text-green-600">
+                {stats.active}
+              </p>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
               <CheckCircle className="w-6 h-6 text-green-600" />
@@ -390,7 +395,9 @@ const Vouchers = () => {
                   <tr>
                     <td colSpan="8" className="text-center py-12">
                       <Ticket className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Không tìm thấy voucher nào</p>
+                      <p className="text-gray-500">
+                        Không tìm thấy voucher nào
+                      </p>
                     </td>
                   </tr>
                 ) : (
@@ -422,7 +429,7 @@ const Vouchers = () => {
                       <td className="py-3 px-4">
                         {voucher.minOrderValue > 0
                           ? `${voucher.minOrderValue.toLocaleString()}₫`
-                          : 'Không'}
+                          : "Không"}
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-sm">
@@ -443,11 +450,15 @@ const Vouchers = () => {
                       <td className="py-3 px-4 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-gray-600">
-                            {new Date(voucher.startDate).toLocaleDateString('vi-VN')}
+                            {new Date(voucher.startDate).toLocaleDateString(
+                              "vi-VN"
+                            )}
                           </span>
                           <span className="text-gray-400">đến</span>
                           <span className="text-gray-600">
-                            {new Date(voucher.endDate).toLocaleDateString('vi-VN')}
+                            {new Date(voucher.endDate).toLocaleDateString(
+                              "vi-VN"
+                            )}
                           </span>
                         </div>
                       </td>
@@ -456,13 +467,13 @@ const Vouchers = () => {
                           <span
                             className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                               voucher.isActive && !voucher.isExpired
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-700'
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-700"
                             }`}
                           >
-                            {voucher.status === 'ACTIVE'
-                              ? 'Hoạt động'
-                              : 'Không hoạt động'}
+                            {voucher.status === "ACTIVE"
+                              ? "Hoạt động"
+                              : "Không hoạt động"}
                           </span>
                           {voucher.isExpired && (
                             <span className="inline-block px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
@@ -473,13 +484,18 @@ const Vouchers = () => {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEdit(voucher)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit className="w-5 h-5" />
-                          </button>
+                          {/* Chỉ hiển thị icon chỉnh sửa khi voucher chưa hết hạn, còn lượt sử dụng và đang ACTIVE */}
+                          {!voucher.isExpired &&
+                            voucher.remainingUses > 0 &&
+                            voucher.status === "ACTIVE" && (
+                              <button
+                                onClick={() => handleEdit(voucher)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                                title="Chỉnh sửa"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                            )}
                           <button
                             onClick={() => handleDelete(voucher.id)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded transition"
@@ -501,8 +517,8 @@ const Vouchers = () => {
       {/* Total Count */}
       {filteredVouchers.length > 0 && (
         <div className="mt-4 text-sm text-gray-600">
-          Tổng số:{' '}
-          <span className="font-semibold">{filteredVouchers.length}</span>{' '}
+          Tổng số:{" "}
+          <span className="font-semibold">{filteredVouchers.length}</span>{" "}
           voucher
         </div>
       )}
@@ -543,7 +559,7 @@ const VoucherModal = ({
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
           <h2 className="text-2xl font-bold text-gray-800">
-            {editMode ? 'Chỉnh sửa voucher' : 'Thêm voucher mới'}
+            {editMode ? "Chỉnh sửa voucher" : "Thêm voucher mới"}
           </h2>
           <button
             onClick={onClose}
@@ -562,7 +578,9 @@ const VoucherModal = ({
             <input
               type="text"
               value={formData.code}
-              onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+              onChange={(e) =>
+                handleChange("code", e.target.value.toUpperCase())
+              }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none uppercase"
               placeholder="VD: GIAM50K, FREESHIP1"
               required
@@ -580,7 +598,7 @@ const VoucherModal = ({
             </label>
             <select
               value={formData.discountType}
-              onChange={(e) => handleChange('discountType', e.target.value)}
+              onChange={(e) => handleChange("discountType", e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
               required
             >
@@ -599,22 +617,22 @@ const VoucherModal = ({
               <input
                 type="number"
                 value={formData.discountValue}
-                onChange={(e) => handleChange('discountValue', e.target.value)}
+                onChange={(e) => handleChange("discountValue", e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
                 placeholder={
-                  formData.discountType === 'PERCENTAGE' ? '35' : '50000'
+                  formData.discountType === "PERCENTAGE" ? "35" : "50000"
                 }
                 required
                 min="0"
               />
               <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500">
-                {formData.discountType === 'PERCENTAGE' ? '%' : '₫'}
+                {formData.discountType === "PERCENTAGE" ? "%" : "₫"}
               </span>
             </div>
           </div>
 
           {/* Giảm tối đa (chỉ cho PERCENTAGE) */}
-          {formData.discountType === 'PERCENTAGE' && (
+          {formData.discountType === "PERCENTAGE" && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Giảm tối đa (₫)
@@ -623,7 +641,7 @@ const VoucherModal = ({
                 type="number"
                 value={formData.maxDiscountValue}
                 onChange={(e) =>
-                  handleChange('maxDiscountValue', e.target.value)
+                  handleChange("maxDiscountValue", e.target.value)
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
                 placeholder="50000"
@@ -640,7 +658,7 @@ const VoucherModal = ({
             <input
               type="number"
               value={formData.minOrderValue}
-              onChange={(e) => handleChange('minOrderValue', e.target.value)}
+              onChange={(e) => handleChange("minOrderValue", e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
               placeholder="0"
               min="0"
@@ -655,7 +673,7 @@ const VoucherModal = ({
             <input
               type="number"
               value={formData.usageLimit}
-              onChange={(e) => handleChange('usageLimit', e.target.value)}
+              onChange={(e) => handleChange("usageLimit", e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
               placeholder="100"
               required
@@ -672,7 +690,7 @@ const VoucherModal = ({
               <input
                 type="date"
                 value={formData.startDate}
-                onChange={(e) => handleChange('startDate', e.target.value)}
+                onChange={(e) => handleChange("startDate", e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
                 required
               />
@@ -684,7 +702,7 @@ const VoucherModal = ({
               <input
                 type="date"
                 value={formData.endDate}
-                onChange={(e) => handleChange('endDate', e.target.value)}
+                onChange={(e) => handleChange("endDate", e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
                 required
               />
@@ -699,7 +717,7 @@ const VoucherModal = ({
               </label>
               <select
                 value={formData.status}
-                onChange={(e) => handleChange('status', e.target.value)}
+                onChange={(e) => handleChange("status", e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
               >
                 <option value="ACTIVE">Hoạt động</option>
@@ -715,7 +733,7 @@ const VoucherModal = ({
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) => handleChange('description', e.target.value)}
+              onChange={(e) => handleChange("description", e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none resize-none"
               rows="3"
               placeholder="Mô tả chi tiết về voucher..."
@@ -742,12 +760,12 @@ const VoucherModal = ({
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-green-600">
-                      {formData.discountType === 'PERCENTAGE'
+                      {formData.discountType === "PERCENTAGE"
                         ? `${formData.discountValue}%`
                         : `${Number(formData.discountValue).toLocaleString()}₫`}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {formData.discountType === 'FREESHIP' && 'Miễn phí ship'}
+                      {formData.discountType === "FREESHIP" && "Miễn phí ship"}
                     </p>
                   </div>
                 </div>
@@ -775,7 +793,7 @@ const VoucherModal = ({
                   Đang xử lý...
                 </>
               ) : (
-                <>{editMode ? 'Cập nhật' : 'Thêm mới'}</>
+                <>{editMode ? "Cập nhật" : "Thêm mới"}</>
               )}
             </button>
           </div>
