@@ -50,6 +50,12 @@ const Navbar = () => {
     }
   }, [location.search]);
 
+  // Đóng thanh search khi location thay đổi (chuyển trang)
+  // useEffect(() => {
+  // Đóng thanh search khi chuyển sang trang khác
+  // setSearchOpen(false);
+  // }, [location.pathname]); // Chỉ theo dõi thay đổi pathname, không theo search params
+
   const handleLogout = () => {
     dispatch(logout());
     setAvatarMenuOpen(false);
@@ -67,24 +73,43 @@ const Navbar = () => {
 
   const initials = getInitials(user?.fullName);
 
+  // khi click icon search, tự động chuyển đến trang Collection
+  const isOpeningSearch = useRef(false);
+
   const handleSearchToggle = () => {
-    setSearchOpen((s) => !s);
-    // Không reset searchValue khi toggle
+    isOpeningSearch.current = true; // Đánh dấu đang chủ động mở search
+
+    setSearchOpen((prev) => !prev);
     setAvatarMenuOpen(false);
+
+    // Nếu đang ở trang khác không phải collection, chuyển hướng
+    if (location.pathname !== "/collection") {
+      navigate("/collection");
+    }
+
+    // Reset sau 1 khoảng thời gian nhỏ
+    setTimeout(() => {
+      isOpeningSearch.current = false;
+    }, 100);
   };
+
+  // useEffect đóng thanh search chỉ khi KHÔNG phải đang chủ động mở
+  useEffect(() => {
+    if (!isOpeningSearch.current) {
+      // Đóng thanh search khi chuyển sang trang khác
+      setSearchOpen(false);
+    }
+  }, [location.pathname]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     const q = searchValue.trim();
 
     if (q) {
-      // Nếu có từ khóa tìm kiếm
       navigate(`/collection?search=${encodeURIComponent(q)}`);
     } else {
-      // Nếu search rỗng, chỉ điều hướng đến collection mà không có search param
       navigate(`/collection`);
-      // Có thể đóng thanh tìm kiếm nếu muốn
-      setSearchOpen(false);
+      // KHÔNG đóng thanh search ở đây
     }
   };
 
@@ -118,19 +143,19 @@ const Navbar = () => {
   }, [searchOpen]);
 
   // Parse search query từ URL khi component mount hoặc URL thay đổi
-useEffect(() => {
-  const params = new URLSearchParams(location.search);
-  const searchQuery = params.get("search");
-  if (searchQuery) {
-    setSearchValue(searchQuery);
-    if (!searchOpen && searchQuery.trim() !== "") {
-      setSearchOpen(true);
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchQuery = params.get("search");
+    if (searchQuery) {
+      setSearchValue(searchQuery);
+      if (!searchOpen && searchQuery.trim() !== "") {
+        setSearchOpen(true);
+      }
+    } else {
+      // Reset searchValue nếu không có search param
+      setSearchValue("");
     }
-  } else {
-    // Reset searchValue nếu không có search param
-    setSearchValue("");
-  }
-}, [location.search]);
+  }, [location.search]);
   return (
     <nav
       className={`bg-white shadow-md fixed w-full z-50 transition-all duration-300 ${
