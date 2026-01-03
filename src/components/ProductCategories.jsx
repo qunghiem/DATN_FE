@@ -35,16 +35,22 @@ const ProductCategories = () => {
         }
 
         // Transform API data to match component structure
-        const transformedData = data.map((category) => ({
-          id: category.id,
-          name: category.name,
-          productCount: category.productCount,
-          image:
-            category.image ||
-            "//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16",
-          link: `/collection?categoryName=${encodeURIComponent(category.name)}`,
-          description: category.description,
-        }));
+        const transformedData = data.map((category) => {
+          const link = `/collection?category=${encodeURIComponent(
+            category.name
+          )}`;
+          console.log("Category:", category.name, "Link:", link); // Thêm dòng này
+          return {
+            id: category.id,
+            name: category.name,
+            productCount: category.productCount,
+            image:
+              category.image ||
+              "//theme.hstatic.net/200000695155/1001373964/14/season_coll_1_img_large.png?v=16",
+            link: link,
+            description: category.description,
+          };
+        });
 
         setCategories(transformedData);
         setError(null);
@@ -64,20 +70,20 @@ const ProductCategories = () => {
     setIsDragging(true);
     setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
     setScrollLeft(scrollContainerRef.current.scrollLeft);
-    scrollContainerRef.current.style.cursor = 'grabbing';
+    scrollContainerRef.current.style.cursor = "grabbing";
   };
 
   const handleMouseLeave = () => {
     setIsDragging(false);
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.cursor = 'grab';
+      scrollContainerRef.current.style.cursor = "grab";
     }
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.cursor = 'grab';
+      scrollContainerRef.current.style.cursor = "grab";
     }
   };
 
@@ -140,7 +146,7 @@ const ProductCategories = () => {
 
       {/* Category List - Giống BestSeller */}
       {/* Mobile: 1.5 item (65%), Tablet: 3.5 item (27.5%), Desktop: 4 item (25%) */}
-      <div 
+      <div
         ref={scrollContainerRef}
         onMouseDown={handleMouseDown}
         onMouseLeave={handleMouseLeave}
@@ -170,8 +176,13 @@ const ProductCategories = () => {
 
 // Component Category Card tách riêng
 const CategoryCard = ({ category }) => {
+  const handleClick = (e) => {
+    console.log('Clicked category:', category.name);
+    console.log('Link to navigate:', category.link);
+  };
   return (
     <Link
+      onClick={handleClick}
       to={category.link}
       className="flex-none w-[65%] md:w-[27.5%] lg:w-1/4 group relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 block"
     >
