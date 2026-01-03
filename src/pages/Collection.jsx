@@ -17,9 +17,10 @@ const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 const Collection = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  // const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // State
+  // StateupdateURLWithFilters
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [favorites, setFavorites] = useState([]);
@@ -74,6 +75,48 @@ const Collection = () => {
     return Array.from(uniqueMap.values());
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    // Giữ lại search và categoryName
+    const search = searchParams.get("search");
+    const categoryName = searchParams.get("categoryName");
+    if (search) params.set("search", search);
+    if (categoryName) params.set("categoryName", categoryName);
+
+    // Thêm các filter
+    selectedBrand.forEach((brand) => params.append("brand", brand));
+    selectedSex.forEach((sex) => params.append("sex", sex));
+    selectedCategory.forEach((cat) => params.append("category", cat));
+    selectedPriceRange.forEach((range) => params.append("priceRange", range));
+    if (sortBy !== "default") params.set("sort", sortBy);
+
+    // Cập nhật URL (chỉ khi có thay đổi thực sự)
+    if (params.toString() !== searchParams.toString()) {
+      setSearchParams(params);
+    }
+  }, [
+    selectedBrand,
+    selectedSex,
+    selectedCategory,
+    selectedPriceRange,
+    sortBy,
+  ]);
+
+  // Thêm useEffect để đọc filter từ URL khi mount
+  useEffect(() => {
+    const brands = searchParams.getAll("brand");
+    const sex = searchParams.getAll("sex");
+    const categories = searchParams.getAll("category");
+    const priceRanges = searchParams.getAll("priceRange");
+    const sort = searchParams.get("sort");
+
+    if (brands.length > 0) setSelectedBrand(brands);
+    if (sex.length > 0) setSelectedSex(sex);
+    if (categories.length > 0) setSelectedCategory(categories);
+    if (priceRanges.length > 0) setSelectedPriceRange(priceRanges);
+    if (sort) setSortBy(sort);
+  }, []);
   // Initialize category from URL
   useEffect(() => {
     const categoryName = searchParams.get("categoryName");
