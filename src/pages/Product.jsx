@@ -469,34 +469,62 @@ const Product = () => {
         {/* Product Main Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Left: Images */}
-          <div className="flex gap-4">
+          <div className="flex gap-4 flex-wrap flex-col-reverse md:flex-nowrap md:flex-row">
             {/* Thumbnail Images */}
-            <div className="flex flex-col gap-3">
-              {product.images.map((img, index) => (
-                <div
-                  key={index}
-                  onClick={() => setSelectedImage(img)}
-                  className={`w-20 h-24 border-2 cursor-pointer overflow-hidden ${
-                    selectedImage === img
-                      ? "border-gray-800"
-                      : "border-gray-200"
-                  }`}
-                >
-                  <img
-                    src={
-                      typeof img === "string"
-                        ? img
-                        : img.image_url || img.imageUrl
-                    }
-                    alt={`Thumbnail ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
+            <div className="w-full md:w-auto">
+              {/* Mobile: Horizontal scroll */}
+              <div className="flex md:hidden space-x-2 overflow-x-auto pb-2 hide-scrollbar">
+                {product.images.map((img, index) => (
+                  <div
+                    key={index}
+                    onClick={() => setSelectedImage(img)}
+                    className={`flex-shrink-0 w-20 h-24 border-2 cursor-pointer overflow-hidden ${
+                      selectedImage === img
+                        ? "border-gray-800"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <img
+                      src={
+                        typeof img === "string"
+                          ? img
+                          : img.image_url || img.imageUrl
+                      }
+                      alt={`Thumbnail ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Vertical column (original layout) */}
+              <div className="hidden md:flex flex-col space-y-2 max-h-[500px] overflow-y-auto">
+                {product.images.map((img, index) => (
+                  <div
+                    key={index}
+                    onClick={() => setSelectedImage(img)}
+                    className={`w-20 h-24 border-2 cursor-pointer overflow-hidden ${
+                      selectedImage === img
+                        ? "border-gray-800"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <img
+                      src={
+                        typeof img === "string"
+                          ? img
+                          : img.image_url || img.imageUrl
+                      }
+                      alt={`Thumbnail ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Main Image */}
-            <div className="flex-1relative">
+            {/* Main Image - Unchanged */}
+            <div className="flex-1 relative">
               <img
                 src={selectedImage}
                 alt={product.name}
@@ -550,11 +578,14 @@ const Product = () => {
                 </span>
               </div>
             </div>
-            
-              {/* Total Sold */}
-             <div className="space-y-2">
+
+            {/* Total Sold */}
+            <div className="space-y-2">
               <div className="text-sm text-gray-600">
-                Đã bán <span className="font-semibold text-gray-900">{product.sold || 0}</span>
+                Đã bán{" "}
+                <span className="font-semibold text-gray-900">
+                  {product.sold || 0}
+                </span>
                 {product.total_count > 0 && (
                   <span className="text-gray-500">/{product.total_count}</span>
                 )}{" "}
@@ -799,7 +830,8 @@ const Product = () => {
 
         {/* Product Description Tabs */}
         <div className="mt-12 border-t">
-          <div className="flex gap-8 border-b">
+          {/* Desktop: Tab Navigation (hidden on mobile) */}
+          <div className="hidden md:flex gap-8 border-b">
             <button
               onClick={() => setActiveTab("description")}
               className={`py-4 border-b-2 font-medium transition ${
@@ -842,11 +874,68 @@ const Product = () => {
             </button>
           </div>
 
-          <div className="py-6">
+          {/* Mobile: Show all sections in order */}
+          <div className="md:hidden space-y-6 py-6">
+            {/* Mô tả sản phẩm - Always visible on mobile */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                Mô tả sản phẩm
+              </h3>
+              {product.description && (
+                <div className="prose max-w-none">
+                  <span className="font-bold">{product.name}</span>{" "}
+                  <span className="text-gray-700 whitespace-pre-line">
+                    {product.description}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Đánh giá - Always visible on mobile */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Đánh giá</h3>
+              <ProductReviews productId={productId} />
+            </div>
+
+            {/* Chính sách giao hàng - Always visible on mobile */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                Chính sách giao hàng
+              </h3>
+              <div className="prose max-w-none">
+                <ul className="space-y-2 text-gray-700">
+                  <li>• Giao hàng toàn quốc, nhận hàng trong 2-5 ngày</li>
+                  <li>• Miễn phí giao hàng cho đơn từ 500.000đ</li>
+                  <li>• Kiểm tra hàng trước khi thanh toán</li>
+                  <li>• Hỗ trợ đổi size trong 7 ngày</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Chính sách đổi trả - Always visible on mobile */}
+            <div className="pb-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                Chính sách đổi trả
+              </h3>
+              <div className="prose max-w-none">
+                <ul className="space-y-2 text-gray-700">
+                  <li>• Đổi hàng trong vòng 7 ngày nếu lỗi nhà sản xuất</li>
+                  <li>• Sản phẩm chưa qua sử dụng, còn nguyên tem mác</li>
+                  <li>• Hoàn tiền 100% nếu sản phẩm lỗi</li>
+                  <li>• Liên hệ hotline 1800.0000 để được hỗ trợ</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop: Tab Content (hidden on mobile) */}
+          <div className="hidden md:block py-6">
             {activeTab === "description" && product.description && (
               <div className="prose max-w-none">
                 <span className="font-bold">{product.name}</span>{" "}
-                <span className="text-gray-700 whitespace-pre-line">{product.description}</span>
+                <span className="text-gray-700 whitespace-pre-line">
+                  {product.description}
+                </span>
               </div>
             )}
 
