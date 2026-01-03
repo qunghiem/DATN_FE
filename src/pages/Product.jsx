@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useLayoutEffect  } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -50,6 +50,20 @@ const Product = () => {
 
   // Fetch product data from API
   useEffect(() => {
+    // Hàm force scroll mạnh
+  const forceScrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    
+    // Thử nhiều cách để đảm bảo
+    setTimeout(() => window.scrollTo(0, 0), 10);
+    setTimeout(() => window.scrollTo(0, 0), 100);
+  };
+  
+  // Scroll ngay khi useEffect bắt đầu
+  forceScrollToTop();
+     window.scrollTo({ top: 0, behavior: 'instant' });
     const fetchProduct = async () => {
       try {
         setIsLoading(true);
@@ -175,7 +189,7 @@ const Product = () => {
     };
 
     if (productId) {
-      window.scrollTo(0, 0);
+      // window.scrollTo(0, 0);
       fetchProduct();
     }
   }, [productId]);
