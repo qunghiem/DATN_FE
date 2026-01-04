@@ -54,22 +54,23 @@ const Wishlist = () => {
   };
 
   const handleAddToCart = (product) => {
-    // Giả sử chúng ta lấy variant đầu tiên (có thể cải thiện)
-    const cartItem = {
-      productId: product.productId,
-      variantId: `${product.productId}-default`, // Tạm thời
-      name: product.name,
-      price: product.price?.discountPrice || product.price?.price || 0,
-      image: product.images?.[0] || "",
-      color: "Default",
-      size: "Default",
-      quantity: 1,
-      stock: 100, // Default stock
-    };
-
-    dispatch(addToCartAPI(cartItem));
-    toast.success("Đã thêm vào giỏ hàng!");
+  // Kiểm tra product có variants không
+  const variant = product.variants?.[0];
+  
+  const cartItem = {
+    productId: product.productId,
+    variantId: variant?.variantId || `${product.productId}-V001`, // Sửa format
+    name: product.name,
+    price: product.price?.discountPrice || product.price?.price || 0,
+    image: product.images?.[0] || "",
+    color: variant?.color || product.color || "Default", // Lấy từ variant nếu có
+    size: variant?.size || product.size || "Default",    // Lấy từ variant nếu có
+    quantity: 1,
+    stock: variant?.stock || product.stock || 10,        // Lấy stock thực tế
   };
+
+  
+};
 
   const handleProductClick = (productId) => {
     navigate(`/product/${productId}`);
@@ -226,24 +227,11 @@ const Wishlist = () => {
                       {product.likeCount || 0}
                     </span>
                   </div>
-
-                  {/* Add to Cart Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddToCart(product);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#3A6FB5] text-white rounded-lg hover:bg-[#2E5C99] transition"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    Thêm vào giỏ
-                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
-       
       </div>
     </div>
   );
