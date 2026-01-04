@@ -9,6 +9,7 @@ import BestSeller from "../components/BestSeller";
 
 import ContentRecommendations from "../components/ContentRecommendations";
 import CollaborativeRecommendations from "../components/CollaborativeRecommendationsV2";
+import CustomerReviews from "../components/CustomerReviews";
 
 const Home = () => {
   const [savedCount, setSavedCount] = useState(0);
@@ -48,6 +49,7 @@ const Home = () => {
         />
       )}
       <NewArrivals />
+      <CustomerReviews />
     </div>
   );
 };

@@ -1,325 +1,402 @@
-import React from 'react';
-import { Users, Target, Globe, Shield, Award, Heart } from 'lucide-react';
+import React from "react";
+import { Link } from "react-router-dom";
+import { 
+  Check, 
+  Award, 
+  Users, 
+  Truck, 
+  Shield, 
+  Heart,
+  Target,
+  Globe,
+  ThumbsUp,
+  Star
+} from "lucide-react";
+import CustomerReviews from "../components/CustomerReviews";
 
 const About = () => {
-  // Fixed data for the about page
-  const companyInfo = {
-    name: "YINLI",
-    slogan: "Thời trang cho mọi người",
-    foundedYear: 2015,
-    headquarters: "Hà Nội, Việt Nam",
-    employees: 150,
-    stores: 25,
-    customers: 100000,
-  };
+  const values = [
+    {
+      icon: <Target className="w-8 h-8" />,
+      title: "TẦM NHÌN",
+      description: "Trở thành thương hiệu thể thao hàng đầu Việt Nam, mang đến trải nghiệm tốt nhất cho người dùng",
+      color: "bg-blue-100 text-[#2B4F7B]"
+    },
+    {
+      icon: <Heart className="w-8 h-8" />,
+      title: "SỨ MỆNH",
+      description: "Truyền cảm hứng sống năng động, khỏe mạnh thông qua những sản phẩm chất lượng",
+      color: "bg-red-100 text-red-600"
+    },
+    {
+      icon: <Globe className="w-8 h-8" />,
+      title: "GIÁ TRỊ",
+      description: "Đề cao tính bền vững, thân thiện với môi trường và trách nhiệm với cộng đồng",
+      color: "bg-green-100 text-green-600"
+    }
+  ];
 
-  const teamMembers = [
+  const features = [
     {
-      id: 1,
-      name: "Nguyễn Văn A",
-      position: "CEO & Founder",
-      image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop",
-      description: "15 năm kinh nghiệm trong ngành thời trang"
+      icon: <Award className="w-6 h-6" />,
+      title: "Chất lượng đỉnh cao",
+      description: "Sản phẩm đạt chuẩn quốc tế với chất liệu cao cấp"
     },
     {
-      id: 2,
-      name: "Trần Thị B",
-      position: "Giám đốc Thiết kế",
-      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop",
-      description: "Cựu sinh viên London College of Fashion"
+      icon: <Shield className="w-6 h-6" />,
+      title: "Bảo hành 12 tháng",
+      description: "Cam kết bảo hành dài hạn cho tất cả sản phẩm"
     },
     {
-      id: 3,
-      name: "Lê Văn C",
-      position: "Giám đốc Kinh doanh",
-      image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w-400&h=400&fit=crop",
-      description: "Chuyên gia phát triển thị trường"
+      icon: <Truck className="w-6 h-6" />,
+      title: "Giao hàng toàn quốc",
+      description: "Miễn phí vận chuyển cho đơn hàng từ 500.000đ"
     },
     {
-      id: 4,
-      name: "Phạm Thị D",
-      position: "Trưởng phòng CSKH",
-      image: "https://images.unsplash.com/photo-1494790108755-2616b786d4d9?w=400&h=400&fit=crop",
-      description: "8 năm kinh nghiệm chăm sóc khách hàng"
+      icon: <Users className="w-6 h-6" />,
+      title: "Hỗ trợ 24/7",
+      description: "Đội ngũ tư vấn nhiệt tình, luôn sẵn sàng hỗ trợ"
     }
   ];
 
   const milestones = [
-    { year: 2015, event: "Thành lập YINLI tại Hà Nội" },
-    { year: 2017, event: "Mở cửa hàng đầu tiên" },
-    { year: 2019, event: "Đạt mốc 10.000 khách hàng" },
-    { year: 2020, event: "Ra mắt cửa hàng online" },
-    { year: 2022, event: "Mở rộng 25 cửa hàng toàn quốc" },
-    { year: 2023, event: "Đón khách hàng thứ 100.000" }
+    { year: "2018", title: "Thành lập", description: "EGA Sportswear chính thức ra mắt" },
+    { year: "2019", title: "Mở rộng", description: "Có mặt tại 3 thành phố lớn" },
+    { year: "2020", title: "10.000 KH", description: "Phục vụ hơn 10.000 khách hàng" },
+    { year: "2022", title: "Online", description: "Ra mắt website thương mại điện tử" },
+    { year: "2024", title: "Toàn quốc", description: "Phủ sóng toàn quốc với 50+ đại lý" }
   ];
 
-  const values = [
+  const team = [
     {
-      icon: <Target className="w-8 h-8" />,
-      title: "Tầm nhìn",
-      description: "Trở thành thương hiệu thời trang hàng đầu Việt Nam, mang đến trải nghiệm mua sắm xuất sắc cho khách hàng"
+      name: "Trần Minh Anh",
+      role: "CEO & Founder",
+      image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80",
+      quote: "Chúng tôi tin rằng trang phục thể thao chất lượng sẽ truyền cảm hứng cho lối sống năng động"
     },
     {
-      icon: <Heart className="w-8 h-8" />,
-      title: "Sứ mệnh",
-      description: "Đem lại những sản phẩm chất lượng với giá cả hợp lý, phù hợp với mọi đối tượng khách hàng"
+      name: "Lê Văn Bình",
+      role: "Giám đốc Thiết kế",
+      image: "https://cdn.nhandan.vn/images/1ef398c4e2fb4bf07980a2ded785b3ef965303fb1ddec4c99df8bd9658f076278753efade835869db95d723644194f3ae667d376bf869970b83bd2a9ea12e0ea/mark-9867.jpg",
+      quote: "Mỗi thiết kế đều mang trong mình câu chuyện và cảm hứng riêng"
     },
     {
-      icon: <Users className="w-8 h-8" />,
-      title: "Giá trị cốt lõi",
-      description: "Chất lượng - Sáng tạo - Trung thực - Tận tâm - Phát triển bền vững"
+      name: "Nguyễn Văn Cẩm",
+      role: "Trưởng phòng Kinh doanh",
+      image: "https://cdnphoto.dantri.com.vn/sKMZXvcLv9DPOPbyDBvePaZHX_g=/thumb_w/1020/2025/11/07/mjpg-1762475708545.jpg",
+      quote: "Khách hàng hài lòng là động lực lớn nhất của chúng tôi"
     }
   ];
 
-  const stats = [
-    { icon: <Users className="w-6 h-6" />, label: "Khách hàng", value: "100.000+", suffix: "" },
-    { icon: <Award className="w-6 h-6" />, label: "Sản phẩm", value: "5000+", suffix: "" },
-    { icon: <Globe className="w-6 h-6" />, label: "Cửa hàng", value: "25", suffix: "" },
-    { icon: <Shield className="w-6 h-6" />, label: "Bảo hành", value: "12", suffix: " tháng" }
-  ];
-
-  const achievements = [
-    "Giải thưởng Thương hiệu Thời trang Xuất sắc 2022",
-    "Top 10 Doanh nghiệp Thời trang phát triển nhanh nhất 2023",
-    "Chứng nhận Sản phẩm Xanh 2023",
-    "Giải thưởng Trải nghiệm Khách hàng Xuất sắc 2024"
-  ];
-
   return (
-    <div className="pt-16 min-h-screen bg-gray-50">
-      {/* Hero Banner */}
-      <div className="bg-gradient-to-r from-[#003EA7] to-[#3A6FB5] text-white py-16 px-4">
-        <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-white">
+      {/* Hero Section */}
+      <section className="relative bg-gradient-to-r from-[#2B4F7B] to-[#3A6FB5] text-white py-16 sm:py-20 lg:py-24">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                Về <span className="text-yellow-300">EGASPORT</span>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+                VỀ EGA <span className="text-blue-200">SPORTSWEAR</span>
               </h1>
-              <p className="text-xl mb-8 opacity-90">
-                Hành trình 10 năm đồng hành cùng phong cách thời trang Việt
+              <p className="text-lg sm:text-xl text-blue-100 mb-8 max-w-2xl">
+                Hơn 6 năm đồng hành cùng cộng đồng yêu thể thao Việt Nam, 
+                chúng tôi tự hào mang đến những sản phẩm chất lượng cao, 
+                thiết kế thời thượng và dịch vụ tận tâm.
               </p>
-              <div className="flex flex-wrap gap-4">
-                <button className="bg-white text-[#003EA7] px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
-                  Khám phá bộ sưu tập
-                </button>
-                <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition">
-                  Liên hệ với chúng tôi
-                </button>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="grid grid-cols-2 gap-4">
-                <img 
-                  src="https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=500&fit=crop" 
-                  alt="Store interior" 
-                  className="rounded-lg shadow-xl"
-                />
-                <img 
-                  src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&h=300&fit=crop" 
-                  alt="Fashion collection" 
-                  className="rounded-lg shadow-xl mt-8"
-                />
-                <img 
-                  src="https://images.unsplash.com/photo-1558769132-cb1a40ed0ada?w=400&h=300&fit=crop" 
-                  alt="Team work" 
-                  className="rounded-lg shadow-xl"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        {/* Stats Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-12">
-          <h2 className="text-3xl font-bold text-center mb-10 text-gray-800">
-            EGASPORT trong số
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map((stat, index) => (
-              <div 
-                key={index} 
-                className="text-center p-6 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-100 hover:shadow-md transition"
+              <Link
+                to="/collection"
+                className="inline-flex items-center px-8 py-3 bg-white text-[#2B4F7B] font-semibold rounded-lg hover:bg-blue-50 transition-all transform hover:-translate-y-1"
               >
-                <div className="inline-flex items-center justify-center w-14 h-14 bg-[#3A6FB5] text-white rounded-full mb-4">
-                  {stat.icon}
+                KHÁM PHÁ BỘ SƯU TẬP
+              </Link>
+            </div>
+            <div className="lg:text-right">
+              <div className="inline-block bg-white/10 backdrop-blur-sm rounded-2xl p-8">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold mb-2">6+</div>
+                    <div className="text-sm text-blue-200">Năm kinh nghiệm</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold mb-2">50K+</div>
+                    <div className="text-sm text-blue-200">Khách hàng hài lòng</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold mb-2">500+</div>
+                    <div className="text-sm text-blue-200">Sản phẩm đa dạng</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-bold mb-2">24/7</div>
+                    <div className="text-sm text-blue-200">Hỗ trợ khách hàng</div>
+                  </div>
                 </div>
-                <div className="text-3xl font-bold text-gray-800 mb-2">
-                  {stat.value}<span className="text-lg">{stat.suffix}</span>
-                </div>
-                <p className="text-gray-600">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Company Story */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold mb-8 text-gray-800">Câu chuyện của chúng tôi</h2>
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-2xl font-semibold mb-4 text-[#003EA7]">Từ ý tưởng đến hiện thực</h3>
-                <p className="text-gray-600 mb-4">
-                  YINLI được thành lập năm {companyInfo.foundedYear} với sứ mệnh mang đến những sản phẩm thời trang chất lượng, hợp thời và phù hợp với túi tiền của người Việt. 
-                </p>
-                <p className="text-gray-600 mb-4">
-                  Từ một cửa hàng nhỏ tại {companyInfo.headquarters}, chúng tôi đã phát triển thành hệ thống {companyInfo.stores} cửa hàng trên toàn quốc, phục vụ hơn {companyInfo.customers.toLocaleString()} khách hàng.
-                </p>
-                <p className="text-gray-600">
-                  Với đội ngũ {companyInfo.employees} nhân viên tận tâm, chúng tôi không ngừng sáng tạo và cải thiện để mang đến trải nghiệm mua sắm tốt nhất.
-                </p>
-              </div>
-              <div>
-                <img 
-                  src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&h=400&fit=crop" 
-                  alt="Our story" 
-                  className="rounded-xl w-full h-full object-cover"
-                />
               </div>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Values */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold mb-8 text-gray-800">Giá trị & Tầm nhìn</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Our Story */}
+      <section className="py-16 sm:py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              CÂU CHUYỆN CỦA CHÚNG TÔI
+            </h2>
+            <div className="w-24 h-1 bg-[#3A6FB5] mx-auto"></div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="relative">
+                <div className="absolute -inset-4 bg-gradient-to-r from-blue-100 to-blue-50 rounded-2xl"></div>
+                <img 
+                  src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                  alt="EGA Sportswear Story"
+                  className="relative rounded-xl shadow-lg w-full h-64 sm:h-80 lg:h-96 object-cover"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                Hành trình từ những bước chân đầu tiên
+              </h3>
+              <div className="space-y-4 text-gray-600">
+                <p>
+                  EGA Sportswear được thành lập năm 2018 với sứ mệnh mang đến 
+                  cho người Việt những bộ trang phục thể thao chất lượng quốc tế 
+                  với giá thành hợp lý.
+                </p>
+                <p>
+                  Bắt đầu từ một xưởng may nhỏ tại TP.HCM, chúng tôi đã không ngừng 
+                  nghiên cứu, cải tiến và phát triển để cho ra đời những sản phẩm 
+                  đáp ứng nhu cầu đa dạng của người yêu thể thao.
+                </p>
+                <p>
+                  Ngày nay, EGA tự hào là lựa chọn hàng đầu của các vận động viên 
+                  chuyên nghiệp, huấn luyện viên và người tập luyện thể thao tại Việt Nam.
+                </p>
+              </div>
+              
+              <div className="mt-8 grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-500" />
+                  <span className="font-medium">Chất liệu nhập khẩu</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-500" />
+                  <span className="font-medium">Thiết kế độc quyền</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-500" />
+                  <span className="font-medium">Sản xuất tại Việt Nam</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-500" />
+                  <span className="font-medium">Bảo hành dài hạn</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Core Values */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              GIÁ TRỐT CỐT LÕI
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Những nguyên tắc định hướng cho mọi hoạt động và quyết định của chúng tôi
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {values.map((value, index) => (
               <div 
-                key={index} 
-                className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition"
+                key={index}
+                className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
               >
-                <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-[#3A6FB5] to-[#003EA7] text-white rounded-full mb-6">
+                <div className={`inline-flex p-4 rounded-full ${value.color} mb-6`}>
                   {value.icon}
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-gray-800">{value.title}</h3>
-                <p className="text-gray-600">{value.description}</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  {value.title}
+                </h3>
+                <p className="text-gray-600">
+                  {value.description}
+                </p>
               </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Milestones Timeline */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold mb-8 text-gray-800">Chặng đường phát triển</h2>
+      {/* Features */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              TẠI SAO CHỌN EGA?
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Những lý do khiến khách hàng tin tưởng và đồng hành cùng chúng tôi
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <div 
+                key={index}
+                className="text-center p-6 hover:bg-blue-50 rounded-xl transition-all"
+              >
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-[#3A6FB5] text-white rounded-full mb-4">
+                  {feature.icon}
+                </div>
+                <h3 className="font-semibold text-lg text-gray-900 mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Timeline */}
+      <section className="py-16 bg-gradient-to-br from-blue-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              CHẶNG ĐƯỜNG PHÁT TRIỂN
+            </h2>
+          </div>
+          
           <div className="relative">
             {/* Timeline line */}
-            <div className="absolute left-0 md:left-1/2 transform md:-translate-x-1/2 w-1 h-full bg-gradient-to-b from-[#3A6FB5] to-[#003EA7]"></div>
+            <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 h-full w-1 bg-blue-200"></div>
             
-            {milestones.map((milestone, index) => (
-              <div 
-                key={index} 
-                className={`relative mb-8 ${index % 2 === 0 ? 'md:pr-1/2 md:pl-8' : 'md:pl-1/2 md:pr-8'} pl-8`}
-              >
-                <div className="absolute left-0 md:left-1/2 transform -translate-x-1/2 w-6 h-6 bg-white border-4 border-[#3A6FB5] rounded-full"></div>
-                <div className="bg-white rounded-xl shadow-lg p-6 ml-4 border border-gray-100">
-                  <div className="flex items-center gap-4 mb-3">
-                    <span className="text-2xl font-bold text-[#003EA7]">{milestone.year}</span>
-                    <div className="w-8 h-1 bg-gradient-to-r from-[#3A6FB5] to-[#003EA7]"></div>
-                  </div>
-                  <p className="text-gray-800 font-medium">{milestone.event}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Team */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold mb-8 text-gray-800">Đội ngũ lãnh đạo</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {teamMembers.map((member) => (
-              <div 
-                key={member.id} 
-                className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition"
-              >
-                <div className="relative h-64 overflow-hidden">
-                  <img 
-                    src={member.image} 
-                    alt={member.name}
-                    className="w-full h-full object-cover hover:scale-105 transition duration-500"
-                  />
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-1 text-gray-800">{member.name}</h3>
-                  <p className="text-[#3A6FB5] font-medium mb-3">{member.position}</p>
-                  <p className="text-gray-600 text-sm">{member.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Achievements */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold mb-8 text-gray-800">Thành tựu & Giải thưởng</h2>
-          <div className="bg-gradient-to-r from-[#003EA7] to-[#3A6FB5] rounded-2xl p-8 text-white">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {achievements.map((achievement, index) => (
+            {/* Milestones */}
+            <div className="space-y-12">
+              {milestones.map((milestone, index) => (
                 <div 
-                  key={index} 
-                  className="flex items-start gap-4 p-4 bg-white/10 rounded-xl backdrop-blur-sm"
+                  key={index}
+                  className={`relative flex items-center ${
+                    index % 2 === 0 ? 'md:flex-row-reverse' : ''
+                  }`}
                 >
-                  <Award className="w-6 h-6 flex-shrink-0 mt-1" />
-                  <p className="font-medium">{achievement}</p>
+                  {/* Year dot */}
+                  <div className="absolute left-0 md:left-1/2 md:-translate-x-1/2 w-8 h-8 rounded-full bg-[#3A6FB5] border-4 border-white z-10"></div>
+                  
+                  {/* Content */}
+                  <div className={`ml-12 md:ml-0 md:w-1/2 ${
+                    index % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12'
+                  }`}>
+                    <div className="bg-white p-6 rounded-xl shadow-lg">
+                      <div className="text-2xl font-bold text-[#2B4F7B] mb-2">
+                        {milestone.year}
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {milestone.title}
+                      </h3>
+                      <p className="text-gray-600">
+                        {milestone.description}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Commitment */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-          <div className="text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Cam kết của chúng tôi</h2>
-            <p className="text-gray-600 text-lg mb-8">
-              Chúng tôi cam kết mang đến những sản phẩm chất lượng nhất, dịch vụ xuất sắc và trải nghiệm mua sắm đáng nhớ. 
-              Mỗi sản phẩm YINLI là kết tinh của sự sáng tạo, tỉ mỉ và tâm huyết.
+      {/* Team Section */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              ĐỘI NGŨ CỦA CHÚNG TÔI
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Những con người đầy nhiệt huyết đứng sau thành công của EGA Sportswear
             </p>
-            <div className="flex flex-wrap justify-center gap-6">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-gray-700">Chất lượng đảm bảo</span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {team.map((member, index) => (
+              <div 
+                key={index}
+                className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
+              >
+                <div className="h-64 overflow-hidden">
+                  <img 
+                    src={member.image}
+                    alt={member.name}
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">
+                    {member.name}
+                  </h3>
+                  <p className="text-[#3A6FB5] font-medium mb-4">
+                    {member.role}
+                  </p>
+                  <p className="text-gray-600 italic">
+                    "{member.quote}"
+                  </p>
+                  
+                  <div className="flex items-center gap-2 mt-6 pt-4 border-t border-gray-100">
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-gray-700">Giá cả cạnh tranh</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                <span className="text-gray-700">Giao hàng nhanh chóng</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                <span className="text-gray-700">Hỗ trợ 24/7</span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Customer Reviews Section */}
+      <CustomerReviews />
 
       {/* CTA Section */}
-      <div className="bg-gray-900 text-white py-16 px-4 mt-12">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Sẵn sàng trải nghiệm YINLI?
+      <section className="py-16 bg-gradient-to-r from-[#2B4F7B] to-[#3A6FB5]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
+            SẴN SÀNG TRẢI NGHIỆM?
           </h2>
-          <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-            Khám phá bộ sưu tập mới nhất và nhận ưu đãi đặc biệt dành riêng cho bạn
+          <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
+            Tham gia cộng đồng hơn 50.000 người yêu thể thao đã tin tưởng lựa chọn EGA
           </p>
+          
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-[#3A6FB5] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#2E5C99] transition">
-              Mua sắm ngay
-            </button>
-            <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition">
-              Liên hệ tư vấn
-            </button>
+            <Link
+              to="/collection"
+              className="inline-flex items-center justify-center px-8 py-3 bg-white text-[#2B4F7B] font-semibold rounded-lg hover:bg-blue-50 transition-all transform hover:scale-105"
+            >
+              <ThumbsUp className="w-5 h-5 mr-2" />
+              MUA SẮM NGAY
+            </Link>
+            <Link
+              to="/contact"
+              className="inline-flex items-center justify-center px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-all"
+            >
+              LIÊN HỆ CHÚNG TÔI
+            </Link>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

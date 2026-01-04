@@ -42,7 +42,7 @@ const Footer = () => {
             <div className="space-y-2">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 flex-shrink-0 mt-1 text-blue-300" />
-                <p>150/8 Nguyễn Duy Cung, Phường 12, Tp.HCM</p>
+                <p>123 Nguyễn Duy Cung, Phường 10, Tp.HCM</p>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-blue-300" />
@@ -56,10 +56,10 @@ const Footer = () => {
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-blue-300" />
                 <a
-                  href="mailto:support@egany.com"
+                  href="mailto:nhom5@gmail.com"
                   className="hover:text-blue-200 transition"
                 >
-                  support@egany.com
+                  nhom5@gmail.com
                 </a>
               </div>
             </div>
