@@ -11,7 +11,6 @@ import {
 import { addToCartAPI } from "../features/cart/cartSlice";
 import { Heart, ShoppingCart, Trash2, Loader2, Package } from "lucide-react";
 import { toast } from "react-toastify";
-import RecommendedProducts from "../components/RecommendedProducts";
 import React, { useState, useRef } from "react";
 
 const Wishlist = () => {

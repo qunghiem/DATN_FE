@@ -1040,6 +1040,7 @@ const Product = () => {
             </div>
           </div>
         )}
+        
       </div>
 
       {/* Size Guide Modal */}

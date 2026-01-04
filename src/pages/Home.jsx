@@ -6,7 +6,9 @@ import ProductCategories from "../components/ProductCategories";
 import Vouchers from "../components/Vouchers";
 import NewArrivals from "../components/Newarrivals";
 import BestSeller from "../components/BestSeller";
-import RecommendedProducts from "../components/RecommendedProducts";
+
+import ContentRecommendations from "../components/ContentRecommendations";
+import CollaborativeRecommendations from "../components/CollaborativeRecommendationsV2";
 
 const Home = () => {
   const [savedCount, setSavedCount] = useState(0);
@@ -29,15 +31,22 @@ const Home = () => {
       <Vouchers />
       <BestSeller savedRef={savedRef} 
         setSavedCount={setSavedCount} />
-      
-       {isAuthenticated && user?.id && (
-        <RecommendedProducts 
+
+      {isAuthenticated && user?.id && (
+        <ContentRecommendations 
           userId={user.id}
           savedRef={savedRef} 
           setSavedCount={setSavedCount} 
         />
       )}
 
+      {isAuthenticated && user?.id && (
+        <CollaborativeRecommendations 
+          userId={user.id}
+          savedRef={savedRef} 
+          setSavedCount={setSavedCount} 
+        />
+      )}
       <NewArrivals />
     </div>
   );
