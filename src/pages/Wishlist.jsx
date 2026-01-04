@@ -244,13 +244,7 @@ const Wishlist = () => {
             ))}
           </div>
         )}
-        {isAuthenticated && user?.id && (
-          <RecommendedProducts
-            userId={user.id}
-            savedRef={savedRef}
-            setSavedCount={setSavedCount}
-          />
-        )}
+       
       </div>
     </div>
   );

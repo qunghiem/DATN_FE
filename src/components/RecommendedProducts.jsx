@@ -243,7 +243,7 @@ const RecommendedProducts = ({ userId, savedRef, setSavedCount }) => {
                     </div>
                   )}
 
-                  <button
+                  {/* <button
                     onClick={(e) => toggleFavorite(p.id, e)}
                     className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition z-10 ${
                       favorites.includes(p.id)
@@ -255,7 +255,7 @@ const RecommendedProducts = ({ userId, savedRef, setSavedCount }) => {
                       className="w-4 h-4"
                       fill={favorites.includes(p.id) ? "currentColor" : "none"}
                     />
-                  </button>
+                  </button> */}
 
                   <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
                     {p.labels?.map((label, idx) => {

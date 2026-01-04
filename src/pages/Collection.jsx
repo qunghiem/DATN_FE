@@ -759,7 +759,7 @@ const Collection = () => {
                           )}
 
                           {/* Favorite Button - Top Right */}
-                          <button
+                          {/* <button
                             onClick={(e) => toggleFavorite(p.id, e)}
                             className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm hover:scale-110 transition z-10 ${
                               favorites.includes(p.id)
@@ -775,7 +775,7 @@ const Collection = () => {
                                   : "none"
                               }
                             />
-                          </button>
+                          </button> */}
 
                           {/* Labels - Bottom Left */}
                           <div className="absolute bottom-2 left-2 flex flex-col items-start gap-1">
