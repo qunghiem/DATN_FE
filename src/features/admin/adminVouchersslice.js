@@ -8,7 +8,14 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// Fetch all vouchers
+// Helper function to format date from YYYY-MM-DD to dd/MM/yyyy for API
+const formatDateForAPI = (dateString) => {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+};
+
+// Fetch all vouchers (no filter)
 export const fetchAllVouchers = createAsyncThunk(
   'adminVouchers/fetchAll',
   async (_, { rejectWithValue }) => {
@@ -27,12 +34,31 @@ export const fetchAllVouchers = createAsyncThunk(
   }
 );
 
+// Fetch vouchers by status (ACTIVE, INACTIVE, EXPIRED, OUT_OF_STOCK)
+export const fetchVouchersByStatus = createAsyncThunk(
+  'adminVouchers/fetchByStatus',
+  async (status, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/vouchers?status=${status}`, {
+        headers: getAuthHeader(),
+      });
+      
+      if (response.data.code === 0) {
+        return response.data.result;
+      }
+      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  }
+);
+
 // Fetch active vouchers
 export const fetchActiveVouchers = createAsyncThunk(
   'adminVouchers/fetchActive',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/vouchers/active`, {
+      const response = await axios.get(`${API_URL}/vouchers?status=ACTIVE`, {
         headers: getAuthHeader(),
       });
       
@@ -58,9 +84,9 @@ export const fetchVoucherById = createAsyncThunk(
       if (response.data.code === 0) {
         return response.data.result;
       }
-      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
+      return rejectWithValue(response.data.message || 'Không tìm thấy voucher');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+      return rejectWithValue(error.response?.data?.message || 'Không tìm thấy voucher');
     }
   }
 );
@@ -77,9 +103,9 @@ export const fetchVoucherByCode = createAsyncThunk(
       if (response.data.code === 0) {
         return response.data.result;
       }
-      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
+      return rejectWithValue(response.data.message || 'Không tìm thấy voucher');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+      return rejectWithValue(error.response?.data?.message || 'Không tìm thấy voucher');
     }
   }
 );
@@ -98,7 +124,7 @@ export const validateVoucher = createAsyncThunk(
       }
       return rejectWithValue(response.data.message || 'Voucher không hợp lệ');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+      return rejectWithValue(error.response?.data?.message || 'Voucher không hợp lệ');
     }
   }
 );
@@ -108,16 +134,37 @@ export const createVoucher = createAsyncThunk(
   'adminVouchers/create',
   async (voucherData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/vouchers`, voucherData, {
+      // Format dates to dd/MM/yyyy for API
+      const formattedData = {
+        code: voucherData.code,
+        discountType: voucherData.discountType,
+        discountValue: voucherData.discountValue,
+        usageLimit: voucherData.usageLimit,
+        startDate: formatDateForAPI(voucherData.startDate),
+        endDate: formatDateForAPI(voucherData.endDate),
+      };
+
+      // Add optional fields if they exist
+      if (voucherData.maxDiscountValue) {
+        formattedData.maxDiscountValue = voucherData.maxDiscountValue;
+      }
+      if (voucherData.minOrderValue) {
+        formattedData.minOrderValue = voucherData.minOrderValue;
+      }
+      if (voucherData.description) {
+        formattedData.description = voucherData.description;
+      }
+      
+      const response = await axios.post(`${API_URL}/vouchers`, formattedData, {
         headers: getAuthHeader(),
       });
       
       if (response.data.code === 0) {
         return response.data.result;
       }
-      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
+      return rejectWithValue(response.data.message || 'Không thể tạo voucher');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+      return rejectWithValue(error.response?.data?.message || 'Không thể tạo voucher');
     }
   }
 );
@@ -127,21 +174,31 @@ export const updateVoucher = createAsyncThunk(
   'adminVouchers/update',
   async ({ id, ...voucherData }, { rejectWithValue }) => {
     try {
-      const response = await axios.put(`${API_URL}/vouchers/${id}`, voucherData, {
+      // Format dates to dd/MM/yyyy if they exist
+      const formattedData = { ...voucherData };
+      
+      if (voucherData.startDate) {
+        formattedData.startDate = formatDateForAPI(voucherData.startDate);
+      }
+      if (voucherData.endDate) {
+        formattedData.endDate = formatDateForAPI(voucherData.endDate);
+      }
+      
+      const response = await axios.put(`${API_URL}/vouchers/${id}`, formattedData, {
         headers: getAuthHeader(),
       });
       
       if (response.data.code === 0) {
         return response.data.result;
       }
-      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
+      return rejectWithValue(response.data.message || 'Không thể cập nhật voucher');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+      return rejectWithValue(error.response?.data?.message || 'Không thể cập nhật voucher');
     }
   }
 );
 
-// Delete voucher
+// Delete voucher (soft delete - changes status to INACTIVE)
 export const deleteVoucher = createAsyncThunk(
   'adminVouchers/delete',
   async (id, { rejectWithValue }) => {
@@ -153,32 +210,14 @@ export const deleteVoucher = createAsyncThunk(
       if (response.data.code === 0) {
         return id;
       }
-      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
+      return rejectWithValue(response.data.message || 'Không thể xóa voucher');
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
+      return rejectWithValue(error.response?.data?.message || 'Không thể xóa voucher');
     }
   }
 );
 
-// Update expired vouchers
-export const updateExpiredVouchers = createAsyncThunk(
-  'adminVouchers/updateExpired',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axios.put(`${API_URL}/vouchers/update-expired`, {}, {
-        headers: getAuthHeader(),
-      });
-      
-      if (response.data.code === 0) {
-        return response.data.message;
-      }
-      return rejectWithValue(response.data.message || 'Có lỗi xảy ra');
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra');
-    }
-  }
-);
-
+// Initial state
 const initialState = {
   vouchers: [],
   currentVoucher: null,
@@ -187,6 +226,7 @@ const initialState = {
   success: null,
 };
 
+// Slice
 const adminVouchersSlice = createSlice({
   name: 'adminVouchers',
   initialState,
@@ -197,6 +237,9 @@ const adminVouchersSlice = createSlice({
     },
     setCurrentVoucher: (state, action) => {
       state.currentVoucher = action.payload;
+    },
+    clearCurrentVoucher: (state) => {
+      state.currentVoucher = null;
     },
   },
   extraReducers: (builder) => {
@@ -214,6 +257,21 @@ const adminVouchersSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
+      
+      // Fetch vouchers by status
+      .addCase(fetchVouchersByStatus.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchVouchersByStatus.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.vouchers = action.payload;
+      })
+      .addCase(fetchVouchersByStatus.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      
       // Fetch active vouchers
       .addCase(fetchActiveVouchers.pending, (state) => {
         state.isLoading = true;
@@ -227,6 +285,7 @@ const adminVouchersSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
+      
       // Fetch voucher by ID
       .addCase(fetchVoucherById.pending, (state) => {
         state.isLoading = true;
@@ -240,6 +299,21 @@ const adminVouchersSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
+      
+      // Fetch voucher by code
+      .addCase(fetchVoucherByCode.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchVoucherByCode.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.currentVoucher = action.payload;
+      })
+      .addCase(fetchVoucherByCode.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      
       // Validate voucher
       .addCase(validateVoucher.pending, (state) => {
         state.isLoading = true;
@@ -253,6 +327,7 @@ const adminVouchersSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
+      
       // Create voucher
       .addCase(createVoucher.pending, (state) => {
         state.isLoading = true;
@@ -267,6 +342,7 @@ const adminVouchersSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
+      
       // Update voucher
       .addCase(updateVoucher.pending, (state) => {
         state.isLoading = true;
@@ -278,41 +354,41 @@ const adminVouchersSlice = createSlice({
         if (index !== -1) {
           state.vouchers[index] = action.payload;
         }
+        state.currentVoucher = action.payload;
         state.success = 'Cập nhật voucher thành công';
       })
       .addCase(updateVoucher.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
-      // Delete voucher
+      
+      // Delete voucher (soft delete)
       .addCase(deleteVoucher.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
       .addCase(deleteVoucher.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.vouchers = state.vouchers.filter(v => v.id !== action.payload);
+        // Update the voucher status to INACTIVE in the list
+        const index = state.vouchers.findIndex(v => v.id === action.payload);
+        if (index !== -1) {
+          state.vouchers[index].status = 'INACTIVE';
+        }
         state.success = 'Xóa voucher thành công';
       })
       .addCase(deleteVoucher.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload;
-      })
-      // Update expired vouchers
-      .addCase(updateExpiredVouchers.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(updateExpiredVouchers.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.success = action.payload;
-      })
-      .addCase(updateExpiredVouchers.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });
   },
 });
 
-export const { clearMessages, setCurrentVoucher } = adminVouchersSlice.actions;
+// Export actions
+export const { 
+  clearMessages, 
+  setCurrentVoucher, 
+  clearCurrentVoucher 
+} = adminVouchersSlice.actions;
+
+// Export reducer
 export default adminVouchersSlice.reducer;

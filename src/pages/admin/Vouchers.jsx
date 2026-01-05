@@ -5,8 +5,6 @@ import {
   createVoucher,
   updateVoucher,
   deleteVoucher,
-  validateVoucher,
-  updateExpiredVouchers,
   clearMessages,
 } from "../../features/admin/adminVouchersSlice";
 import {
@@ -21,7 +19,8 @@ import {
   TrendingUp,
   CheckCircle,
   XCircle,
-  RefreshCw,
+  AlertCircle,
+  PackageX,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -36,7 +35,7 @@ const Vouchers = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all"); // all, PERCENTAGE, FIXED_AMOUNT, FREESHIP
-  const [filterStatus, setFilterStatus] = useState("all"); // all, ACTIVE, INACTIVE
+  const [filterStatus, setFilterStatus] = useState("all"); // all, ACTIVE, INACTIVE, EXPIRED, OUT_OF_STOCK
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentVoucher, setCurrentVoucher] = useState(null);
@@ -104,7 +103,7 @@ const Vouchers = () => {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa voucher này?")) {
+    if (window.confirm("Bạn có chắc chắn muốn xóa voucher này? (Voucher sẽ chuyển sang trạng thái INACTIVE và không hiển thị)")) {
       dispatch(deleteVoucher(id));
     }
   };
@@ -129,8 +128,9 @@ const Vouchers = () => {
       toast.error("Vui lòng chọn ngày bắt đầu và kết thúc");
       return;
     }
-    if (new Date(formData.endDate) <= new Date(formData.startDate)) {
-      toast.error("Ngày kết thúc phải sau ngày bắt đầu");
+    // So sánh string trực tiếp vì input type="date" luôn trả về "YYYY-MM-DD"
+    if (formData.endDate < formData.startDate) {
+      toast.error("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
       return;
     }
 
@@ -178,14 +178,6 @@ const Vouchers = () => {
     }
   };
 
-  const handleUpdateExpired = () => {
-    if (window.confirm("Cập nhật trạng thái các voucher đã hết hạn?")) {
-      dispatch(updateExpiredVouchers()).then(() => {
-        dispatch(fetchAllVouchers());
-      });
-    }
-  };
-
   const getDiscountTypeLabel = (type) => {
     switch (type) {
       case "PERCENTAGE":
@@ -216,7 +208,50 @@ const Vouchers = () => {
     }
   };
 
+  const getStatusBadge = (voucher) => {
+    const status = voucher.status;
+    
+    switch(status) {
+      case "ACTIVE":
+        return (
+          <span className="inline-block px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+            Hoạt động
+          </span>
+        );
+      case "INACTIVE":
+        return (
+          <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+            Không hoạt động
+          </span>
+        );
+      case "EXPIRED":
+        return (
+          <span className="inline-block px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+            Hết hạn
+          </span>
+        );
+      case "OUT_OF_STOCK":
+        return (
+          <span className="inline-block px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+            Hết lượt
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+            {status}
+          </span>
+        );
+    }
+  };
+
+  // Lọc voucher: CHỈ HIỂN THỊ voucher có status KHÁC "INACTIVE"
   const filteredVouchers = vouchers.filter((voucher) => {
+    // KHÔNG HIỂN THỊ voucher có status là INACTIVE
+    if (voucher.status === "INACTIVE") {
+      return false;
+    }
+    
     const matchSearch =
       voucher.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       voucher.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -227,42 +262,34 @@ const Vouchers = () => {
     return matchSearch && matchType && matchStatus;
   });
 
-  // Stats
+  // Stats - đếm tất cả voucher KHÁC INACTIVE
+  const displayVouchers = vouchers.filter(v => v.status !== "INACTIVE");
   const stats = {
-    total: vouchers.length,
-    active: vouchers.filter((v) => v.isActive && !v.isExpired).length,
-    expired: vouchers.filter((v) => v.isExpired).length,
-    totalUsage: vouchers.reduce((sum, v) => sum + (v.usageCount || 0), 0),
+    total: displayVouchers.length,
+    active: displayVouchers.filter((v) => v.status === "ACTIVE").length,
+    expired: displayVouchers.filter((v) => v.status === "EXPIRED").length,
+    outOfStock: displayVouchers.filter((v) => v.status === "OUT_OF_STOCK").length,
+    totalUsage: displayVouchers.reduce((sum, v) => sum + (v.usageCount || 0), 0),
   };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Quản lý Voucher</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={handleUpdateExpired}
-            className="flex items-center bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition"
-            title="Cập nhật voucher hết hạn"
-          >
-            <RefreshCw className="w-5 h-5 mr-2" />
-            Cập nhật hết hạn
-          </button>
-          <button
-            onClick={() => {
-              resetForm();
-              setShowModal(true);
-            }}
-            className="flex items-center bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg transition"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Thêm voucher
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            resetForm();
+            setShowModal(true);
+          }}
+          className="flex items-center bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg transition"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Thêm voucher
+        </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -304,7 +331,21 @@ const Vouchers = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm">Lượt sử dụng</p>
+              <p className="text-gray-600 text-sm">Hết lượt sử dụng</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {stats.outOfStock}
+              </p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-lg">
+              <PackageX className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Tổng lượt sử dụng</p>
               <p className="text-2xl font-bold text-purple-600">
                 {stats.totalUsage}
               </p>
@@ -348,7 +389,8 @@ const Vouchers = () => {
           >
             <option value="all">Tất cả trạng thái</option>
             <option value="ACTIVE">Hoạt động</option>
-            <option value="INACTIVE">Không hoạt động</option>
+            <option value="EXPIRED">Hết hạn</option>
+            <option value="OUT_OF_STOCK">Hết lượt</option>
           </select>
         </div>
       </div>
@@ -442,9 +484,6 @@ const Vouchers = () => {
                               {voucher.usageLimit}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            Còn: {voucher.remainingUses}
-                          </div>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-sm">
@@ -463,43 +502,25 @@ const Vouchers = () => {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex flex-col gap-1">
-                          <span
-                            className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                              voucher.isActive && !voucher.isExpired
-                                ? "bg-green-100 text-green-700"
-                                : "bg-gray-100 text-gray-700"
-                            }`}
-                          >
-                            {voucher.status === "ACTIVE"
-                              ? "Hoạt động"
-                              : "Không hoạt động"}
-                          </span>
-                          {voucher.isExpired && (
-                            <span className="inline-block px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
-                              Hết hạn
-                            </span>
-                          )}
-                        </div>
+                        {getStatusBadge(voucher)}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex space-x-2">
-                          {/* Chỉ hiển thị icon chỉnh sửa khi voucher chưa hết hạn, còn lượt sử dụng và đang ACTIVE */}
-                          {!voucher.isExpired &&
-                            voucher.remainingUses > 0 &&
-                            voucher.status === "ACTIVE" && (
-                              <button
-                                onClick={() => handleEdit(voucher)}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                                title="Chỉnh sửa"
-                              >
-                                <Edit className="w-5 h-5" />
-                              </button>
-                            )}
+                          {/* Chỉ cho phép chỉnh sửa voucher có status ACTIVE */}
+                          {voucher.status === "ACTIVE" && (
+                            <button
+                              onClick={() => handleEdit(voucher)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                              title="Chỉnh sửa"
+                            >
+                              <Edit className="w-5 h-5" />
+                            </button>
+                          )}
+                          {/* Tất cả voucher (trừ INACTIVE) đều có thể xóa */}
                           <button
                             onClick={() => handleDelete(voucher.id)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded transition"
-                            title="Xóa"
+                            title="Xóa (chuyển sang INACTIVE)"
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>
@@ -515,13 +536,12 @@ const Vouchers = () => {
       </div>
 
       {/* Total Count */}
-      {filteredVouchers.length > 0 && (
+      {/* {filteredVouchers.length > 0 && (
         <div className="mt-4 text-sm text-gray-600">
-          Tổng số:{" "}
+          Tổng số voucher:{" "}
           <span className="font-semibold">{filteredVouchers.length}</span>{" "}
-          voucher
         </div>
-      )}
+      )} */}
 
       {/* Modal */}
       {showModal && (
@@ -541,7 +561,7 @@ const Vouchers = () => {
   );
 };
 
-// Component Modal
+// Component Modal (giữ nguyên)
 const VoucherModal = ({
   formData,
   setFormData,
@@ -723,6 +743,9 @@ const VoucherModal = ({
                 <option value="ACTIVE">Hoạt động</option>
                 <option value="INACTIVE">Không hoạt động</option>
               </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Lưu ý: Trạng thái EXPIRED và OUT_OF_STOCK được hệ thống tự động cập nhật
+              </p>
             </div>
           )}
 

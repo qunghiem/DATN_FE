@@ -17,15 +17,14 @@ export default function Vouchers() {
   const fetchVouchers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${VITE_API_URL}/api/vouchers`);
+      // Thêm tham số status=ACTIVE vào API call
+      const response = await fetch(`${VITE_API_URL}/api/vouchers?status=ACTIVE`);
       const data = await response.json();
       
-       if (data.code === 0) {
-        // chỉ lấy voucher active
-        const activeVouchers = data.result.filter(v => v.isActive === true);
-        
+      if (data.code === 0) {
+        // Server đã lọc voucher ACTIVE cho chúng ta, không cần filter client-side nữa
         // Transform API data to component format
-        const transformedVouchers = activeVouchers.map((v) => ({
+        const transformedVouchers = data.result.map((v) => ({
           id: v.id,
           code: v.code,
           discountType: v.discountType,
@@ -34,7 +33,7 @@ export default function Vouchers() {
           maxDiscountValue: v.maxDiscountValue,
           endDate: v.endDate,
           remainingUses: v.remainingUses,
-          isActive: v.isActive, // Giữ lại thông tin isActive nếu cần
+          isActive: v.isActive,
           icon: getIcon(v.discountType),
           title: getTitle(v),
           desc: getDescription(v),
@@ -88,10 +87,12 @@ export default function Vouchers() {
   };
 
   const formatMoney = (amount) => {
+    if (!amount) return "0đ";
     return `${(amount / 1000).toFixed(0)}k`;
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "Không có HSD";
     const date = new Date(dateString);
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -150,7 +151,7 @@ export default function Vouchers() {
                 copied={copied}
                 saved={saved}
                 onCopy={handleCopy}
-                onSave={handleSave}
+                // onSave={handleSave}
               />
             ))}
           </div>
@@ -165,7 +166,7 @@ export default function Vouchers() {
                     copied={copied}
                     saved={saved}
                     onCopy={handleCopy}
-                    onSave={handleSave}
+                    // onSave={handleSave}
                   />
                 </div>
               ))}
@@ -182,7 +183,7 @@ export default function Vouchers() {
                     copied={copied}
                     saved={saved}
                     onCopy={handleCopy}
-                    onSave={handleSave}
+                    // onSave={handleSave}
                   />
                 </div>
               ))}
@@ -195,7 +196,7 @@ export default function Vouchers() {
 }
 
 // Component Voucher Card tách riêng để tái sử dụng cho 3 kích thước màn hình
-function VoucherCard({ voucher: v, copied, saved, onCopy, onSave }) {
+function VoucherCard({ voucher: v, copied, onCopy }) {
   return (
     <div className="rounded-xl shadow-sm hover:shadow-md transition transform hover:-translate-y-1 bg-white">
       {/* Icon */}
@@ -228,6 +229,7 @@ function VoucherCard({ voucher: v, copied, saved, onCopy, onSave }) {
           >
             {copied === v.code ? <><FiCheck /> Đã sao chép</> : <><FiCopy /> Sao chép</>}
           </button>
+
         </div>
       </div>
     </div>

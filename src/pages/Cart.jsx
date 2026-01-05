@@ -633,14 +633,31 @@ const Cart = () => {
         return "";
     }
   };
+  // Tính remainingUses cho mỗi voucher
+  const vouchersWithRemaining = activeVouchers.map((v) => ({
+    ...v,
+    remainingUses: v.usageLimit - v.usageCount,
+  }));
 
-  // Lọc voucher theo loại
-  const productVouchers = activeVouchers.filter(
-  (v) => v.discountType !== "FREESHIP" && v.remainingUses > 0
-);
-const shippingVouchers = activeVouchers.filter(
-  (v) => v.discountType === "FREESHIP" && v.remainingUses > 0
-);
+  // Sử dụng cho filter
+  const productVouchers = vouchersWithRemaining.filter(
+    (v) => v.discountType !== "FREESHIP" && v.remainingUses > 0
+  );
+
+  const shippingVouchers = vouchersWithRemaining.filter(
+    (v) => v.discountType === "FREESHIP" && v.remainingUses > 0
+  );
+
+  // Thêm debug
+  console.log("=== VOUCHER USAGE INFO ===");
+  activeVouchers.forEach((v) => {
+    console.log(`Voucher ${v.code}:`, {
+      usageCount: v.usageCount,
+      usageLimit: v.usageLimit,
+      remaining: v.usageLimit - v.usageCount,
+      isAvailable: v.usageCount < v.usageLimit,
+    });
+  });
 
   if (isLoading && cartItems.length === 0) {
     return (
@@ -976,8 +993,8 @@ const shippingVouchers = activeVouchers.filter(
                               {formatPrice(voucher.minOrderValue)}
                             </p>
                             <p className="text-xs text-gray-500">
-                              Còn lại: {voucher.remainingUses}/
-                              {voucher.usageLimit}
+                              Còn lại: {voucher.usageLimit - voucher.usageCount}
+                              /{voucher.usageLimit}
                             </p>
                           </div>
                         </div>
