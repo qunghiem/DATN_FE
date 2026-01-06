@@ -63,7 +63,7 @@ const Product = () => {
   
   // Scroll ngay khi useEffect bắt đầu
   forceScrollToTop();
-     window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
     const fetchProduct = async () => {
       try {
         setIsLoading(true);
@@ -321,7 +321,7 @@ const Product = () => {
       return;
     }
 
-    // Kiểm tra số lượng đã có trong giỏ hàng
+    // Kiểm tra số lượng đã có trong giỏ hàng, kiểm tra đã có biến thể này chưa
     const existingCartItem = cartItems.find(
       (item) => item.productVariantId === selectedVariant.id
     );
@@ -366,6 +366,7 @@ const Product = () => {
     return new Intl.NumberFormat("vi-VN").format(price) + "đ";
   };
 
+  // lọc ds màu khác nhau
   const getUniqueColors = () => {
     const colorMap = new Map();
     product?.variants?.forEach((variant) => {

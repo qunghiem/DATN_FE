@@ -96,7 +96,7 @@ export const updateCartItemAPI = createAsyncThunk(
   }
 );
 
-// Remove item from cart via API
+// xóa 1 sp khỏi giỏ hàng
 export const removeFromCartAPI = createAsyncThunk(
   'cart/removeFromCartAPI',
   async (cartItemId, { rejectWithValue }) => {
@@ -118,7 +118,7 @@ export const removeFromCartAPI = createAsyncThunk(
   }
 );
 
-// Clear entire cart via API
+// xóa toàn bộ giỏ hàng
 export const clearCartAPI = createAsyncThunk(
   'cart/clearCartAPI',
   async (_, { rejectWithValue }) => {

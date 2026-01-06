@@ -160,9 +160,7 @@ const Collection = () => {
           categoriesRes.data?.result || categoriesRes.data?.data || [];
         const categoryNames = categoriesData.map((c) => c.name);
         setCategories([...categoryNames]);
-
-        // Fetch labels for shipping options (nếu cần)
-        // ...
+        
       } catch (err) {
         console.error("Error fetching brands/categories/labels:", err);
       }

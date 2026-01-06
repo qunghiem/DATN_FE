@@ -32,9 +32,9 @@ const CollaborativeRecommendationsV2 = ({ userId, savedRef, setSavedCount }) => 
       products={products}
       title="CÓ THỂ BẠN CŨNG THÍCH"
       subtitle="NGƯỜI DÙNG TƯƠNG TỰ CŨNG THÍCH"
-      viewAllLink="/collection/collaborative"
+      viewAllLink="/collection"
       showBadge={true}
-      badgeText="Cộng đồng"
+      // badgeText="Cộng đồng"
       badgeColor="from-blue-500 to-cyan-500"
       showSold={true}
       showHotDeal={false}

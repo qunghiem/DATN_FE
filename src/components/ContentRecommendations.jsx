@@ -29,7 +29,7 @@ const ContentRecommendations = ({ userId, savedRef, setSavedCount }) => {
       products={products}
       title="GỢI Ý CHO BẠN"
       subtitle="DÀNH RIÊNG CHO BẠN"
-      viewAllLink="/collection/recommended"
+      viewAllLink="/collection"
       showBadge={true}
       badgeText="Gợi Ý"
       badgeColor="from-purple-500 to-pink-500"

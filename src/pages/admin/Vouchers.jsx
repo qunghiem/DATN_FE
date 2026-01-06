@@ -103,7 +103,7 @@ const Vouchers = () => {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa voucher này? (Voucher sẽ chuyển sang trạng thái INACTIVE và không hiển thị)")) {
+    if (window.confirm("Bạn có chắc chắn muốn xóa voucher này?")) {
       dispatch(deleteVoucher(id));
     }
   };
