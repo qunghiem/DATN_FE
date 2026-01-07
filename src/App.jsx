@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -25,19 +25,26 @@ import Wishlist from "./pages/Wishlist";
 import PaymentReturn from './pages/PaymentReturn';
 import EmployeeChat from './pages/EmployeeChat';
 import ChatWidget from './components/ChatWidget';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import AdminOrders from './pages/admin/Orders';
 import AdminReviews from './pages/admin/AdminReviews';
 import AdminStatistics from './pages/admin/Statistics';
 import AdminBestsellerProducts from './pages/admin/BestsellerProducts';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminProfile from './pages/admin/AdminProfile';
+import { initializeAuth } from './features/auth/authSlice';
+
 
 const App = () => {
   const location = useLocation();
+  const dispatch = useDispatch();
   const hideLayout = location.pathname.startsWith("/admin") || location.pathname === "/employee/chat";
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   
+  useEffect(() => {
+    // Khởi tạo auth khi app load
+    dispatch(initializeAuth({ dispatch }));
+  }, [dispatch]);
   // Show ChatWidget only for authenticated CUSTOMER users on customer pages
   const showChatWidget = isAuthenticated && 
                         user?.role === 'CUSTOMER' && 

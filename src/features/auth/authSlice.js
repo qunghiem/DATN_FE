@@ -3,22 +3,102 @@ import axios from 'axios';
 
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
-// Biến lưu trữ dispatch để interceptor có thể sử dụng
+// Biến lưu trữ dispatch và refresh timer
 let storeDispatch = null;
-
-// Interceptor để tự động logout khi token hết hạn
 let authInterceptor = null;
+let responseInterceptor = null;
+let refreshTimer = null;
 
+// Hàm decode JWT để lấy thời gian hết hạn
+const decodeToken = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    return null;
+  }
+};
+
+// Hàm tính thời gian còn lại của token (ms)
+const getTokenRemainingTime = (token) => {
+  const decoded = decodeToken(token);
+  if (!decoded || !decoded.exp) return 0;
+  
+  const expiryTime = decoded.exp * 1000; // Convert to milliseconds
+  const currentTime = Date.now();
+  return expiryTime - currentTime;
+};
+
+// Hàm thiết lập auto refresh trước khi token hết hạn
+const setupAutoRefresh = (accessToken, dispatch) => {
+  // Clear timer cũ nếu có
+  if (refreshTimer) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+
+  const remainingTime = getTokenRemainingTime(accessToken);
+  
+  // Refresh token trước 5 phút (300000ms) khi sắp hết hạn
+  // Hoặc nếu token còn ít hơn 5 phút thì refresh ngay sau 1 phút
+  const refreshBuffer = 5 * 60 * 1000; // 5 minutes
+  const minRefreshTime = 60 * 1000; // 1 minute
+  
+  let refreshTime;
+  if (remainingTime > refreshBuffer) {
+    refreshTime = remainingTime - refreshBuffer;
+  } else if (remainingTime > minRefreshTime) {
+    refreshTime = minRefreshTime;
+  } else {
+    // Token sắp hết hạn, refresh ngay lập tức
+    dispatch(refreshToken());
+    return;
+  }
+
+  console.log(`Auto refresh will trigger in ${Math.round(refreshTime / 1000)} seconds`);
+  
+  refreshTimer = setTimeout(() => {
+    console.log('Auto refreshing token...');
+    dispatch(refreshToken());
+  }, refreshTime);
+};
+
+// Biến để theo dõi trạng thái refresh
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
+
+// Setup interceptor
 const setupAuthInterceptor = (dispatch) => {
-  // Lưu dispatch để sử dụng trong interceptor
   storeDispatch = dispatch;
   
   // Xóa interceptor cũ nếu có
   if (authInterceptor !== null) {
     axios.interceptors.request.eject(authInterceptor);
   }
+  if (responseInterceptor !== null) {
+    axios.interceptors.response.eject(responseInterceptor);
+  }
 
-  // Interceptor cho request: tự động thêm token
+  // Request interceptor: tự động thêm token
   authInterceptor = axios.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('access_token');
@@ -32,25 +112,104 @@ const setupAuthInterceptor = (dispatch) => {
     }
   );
 
-  // Interceptor cho response: xử lý lỗi 401 toàn cục
-  axios.interceptors.response.use(
+  // Response interceptor: xử lý lỗi 401 và tự động refresh token
+  responseInterceptor = axios.interceptors.response.use(
     (response) => response,
-    (error) => {
-      if (error.response?.status === 401) {
-        // Token hết hạn, tự động logout
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        
-        if (storeDispatch) {
-          storeDispatch(logout());
+    async (error) => {
+      const originalRequest = error.config;
+
+      // Nếu lỗi 401 và chưa retry
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        // Không retry cho các endpoint auth
+        if (originalRequest.url.includes('/auth/login') || 
+            originalRequest.url.includes('/auth/refresh') ||
+            originalRequest.url.includes('/auth/register')) {
+          return Promise.reject(error);
         }
+
+        if (isRefreshing) {
+          // Nếu đang refresh, thêm request vào queue
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          })
+            .then(token => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              return axios(originalRequest);
+            })
+            .catch(err => {
+              return Promise.reject(err);
+            });
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        const refreshTokenValue = localStorage.getItem('refresh_token');
         
-        // Redirect đến trang login nếu đang ở client side
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+        if (!refreshTokenValue) {
+          // Không có refresh token, logout
+          isRefreshing = false;
+          processQueue(new Error('No refresh token'), null);
+          if (storeDispatch) {
+            storeDispatch(logout());
+          }
+          return Promise.reject(error);
+        }
+
+        try {
+          // Gọi API refresh token
+          const response = await axios.post(`${VITE_API_URL}/api/auth/refresh`, {
+            refreshToken: refreshTokenValue,
+          });
+
+          if (response.data.code === 1000) {
+            const { access_token, refresh_token } = response.data.result;
+            
+            // Lưu token mới
+            localStorage.setItem('access_token', access_token);
+            localStorage.setItem('refresh_token', refresh_token);
+            
+            // Cập nhật token trong Redux
+            if (storeDispatch) {
+              storeDispatch(setTokens({ 
+                access_token, 
+                refresh_token 
+              }));
+              
+              // Setup auto refresh cho token mới
+              setupAutoRefresh(access_token, storeDispatch);
+            }
+            
+            // Process queue
+            processQueue(null, access_token);
+            
+            // Retry request gốc với token mới
+            originalRequest.headers.Authorization = `Bearer ${access_token}`;
+            return axios(originalRequest);
+          } else {
+            throw new Error('Refresh token failed');
+          }
+        } catch (refreshError) {
+          // Refresh thất bại, logout
+          processQueue(refreshError, null);
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          
+          if (storeDispatch) {
+            storeDispatch(logout());
+          }
+          
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+          
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
         }
       }
+      
       return Promise.reject(error);
     }
   );
@@ -69,13 +228,14 @@ export const login = createAsyncThunk(
       });
       
       if (response.data.code === 1000) {
-        // Store tokens in localStorage
-        localStorage.setItem('access_token', response.data.result.tokens.access_token);
-        localStorage.setItem('refresh_token', response.data.result.tokens.refresh_token);
+        const { access_token, refresh_token } = response.data.result.tokens;
+        
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', refresh_token);
         localStorage.setItem('user', JSON.stringify(response.data.result.user));
         
-        // Thiết lập interceptor sau khi login thành công
         setupAuthInterceptor(dispatch);
+        setupAutoRefresh(access_token, dispatch);
         
         return response.data.result;
       } else {
@@ -94,12 +254,14 @@ export const loginWithGoogle = createAsyncThunk(
       const response = await axios.post(`${VITE_API_URL}/api/auth/login/google`, { idToken });
       
       if (response.data.success) {
-        localStorage.setItem('access_token', response.data.data.tokens.access_token);
-        localStorage.setItem('refresh_token', response.data.data.tokens.refresh_token);
+        const { access_token, refresh_token } = response.data.data.tokens;
+        
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', refresh_token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
         
-        // Thiết lập interceptor sau khi login thành công
         setupAuthInterceptor(dispatch);
+        setupAutoRefresh(access_token, dispatch);
         
         return response.data.data;
       } else {
@@ -125,12 +287,14 @@ export const register = createAsyncThunk(
       });
       
       if (response.data.code === 1000) {
-        localStorage.setItem('access_token', response.data.result.data.tokens.access_token);
-        localStorage.setItem('refresh_token', response.data.result.data.tokens.refresh_token);
+        const { access_token, refresh_token } = response.data.result.data.tokens;
+        
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', refresh_token);
         localStorage.setItem('user', JSON.stringify(response.data.result.data.user));
         
-        // Thiết lập interceptor sau khi register thành công
         setupAuthInterceptor(dispatch);
+        setupAutoRefresh(access_token, dispatch);
         
         return response.data.result.data;
       } else {
@@ -207,7 +371,6 @@ export const resetPassword = createAsyncThunk(
   }
 );
 
-// Thêm async thunk để fetch user profile
 export const fetchUserProfile = createAsyncThunk(
   'auth/fetchUserProfile',
   async (_, { getState, rejectWithValue }) => {
@@ -229,13 +392,11 @@ export const fetchUserProfile = createAsyncThunk(
         return rejectWithValue(response.data.message);
       }
     } catch (error) {
-      // Interceptor global sẽ xử lý lỗi 401, ở đây chỉ cần trả về lỗi thông thường
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra khi tải thông tin người dùng!');
     }
   }
 );
 
-// Thêm async thunk để update user profile
 export const updateUserProfile = createAsyncThunk(
   'auth/updateUserProfile',
   async ({ fullName, phone }, { getState, rejectWithValue }) => {
@@ -269,16 +430,14 @@ export const updateUserProfile = createAsyncThunk(
         return rejectWithValue(response.data.message);
       }
     } catch (error) {
-      // Interceptor global sẽ xử lý lỗi 401
       return rejectWithValue(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật thông tin!');
     }
   }
 );
 
-// Thêm async thunk để refresh token
 export const refreshToken = createAsyncThunk(
   'auth/refreshToken',
-  async (_, { getState, rejectWithValue }) => {
+  async (_, { getState, rejectWithValue, dispatch }) => {
     try {
       const { auth } = getState();
       const { refresh_token } = auth;
@@ -287,16 +446,18 @@ export const refreshToken = createAsyncThunk(
         return rejectWithValue('Không có refresh token');
       }
       
-      const response = await axios.post(`${VITE_API_URL}/api/auth/refresh-token`, {
-        refresh_token: refresh_token,
+      const response = await axios.post(`${VITE_API_URL}/api/auth/refresh`, {
+        refreshToken: refresh_token,
       });
       
       if (response.data.code === 1000) {
-        const { access_token, refresh_token: newRefreshToken } = response.data.result.tokens;
+        const { access_token, refresh_token: newRefreshToken } = response.data.result;
         
-        // Cập nhật tokens mới
         localStorage.setItem('access_token', access_token);
         localStorage.setItem('refresh_token', newRefreshToken);
+        
+        // Setup auto refresh cho token mới
+        setupAutoRefresh(access_token, dispatch);
         
         return {
           access_token,
@@ -338,12 +499,23 @@ const authSlice = createSlice({
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
       
-      // Xóa interceptor khi logout
+      // Clear timer và interceptor
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+      }
+      
       if (authInterceptor !== null) {
         axios.interceptors.request.eject(authInterceptor);
         authInterceptor = null;
-        storeDispatch = null;
       }
+      
+      if (responseInterceptor !== null) {
+        axios.interceptors.response.eject(responseInterceptor);
+        responseInterceptor = null;
+      }
+      
+      storeDispatch = null;
     },
     clearMessages: (state) => {
       state.error = null;
@@ -365,11 +537,24 @@ const authSlice = createSlice({
         localStorage.setItem('user', JSON.stringify(state.user));
       }
     },
-    // Thêm action để thiết lập interceptor khi khởi tạo app
+    setTokens: (state, action) => {
+      state.access_token = action.payload.access_token;
+      state.refresh_token = action.payload.refresh_token;
+    },
+    // Action để khởi tạo auth khi app load
     initializeAuth: (state, action) => {
       const { dispatch } = action.payload;
-      if (state.access_token && !authInterceptor) {
+      if (state.access_token) {
         setupAuthInterceptor(dispatch);
+        
+        // Check và setup auto refresh nếu token còn hợp lệ
+        const remainingTime = getTokenRemainingTime(state.access_token);
+        if (remainingTime > 0) {
+          setupAutoRefresh(state.access_token, dispatch);
+        } else {
+          // Token đã hết hạn, refresh ngay
+          dispatch(refreshToken());
+        }
       }
     },
   },
@@ -540,6 +725,11 @@ const authSlice = createSlice({
       .addCase(refreshToken.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+        // Nếu refresh thất bại, logout
+        state.user = null;
+        state.access_token = null;
+        state.refresh_token = null;
+        state.isAuthenticated = false;
       });
   },
 });
@@ -551,6 +741,7 @@ export const {
   clearError, 
   setUser, 
   updateUser,
+  setTokens,
   initializeAuth
 } = authSlice.actions;
 export default authSlice.reducer;
