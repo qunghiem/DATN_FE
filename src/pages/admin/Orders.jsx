@@ -137,32 +137,32 @@ const AdminOrders = () => {
   ]);
 
   useEffect(() => {
-  const fetchStats = async () => {
-    try {
-      const stats = await fetchOrderStats({
-        from: fromDate ? `${fromDate}T00:00:00` : null,
-        to: toDate ? `${toDate}T23:59:59` : null
-      });
-      
-      // Cập nhật state với dữ liệu từ API
-      if (stats) {
-        setOrderStats({
-          total: stats.total || 0,
-          pending: stats.pending || 0,
-          confirmed: stats.confirmed || 0,
-          shipped: stats.shipped || 0,
-          delivered: stats.delivered || 0,
-          // cancelled: stats.cancelled || 0
+    const fetchStats = async () => {
+      try {
+        const stats = await fetchOrderStats({
+          from: fromDate ? `${fromDate}T00:00:00` : null,
+          to: toDate ? `${toDate}T23:59:59` : null,
         });
+
+        // Cập nhật state với dữ liệu từ API
+        if (stats) {
+          setOrderStats({
+            total: stats.total || 0,
+            pending: stats.pending || 0,
+            confirmed: stats.confirmed || 0,
+            shipped: stats.shipped || 0,
+            delivered: stats.delivered || 0,
+            // cancelled: stats.cancelled || 0
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching order stats:", error);
+        toast.error("Không thể tải thống kê đơn hàng");
       }
-    } catch (error) {
-      console.error("Error fetching order stats:", error);
-      toast.error("Không thể tải thống kê đơn hàng");
-    }
-  };
-  
-  fetchStats();
-}, [statusFilter, fromDate, toDate]); // Có thể bỏ debouncedSearchTerm nếu API không hỗ trợ search
+    };
+
+    fetchStats();
+  }, [statusFilter, fromDate, toDate]); // Có thể bỏ debouncedSearchTerm nếu API không hỗ trợ search
 
   // Handle messages
   useEffect(() => {
@@ -319,7 +319,7 @@ const AdminOrders = () => {
     const minutes = date.getMinutes().toString().padStart(2, "0");
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
-// lấy ra số lượng đơn hàng tương ứng với mỗi trạng thái
+  // lấy ra số lượng đơn hàng tương ứng với mỗi trạng thái
   const fetchOrderStats = async (params = {}) => {
     const token = localStorage.getItem("access_token");
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -365,60 +365,62 @@ const AdminOrders = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-  <div className="bg-white rounded-lg shadow-md p-4">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-gray-600 text-sm">Tổng đơn</p>
-        <p className="text-2xl font-bold text-gray-800">{orderStats.total}</p>
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Tổng đơn</p>
+              <p className="text-2xl font-bold text-gray-800">
+                {orderStats.total}
+              </p>
+            </div>
+            <Package className="w-8 h-8 text-gray-400" />
+          </div>
+        </div>
+        <div className="bg-yellow-50 rounded-lg shadow-md p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Chờ xác nhận</p>
+              <p className="text-2xl font-bold text-yellow-700">
+                {orderStats.pending}
+              </p>
+            </div>
+            <Clock className="w-8 h-8 text-yellow-500" />
+          </div>
+        </div>
+        <div className="bg-blue-50 rounded-lg shadow-md p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Đã xác nhận</p>
+              <p className="text-2xl font-bold text-blue-700">
+                {orderStats.confirmed}
+              </p>
+            </div>
+            <CheckCircle className="w-8 h-8 text-blue-500" />
+          </div>
+        </div>
+        <div className="bg-purple-50 rounded-lg shadow-md p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Đang giao</p>
+              <p className="text-2xl font-bold text-purple-700">
+                {orderStats.shipped}
+              </p>
+            </div>
+            <Truck className="w-8 h-8 text-purple-500" />
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-lg shadow-md p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Đã giao</p>
+              <p className="text-2xl font-bold text-green-700">
+                {orderStats.delivered}
+              </p>
+            </div>
+            <CheckCircle className="w-8 h-8 text-green-500" />
+          </div>
+        </div>
       </div>
-      <Package className="w-8 h-8 text-gray-400" />
-    </div>
-  </div>
-  <div className="bg-yellow-50 rounded-lg shadow-md p-4">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-gray-600 text-sm">Chờ xác nhận</p>
-        <p className="text-2xl font-bold text-yellow-700">
-          {orderStats.pending}
-        </p>
-      </div>
-      <Clock className="w-8 h-8 text-yellow-500" />
-    </div>
-  </div>
-  <div className="bg-blue-50 rounded-lg shadow-md p-4">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-gray-600 text-sm">Đã xác nhận</p>
-        <p className="text-2xl font-bold text-blue-700">
-          {orderStats.confirmed}
-        </p>
-      </div>
-      <CheckCircle className="w-8 h-8 text-blue-500" />
-    </div>
-  </div>
-  <div className="bg-purple-50 rounded-lg shadow-md p-4">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-gray-600 text-sm">Đang giao</p>
-        <p className="text-2xl font-bold text-purple-700">
-          {orderStats.shipped}
-        </p>
-      </div>
-      <Truck className="w-8 h-8 text-purple-500" />
-    </div>
-  </div>
-  <div className="bg-green-50 rounded-lg shadow-md p-4">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-gray-600 text-sm">Đã giao</p>
-        <p className="text-2xl font-bold text-green-700">
-          {orderStats.delivered}
-        </p>
-      </div>
-      <CheckCircle className="w-8 h-8 text-green-500" />
-    </div>
-  </div>
-</div>
 
       {/* Filter and Search */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -617,9 +619,8 @@ const AdminOrders = () => {
                                 : "bg-yellow-100 text-yellow-700"
                             }`}
                           >
-                            {order.paymentMethod === "COD"
-                              ? "COD"
-                              : "Đã thanh toán"}
+                            {order.paymentStatus === "PAID" ? "Đã thanh toán" : "Chưa thanh toán"}
+                          
                           </span>
                         </td>
                         <td className="py-3 px-4">

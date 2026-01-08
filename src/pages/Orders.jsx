@@ -132,54 +132,55 @@ const Orders = () => {
   // };
 
   const getTrackingTimeline = (order) => {
-  const timeline = [];
-  const statuses = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"];
-  
-  // Sử dụng updatedAt cho các status updates
-  const statusUpdateTime = order.updatedAt || order.createdAt;
+    const timeline = [];
+    const statuses = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"];
 
-  if (order.status === "CANCELLED") {
-    return [
-      {
-        status: "PENDING",
-        time: order.createdAt,
-        description: "Đơn hàng đã được đặt",
-        completed: true,
-      },
-      {
-        status: "CANCELLED",
-        time: statusUpdateTime,
-        description: order.cancelReason
-          ? `Đơn hàng đã bị hủy. Lý do: ${order.cancelReason}`
-          : "Đơn hàng đã bị hủy",
-        completed: true,
-      },
-    ];
-  }
+    // Sử dụng updatedAt cho các status updates
+    const statusUpdateTime = order.updatedAt || order.createdAt;
 
-  const currentStatusIndex = statuses.indexOf(order.status);
-  statuses.forEach((status, index) => {
-    const statusLabels = {
-      PENDING: "Đơn hàng đã được đặt",
-      CONFIRMED: "Đơn hàng đã được xác nhận",
-      SHIPPED: "Đơn hàng đang được giao",
-      DELIVERED: "Đơn hàng đã được giao thành công",
-    };
-    
-    timeline.push({
-      status: status,
-      time: index <= currentStatusIndex ? statusUpdateTime : null,
-      description: statusLabels[status],
-      completed: index <= currentStatusIndex,
-      // Nếu có payment status, thêm thông tin thanh toán
-      paymentStatus: index === 0 && order.payment?.status === "PAID" 
-        ? "Đã thanh toán" 
-        : null
+    if (order.status === "CANCELLED") {
+      return [
+        {
+          status: "PENDING",
+          time: order.createdAt,
+          description: "Đơn hàng đã được đặt",
+          completed: true,
+        },
+        {
+          status: "CANCELLED",
+          time: statusUpdateTime,
+          description: order.cancelReason
+            ? `Đơn hàng đã bị hủy. Lý do: ${order.cancelReason}`
+            : "Đơn hàng đã bị hủy",
+          completed: true,
+        },
+      ];
+    }
+
+    const currentStatusIndex = statuses.indexOf(order.status);
+    statuses.forEach((status, index) => {
+      const statusLabels = {
+        PENDING: "Đơn hàng đã được đặt",
+        CONFIRMED: "Đơn hàng đã được xác nhận",
+        SHIPPED: "Đơn hàng đang được giao",
+        DELIVERED: "Đơn hàng đã được giao thành công",
+      };
+
+      timeline.push({
+        status: status,
+        time: index <= currentStatusIndex ? statusUpdateTime : null,
+        description: statusLabels[status],
+        completed: index <= currentStatusIndex,
+        // Nếu có payment status, thêm thông tin thanh toán
+        paymentStatus:
+          index === 0 && order.payment?.status === "PAID"
+            ? "Đã thanh toán"
+            : null,
+      });
     });
-  });
-  
-  return timeline;
-};
+
+    return timeline;
+  };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN").format(price) + "₫";
@@ -295,6 +296,64 @@ const Orders = () => {
     return reviewedItems.has(key);
   };
 
+  // Thêm hàm này sau các hàm helper khác
+const handlePayment = async (orderId) => {
+  try {
+    toast.info("Đang xử lý thanh toán...");
+    
+    console.log("🔄 Calling payment API for order:", orderId);
+    
+    const token = localStorage.getItem("access_token");
+    
+    const response = await axios.post(
+      `${VITE_API_URL}/api/v1/payments/create`,
+      {
+        orderId: orderId,
+        bankCode: "NCB"
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      }
+    );
+
+    console.log("✅ Payment API response:", response.data);
+    
+    // SỬA ĐIỀU KIỆN Ở ĐÂY:
+    // Kiểm tra xem có paymentUrl không, không kiểm tra code === 1000 nữa
+    if (response.data && response.data.paymentUrl) {
+      const paymentUrl = response.data.paymentUrl;
+      console.log("🔗 Payment URL:", paymentUrl);
+      
+      // Điều hướng tới link thanh toán
+      window.open(paymentUrl, "_blank");
+      toast.success("Đang chuyển hướng đến trang thanh toán...");
+    } else {
+      console.error("❌ API did not return paymentUrl");
+      console.error("❌ Full response:", response.data);
+      toast.error(`Không thể tạo liên kết thanh toán: ${response.data?.message || 'No payment URL returned'}`);
+    }
+  } catch (error) {
+    console.error("❌ Payment error:", error);
+    
+    // Hiển thị chi tiết lỗi
+    if (error.response) {
+      console.error("❌ Error status:", error.response.status);
+      console.error("❌ Error data:", error.response.data);
+      
+      toast.error(`Lỗi server: ${error.response.status} - ${error.response.data?.message || 'Unknown error'}`);
+    } else if (error.request) {
+      console.error("❌ No response received:", error.request);
+      toast.error("Không nhận được phản hồi từ server. Vui lòng kiểm tra kết nối!");
+    } else {
+      console.error("❌ Request setup error:", error.message);
+      toast.error(`Lỗi: ${error.message}`);
+    }
+  }
+};
+
   // useEffect #1: Load reviewed items khi component mount
   useEffect(() => {
     checkReviewedItems();
@@ -302,108 +361,106 @@ const Orders = () => {
 
   // useEffect #2: Fetch orders
   useEffect(() => {
-  const fetchOrders = async () => {
-    if (!isAuthenticated || !user) {
-      navigate("/login");
-      return;
-    }
+    const fetchOrders = async () => {
+      if (!isAuthenticated || !user) {
+        navigate("/login");
+        return;
+      }
 
-    try {
-      setIsLoading(true);
-      const userId = getUserId();
-
-      // Thử lấy từ API trước
       try {
-        const response = await axios.get(
-          `${VITE_API_URL}/api/orders/me`,
-          {
+        setIsLoading(true);
+        const userId = getUserId();
+
+        // Thử lấy từ API trước
+        try {
+          const response = await axios.get(`${VITE_API_URL}/api/orders/me`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("access_token")}`,
             },
+          });
+
+          if (response.data.code === 1000 && response.data.result) {
+            const ordersData = response.data.result;
+
+            const transformedOrders = ordersData.map((order) => ({
+              id: order.id,
+              orderDate: order.createdAt,
+              updatedAt: order.updatedAt, // Thêm updatedAt
+              status: order.status,
+              items: order.items.map((item) => ({
+                id: item.id,
+                productId: item.productId,
+                variantId: item.productVariantId,
+                name: item.productName,
+                color: item.color,
+                size: item.size,
+                quantity: item.quantity,
+                image: item.imageUrl,
+                price: item.unitPrice,
+                sku: item.productSku,
+                reviewed: item.reviewed || false, // Thêm trạng thái reviewed từ API
+              })),
+              shipping: {
+                fullName: order.fullName,
+                phone: order.phone,
+                email: user.email,
+                address: order.address,
+              },
+              payment: {
+                method: order.paymentMethod,
+                paymentMethod: order.paymentMethod, 
+                subtotal: order.subtotal,
+                shippingFee: order.shippingFee,
+                shippingDiscount: order.shippingDiscount,
+                shippingFeeOriginal: order.shippingFeeOriginal,
+                discount: order.discountAmount,
+                total: order.totalAmount,
+                status: order.paymentStatus || order.payment?.status || "PAID",
+              },
+              note: order.note || "",
+              tracking: [],
+              cancelReason: order.cancelReason || "",
+              rewardPoints: {
+                used: order.rewardPointsUsed,
+                earned: order.rewardPointsEarned,
+                userRemaining: order.userRemainingRewardPoints,
+              },
+            }));
+console.log("📦 Transformed order payment data:", transformedOrders[0]?.payment);
+            setOrders(transformedOrders);
+            setFilteredOrders(transformedOrders);
+            saveUserOrders(userId, transformedOrders);
+
+            if (transformedOrders.length > 0) {
+              toast.success(`Đã tải ${transformedOrders.length} đơn hàng`);
+            }
+            return;
           }
-        );
-
-        if (response.data.code === 1000 && response.data.result) {
-          const ordersData = response.data.result;
-
-          const transformedOrders = ordersData.map((order) => ({
-            id: order.id,
-            orderDate: order.createdAt,
-            updatedAt: order.updatedAt, // Thêm updatedAt
-            status: order.status,
-            items: order.items.map((item) => ({
-              id: item.id,
-              productId: item.productId,
-              variantId: item.productVariantId,
-              name: item.productName,
-              color: item.color,
-              size: item.size,
-              quantity: item.quantity,
-              image: item.imageUrl,
-              price: item.unitPrice,
-              sku: item.productSku,
-              reviewed: item.reviewed || false, // Thêm trạng thái reviewed từ API
-            })),
-            shipping: {
-              fullName: order.fullName,
-              phone: order.phone,
-              email: user.email,
-              address: order.address,
-            },
-            payment: {
-              method: order.paymentMethod,
-              subtotal: order.subtotal,
-              shippingFee: order.shippingFee,
-              shippingDiscount: order.shippingDiscount,
-              shippingFeeOriginal: order.shippingFeeOriginal,
-              discount: order.discountAmount,
-              total: order.totalAmount,
-              status: order.payment?.status || "PAID",
-            },
-            note: order.note || "",
-            tracking: [],
-            cancelReason: order.cancelReason || "",
-            rewardPoints: {
-              used: order.rewardPointsUsed,
-              earned: order.rewardPointsEarned,
-              userRemaining: order.userRemainingRewardPoints,
-            },
-          }));
-
-          setOrders(transformedOrders);
-          setFilteredOrders(transformedOrders);
-          saveUserOrders(userId, transformedOrders);
-
-          if (transformedOrders.length > 0) {
-            toast.success(`Đã tải ${transformedOrders.length} đơn hàng`);
+        } catch (apiError) {
+          console.error("❌ API error:", apiError.message);
+          if (apiError.response?.status === 401) {
+            toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
+            navigate("/login");
+            return;
           }
-          return;
+          // Fallback to local storage nếu API fail
+          console.log("Falling back to local storage data");
         }
-      } catch (apiError) {
-        console.error("❌ API error:", apiError.message);
-        if (apiError.response?.status === 401) {
-          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!");
-          navigate("/login");
-          return;
-        }
-        // Fallback to local storage nếu API fail
-        console.log("Falling back to local storage data");
+
+        // Fallback: lấy từ local storage
+        const localOrders = getUserOrders(userId);
+        setOrders(localOrders);
+        setFilteredOrders(localOrders);
+      } catch (error) {
+        console.error("❌ Error fetching orders:", error);
+        toast.error("Không thể tải danh sách đơn hàng");
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      // Fallback: lấy từ local storage
-      const localOrders = getUserOrders(userId);
-      setOrders(localOrders);
-      setFilteredOrders(localOrders);
-    } catch (error) {
-      console.error("❌ Error fetching orders:", error);
-      toast.error("Không thể tải danh sách đơn hàng");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  fetchOrders();
-}, [isAuthenticated, user, navigate]);
+    fetchOrders();
+  }, [isAuthenticated, user, navigate]);
 
   // useEffect #3: Filter orders
   useEffect(() => {
@@ -416,7 +473,7 @@ const Orders = () => {
       filtered = filtered.filter(
         (order) =>
           // order.id?.toLowerCase().includes(query) ||
-        order.id?.toString().toLowerCase().includes(query) ||
+          order.id?.toString().toLowerCase().includes(query) ||
           (order.items &&
             order.items.length > 0 &&
             order.items.some((item) =>
@@ -596,7 +653,12 @@ const Orders = () => {
                       {order.items && order.items.length > 0 ? (
                         order.items.map((item, index) => (
                           <div
-                             key={item.id || `${order.id}-${item.productId}-${item.variantId}-${Math.random()}`}
+                            key={
+                              item.id ||
+                              `${order.id}-${item.productId}-${
+                                item.variantId
+                              }-${Math.random()}`
+                            }
                             className="flex gap-4 pb-3 border-b border-gray-100 last:border-0"
                           >
                             <div
@@ -704,7 +766,7 @@ const Orders = () => {
                     {/* Order Summary */}
                     <div className="mt-4 pt-4 border-t border-gray-200">
                       <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-600 flex flex-wrap items-center gap-2">
                           <span className="mr-4">
                             {order.items?.length || 0} sản phẩm
                           </span>
@@ -712,9 +774,24 @@ const Orders = () => {
                             <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
                               Thanh toán khi nhận hàng
                             </span>
+                          ) : order.payment?.method === "BANK_TRANSFER" ? (
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                                Chuyển khoản ngân hàng
+                              </span>
+                              {/* THÊM NÚT THANH TOÁN NGAY Ở ĐÂY */}
+                              {order.payment?.status === "UNPAID" && (
+                                <button
+                                  onClick={() => handlePayment(order.id)}
+                                  className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition"
+                                >
+                                  Thanh toán ngay
+                                </button>
+                              )}
+                            </div>
                           ) : (
                             <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
-                              Đã thanh toán
+                              {order.payment?.method || "Đã thanh toán"}
                             </span>
                           )}
                         </div>
@@ -1118,9 +1195,21 @@ const Orders = () => {
                         ? "Chuyển khoản ngân hàng"
                         : selectedOrder.payment?.method}
                     </span>
+                    {/* THÊM NÚT THANH TOÁN NGAY */}
+                    {selectedOrder.payment?.status === "UNPAID" &&
+                      selectedOrder.payment?.method === "BANK_TRANSFER" && (
+                        <button
+                          onClick={() => handlePayment(selectedOrder.id)}
+                          className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition"
+                        >
+                          Thanh toán ngay
+                        </button>
+                      )}
+
+                    {/* Hiển thị trạng thái thanh toán */}
                     {selectedOrder.payment?.status && (
                       <span
-                        className={`ml-2 px-2 py-1 rounded text-xs ${
+                        className={`px-2 py-1 rounded text-xs ${
                           selectedOrder.payment.status === "PAID"
                             ? "bg-green-100 text-green-800"
                             : "bg-yellow-100 text-yellow-800"
