@@ -1260,7 +1260,7 @@ const Cart = () => {
                 disabled={selectedItems.length === 0 || isLoading}
                 className="w-full mt-6 px-6 py-4 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Tiến hành thanh toán ({selectedItems.length})
+                Tiến hành đặt hàng ({selectedItems.length})
               </button>
             </div>
           </div>
